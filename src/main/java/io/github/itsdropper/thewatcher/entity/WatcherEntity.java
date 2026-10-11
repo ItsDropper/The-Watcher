@@ -5,10 +5,15 @@ import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -33,14 +38,16 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
     private static final int OBSERVE_TICKS = 100;
     private static final int STALK_TICKS = 500;
-    private static final int ESCALATE_TICKS = 100;
+    private static final int ESCALATE_TICKS = 160;
     private static final int RETREAT_TICKS = 100;
     private static final double TARGET_RANGE = 48.0D;
+    private static final double DEBUG_TARGET_RANGE = 128.0D;
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     private Phase phase = Phase.IDLE;
     private int phaseTicks;
     private boolean attemptedEscalationAttack;
+    private boolean debugPhaseLocked;
 
     public WatcherEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
@@ -48,8 +55,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
     @Override
     protected void initGoals() {
-        // Deliberately no vanilla melee or automatic target goals.
-        // The Watcher's state machine controls when it observes, stalks, and escalates.
+        // No vanilla combat/target goals: the Watcher is controlled by its own state machine.
         this.goalSelector.add(0, new SwimGoal(this));
         this.goalSelector.add(5, new LookAroundGoal(this));
     }
@@ -63,60 +69,86 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
-        if (timeOfDay < 13000L || timeOfDay >= 23000L) {
-            setPhase(Phase.IDLE);
-            setTarget(null);
-            getNavigation().stop();
+        boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
+
+        // Debug-forced phases deliberately work during daytime and outside the normal range.
+        if (!debugPhaseLocked && !night) {
+            resetToIdle();
             return;
         }
 
-        PlayerEntity player = world.getPlayers().stream()
-                .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
-                .filter(candidate -> squaredDistanceTo(candidate) <= TARGET_RANGE * TARGET_RANGE)
-                .min(Comparator.comparingDouble(this::squaredDistanceTo))
-                .orElse(null);
+        PlayerEntity player = null;
+        if (debugPhaseLocked && getTarget() instanceof PlayerEntity current
+                && current.isAlive() && !current.isSpectator()) {
+            player = current;
+        }
+
+        double targetRange = debugPhaseLocked ? DEBUG_TARGET_RANGE : TARGET_RANGE;
+        if (player == null) {
+            player = world.getPlayers().stream()
+                    .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
+                    .filter(candidate -> squaredDistanceTo(candidate) <= targetRange * targetRange)
+                    .min(Comparator.comparingDouble(this::squaredDistanceTo))
+                    .orElse(null);
+        }
 
         if (player == null) {
-            setPhase(Phase.IDLE);
-            setTarget(null);
-            getNavigation().stop();
+            if (!debugPhaseLocked) {
+                resetToIdle();
+            } else {
+                getNavigation().stop();
+            }
             return;
         }
 
         setTarget(player);
         phaseTicks++;
 
+        if (phase != Phase.IDLE && squaredDistanceTo(player) <= 24.0D * 24.0D
+                && world.getTime() % 200L == 0L) {
+            // A rare, spatially located cue makes the entity feel present without constant noise.
+            world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_STARE,
+                    SoundCategory.HOSTILE, 0.4F, 0.65F + random.nextFloat() * 0.25F);
+
+            if (squaredDistanceTo(player) <= 18.0D * 18.0D) {
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.DARKNESS, 45, 0, true, false, false));
+            }
+        }
+
         switch (phase) {
             case IDLE -> setPhase(Phase.OBSERVING);
             case OBSERVING -> {
                 lookAtPlayer(player);
                 getNavigation().stop();
-                if (phaseTicks >= OBSERVE_TICKS) {
+                if (!debugPhaseLocked && phaseTicks >= OBSERVE_TICKS) {
                     setPhase(Phase.STALKING);
                 }
             }
             case STALKING -> {
                 lookAtPlayer(player);
-                if (squaredDistanceTo(player) > 12.0D * 12.0D) {
-                    getNavigation().startMovingTo(player, 0.48D);
+                // The Watcher advances while it is not being watched, then freezes when noticed.
+                if (!isPlayerLookingAtWatcher(player)
+                        && squaredDistanceTo(player) > 5.5D * 5.5D) {
+                    getNavigation().startMovingTo(player, 0.55D);
                 } else {
                     getNavigation().stop();
                 }
-                if (phaseTicks >= STALK_TICKS) {
+                if (!debugPhaseLocked && phaseTicks >= STALK_TICKS) {
                     setPhase(Phase.ESCALATING);
                 }
             }
             case ESCALATING -> {
                 lookAtPlayer(player);
-                getNavigation().startMovingTo(player, 0.78D);
+                getNavigation().startMovingTo(player, 0.82D);
 
-                // One attack attempt per escalation, never continuous melee spam.
-                if (!attemptedEscalationAttack && squaredDistanceTo(player) <= 2.4D * 2.4D) {
+                // One attack attempt per escalation; no ordinary continuous melee loop.
+                if (!attemptedEscalationAttack && squaredDistanceTo(player) <= 2.6D * 2.6D) {
                     attemptedEscalationAttack = true;
                     tryAttack(player);
                 }
 
-                if (phaseTicks >= ESCALATE_TICKS) {
+                if (!debugPhaseLocked && phaseTicks >= ESCALATE_TICKS) {
                     setPhase(Phase.RETREATING);
                 }
             }
@@ -125,11 +157,27 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     moveAwayFrom(player);
                 }
                 lookAtPlayer(player);
-                if (phaseTicks >= RETREAT_TICKS) {
+                if (!debugPhaseLocked && phaseTicks >= RETREAT_TICKS) {
                     setPhase(Phase.OBSERVING);
                 }
             }
         }
+    }
+
+    private boolean isPlayerLookingAtWatcher(PlayerEntity player) {
+        Vec3d directionToWatcher = new Vec3d(
+                getX() - player.getX(),
+                getEyeY() - player.getEyeY(),
+                getZ() - player.getZ()
+        ).normalize();
+
+        return player.getRotationVec(1.0F).dotProduct(directionToWatcher) > 0.92D;
+    }
+
+    private void resetToIdle() {
+        setPhase(Phase.IDLE);
+        setTarget(null);
+        getNavigation().stop();
     }
 
     private void lookAtPlayer(PlayerEntity player) {
@@ -160,6 +208,28 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return phaseTicks;
     }
 
+    public boolean isDebugPhaseLocked() {
+        return debugPhaseLocked;
+    }
+
+    public void forceDebugPhase(Phase newPhase, PlayerEntity player) {
+        if (newPhase == null || player == null) {
+            return;
+        }
+
+        debugPhaseLocked = true;
+        phase = newPhase;
+        phaseTicks = 0;
+        attemptedEscalationAttack = false;
+        setTarget(player);
+        getNavigation().stop();
+    }
+
+    public void resumeAutomaticPhases() {
+        debugPhaseLocked = false;
+        setPhase(Phase.IDLE);
+    }
+
     public void setPhase(Phase newPhase) {
         if (newPhase == null) {
             return;
@@ -179,7 +249,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 .add(EntityAttributes.GENERIC_MAX_HEALTH, 40.0D)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.23D)
                 .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 6.0D)
-                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, TARGET_RANGE);
+                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, DEBUG_TARGET_RANGE);
     }
 
     @Override
