@@ -12,6 +12,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
+import net.minecraft.world.RaycastContext;
+import net.minecraft.util.hit.BlockHitResult;
 
 import java.util.Comparator;
 import java.util.List;
@@ -179,44 +181,48 @@ public final class WatcherCommands {
     }
 
     /**
-     * Place a new simulation at the edge of loaded render-distance chunks and
-     * outside the player's central view, so the test begins as a distant sighting.
+     * Simulations are deliberately spawned where the player can actually see them.
+     * The normal stalking logic can then move the Watcher toward the render edge after
+     * the player looks away. Spawning at the literal render edge is unreliable because
+     * terrain, fog and chunk tracking can make the first sighting invisible.
      */
     private static Vec3d findDistantSimulationPosition(ServerWorld world, ServerPlayerEntity player) {
         int chunks = WatcherStalkingDirector.renderDistanceChunks(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
-        double[] angleOffsets = {58.0D, 62.0D, 66.0D, 70.0D, 74.0D,
-                -58.0D, -62.0D, -66.0D, -70.0D, -74.0D};
-        double[] radiusSamples = {0.25D, 0.5D, 0.75D};
+        double radius = Math.max(56.0D,
+                Math.min(104.0D, WatcherStalkingDirector.renderDistanceBlocks(chunks) * 0.42D));
+        double[] angleOffsets = {24.0D, -24.0D, 30.0D, -30.0D, 36.0D, -36.0D, 42.0D, -42.0D};
+        double[] radiusScales = {1.0D, 0.9D, 0.8D, 0.7D};
 
-        // Prefer the render-edge band, but back off in one-chunk steps if the
-        // server has not loaded the client's entire render distance.
-        for (double angleOffset : angleOffsets) {
-            for (double radiusSample : radiusSamples) {
-                double desiredRadius = WatcherStalkingDirector.candidateRadius(chunks, radiusSample);
-                for (double backoff = 0.0D; backoff <= 96.0D; backoff += 16.0D) {
-                    double radius = desiredRadius - backoff;
-                    if (radius < 48.0D) {
-                        break;
-                    }
+        for (double radiusScale : radiusScales) {
+            double candidateRadius = radius * radiusScale;
+            for (double angleOffset : angleOffsets) {
+                double angle = Math.toRadians(player.getYaw()) + Math.PI / 2.0D
+                        + Math.toRadians(angleOffset);
+                int x = (int) Math.floor(player.getX() + Math.cos(angle) * candidateRadius);
+                int z = (int) Math.floor(player.getZ() + Math.sin(angle) * candidateRadius);
 
-                    double angle = Math.toRadians(player.getYaw()) + Math.PI / 2.0D
-                            + Math.toRadians(angleOffset);
-                    int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
-                    int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
-
-                    if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                        continue;
-                    }
-
-                    int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
-                    BlockPos feet = new BlockPos(x, y, z);
-                    BlockPos ground = feet.down();
-                    if (world.getBlockState(ground).isSolidBlock(world, ground)
-                            && world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
-                            && world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
-                        return new Vec3d(x + 0.5D, y, z + 0.5D);
-                    }
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                    continue;
                 }
+
+                int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockPos feet = new BlockPos(x, y, z);
+                BlockPos ground = feet.down();
+                if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                        || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                        || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
+                    continue;
+                }
+
+                Vec3d eyes = new Vec3d(x + 0.5D, y + 1.4D, z + 0.5D);
+                BlockHitResult sight = world.raycast(new RaycastContext(
+                        player.getEyePos(), eyes, RaycastContext.ShapeType.COLLIDER,
+                        RaycastContext.FluidHandling.NONE, player));
+                if (sight.getType() != BlockHitResult.Type.MISS) {
+                    continue;
+                }
+
+                return new Vec3d(x + 0.5D, y, z + 0.5D);
             }
         }
 
