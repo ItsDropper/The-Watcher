@@ -12,7 +12,6 @@ import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.bernie.geckolib.GeckoLib;
 
 public class TheWatcher implements ModInitializer {
     public static final String MOD_ID = "the-watcher";
@@ -30,7 +29,6 @@ public class TheWatcher implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        GeckoLib.initialize();
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         LOGGER.info("The Watcher entity registered.");
     }
