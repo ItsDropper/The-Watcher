@@ -112,7 +112,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         setTarget(player);
-        phaseTicks++;
 
         boolean watched = isPlayerWatching(player);
         if (watched) {
@@ -124,6 +123,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
+        // A watched entity's phase timer pauses; it should not escalate just because the player stares.
+        phaseTicks++;
         unseenTicks = Math.min(unseenTicks + 1, 1200);
         attentionTicks = Math.max(0, attentionTicks - 2);
         if (phase != Phase.IDLE) tryDreadEffect(world, player);
