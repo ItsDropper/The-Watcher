@@ -7,10 +7,12 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 ## Current gameplay
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
-- During stalking, it freezes while visible. When out of sight, it moves at high speed and can reposition behind solid cover; hidden teleports are rejected if the player has line of sight to the Watcher or its destination.
+- When the player directly watches it, The Watcher freezes completely. It has no look-around goal and always uses its idle animation.
+- During stalking, it moves quickly while unobserved and sometimes teleports to a covered position. Teleports have a cooldown and are intentionally not guaranteed; its response adapts to how long the player keeps watching it.
 - Retreating is deliberately abrupt: while unseen, it can jump 20–32 blocks to a covered position; while visible, it sprints away instead of teleporting.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
-- When it is nearby, occasional Enderman-like audio cues and short Darkness bursts add pressure.
+- Nearby encounters can trigger randomized cave ambience, spatial Enderman-like sounds, and brief Darkness bursts instead of constant predictable effects.
+- The pause menu includes a **The Watcher Settings** screen for toggling dread effects, night darkness, and unpredictable teleporting.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
 - The entity does not use the usual automatic target and continuous melee goals.
 
