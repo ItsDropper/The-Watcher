@@ -9,6 +9,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -48,6 +49,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private static final double DEBUG_TARGET_RANGE = 128.0D;
 
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
+    private final WatcherLearningEngine learningEngine = new WatcherLearningEngine();
     private Phase phase = Phase.IDLE;
     private int phaseTicks;
     private int hiddenMoveCooldown;
@@ -93,7 +95,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             player = current;
         }
 
-        double targetRange = (debugPhaseLocked || debugSimulation) ? DEBUG_TARGET_RANGE\n                : Math.max(TARGET_RANGE, TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS * 16.0D + 32.0D);
+        double targetRange = (debugPhaseLocked || debugSimulation)
+                ? DEBUG_TARGET_RANGE
+                : Math.max(TARGET_RANGE, TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS * 16.0D + 32.0D);
         if (player == null) {
             player = world.getPlayers().stream()
                     .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
@@ -114,6 +118,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         setTarget(player);
 
         boolean watched = isPlayerWatching(player);
+        learningEngine.observe(watched, Math.sqrt(squaredDistanceTo(player)));
         if (watched) {
             attentionTicks = Math.min(attentionTicks + 1, 1200);
             unseenTicks = 0;
@@ -144,9 +149,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 // Stalking is stationary. It only relocates after leaving the player's view.
                 getNavigation().stop();
                 setVelocity(0.0D, getVelocity().y, 0.0D);
-                int teleportChance = debugSimulation ? 45 : 24;
+                int baseTeleportChance = debugSimulation ? 45 : 24;
+                int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
                 if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
-                        && unseenTicks >= 12 && random.nextInt(100) < teleportChance) {
+                        && unseenTicks >= learningEngine.getHiddenTeleportDelayTicks()
+                        && random.nextInt(100) < teleportChance) {
                     boolean teleported = tryHiddenTeleport(world, player, false);
                     hiddenMoveCooldown = (debugSimulation ? 30 : 90) + random.nextInt(91);
                     if (teleported) {
@@ -155,7 +162,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     }
                 }
 
-                int duration = debugSimulation ? 180 : STALK_TICKS;
+                int duration = debugSimulation ? 180 : learningEngine.adjustStalkDuration(STALK_TICKS);
                 if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.ESCALATING);
                 }
@@ -313,6 +320,18 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         double destinationX = getX() + (dx / length) * 24.0D;
         double destinationZ = getZ() + (dz / length) * 24.0D;
         getNavigation().startMovingTo(destinationX, getY(), destinationZ, speed);
+    }
+
+    @Override
+    protected void writeCustomDataToNbt(NbtCompound nbt) {
+        super.writeCustomDataToNbt(nbt);
+        learningEngine.writeToNbt(nbt);
+    }
+
+    @Override
+    protected void readCustomDataFromNbt(NbtCompound nbt) {
+        super.readCustomDataFromNbt(nbt);
+        learningEngine.readFromNbt(nbt);
     }
 
     public Phase getPhase() {
