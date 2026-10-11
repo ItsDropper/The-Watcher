@@ -59,6 +59,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean attemptedEscalationAttack;
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
+    private boolean debugPhaseAutoAdvance;
 
     public WatcherEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
