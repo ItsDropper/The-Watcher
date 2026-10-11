@@ -247,16 +247,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return false;
     }
 
-    private boolean isPlayerLookingAtWatcher(PlayerEntity player) {
-        Vec3d directionToWatcher = new Vec3d(
-                getX() - player.getX(),
-                getEyeY() - player.getEyeY(),
-                getZ() - player.getZ()
-        ).normalize();
-
-        return player.getRotationVec(1.0F).dotProduct(directionToWatcher) > 0.92D;
-    }
-
     private void resetToIdle() {
         setPhase(Phase.IDLE);
         setTarget(null);
