@@ -61,9 +61,13 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
+    private int daylightTicks;
 
     public WatcherEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
+        // The stalking ring intentionally exceeds vanilla's usual despawn distance.
+        // Keep the entity alive until this mod explicitly ends its encounter.
+        setPersistent();
     }
 
     @Override
@@ -89,8 +93,15 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         if (!debugPhaseLocked && !debugSimulation && !night) {
             resetToIdle();
+            // End a natural encounter deliberately after dawn instead of leaving
+            // persistent Watchers scattered around the world forever.
+            daylightTicks++;
+            if (daylightTicks >= 600) {
+                discard();
+            }
             return;
         }
+        daylightTicks = 0;
 
         PlayerEntity player = null;
         if ((debugPhaseLocked || debugSimulation) && getTarget() instanceof PlayerEntity current
