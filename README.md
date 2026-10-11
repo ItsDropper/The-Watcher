@@ -13,7 +13,9 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
 - Retreating is deliberately abrupt: while unseen, it can jump to a covered position; while visible, it sprints away instead of teleporting.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
-- Nearby encounters can trigger randomized cave ambience, spatial Enderman-like sounds, and brief Darkness bursts instead of constant predictable effects.
+- Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
+- Close encounters can trigger randomized cave ambience, an Enderman-like stare cue, and short Darkness bursts instead of constant predictable effects.
+- The Watcher can now appear naturally and very rarely in Overworld hostile-mob spawns at night; it is not intended to replace ordinary mobs or appear constantly.
 - The pause menu includes **The Watcher Settings** for toggling dread effects, night darkness, and unpredictable teleporting.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
 - The entity does not use the usual automatic target and continuous melee goals.
@@ -27,7 +29,7 @@ These commands require operator permission level 2 and are intended for a world/
 | Command | Effect |
 | --- | --- |
 | `/watcher debug` | Show the command list |
-| `/watcher debug spawn` | Spawn a Watcher five blocks in front of you |
+| `/watcher debug spawn` | Spawn a Watcher on safe ground in front of you |
 | `/watcher debug status` | Show phase, phase ticks, debug lock, health, distance, and target |
 | `/watcher debug phase observe` | Lock it into the stationary observing phase |
 | `/watcher debug phase stalk` | Lock it into stationary stalking with hidden long-range teleports |
@@ -37,10 +39,10 @@ These commands require operator permission level 2 and are intended for a world/
 | `/watcher debug darkness on` | Enable extra Overworld night darkness |
 | `/watcher debug darkness off` | Disable extra Overworld night darkness |
 | `/watcher debug despawn` | Remove the nearest Watcher within 64 blocks |
-| `/watcher debug simulate` | Spawn a Watcher if needed and run an accelerated observe → stalk → escalate → retreat encounter against you |
+| `/watcher debug simulate` | Place a Watcher nearby in clear sight and run an accelerated observe → stalk → escalate → retreat encounter against you |
 | `/watcher debug simulate stop` | Stop the simulated encounter |
 
-A phase forced with a debug command stays locked until `/watcher debug phase auto` is used. The simulation command instead runs a shortened encounter during any time of day; stop it with `/watcher debug simulate stop`. These commands let you test without waiting for normal phase timers.
+Debug commands search a wide area so the Watcher can still be recovered after a distant relocation. A phase forced with a debug command stays locked until `/watcher debug phase auto` is used. The simulation command instead runs a shortened encounter during any time of day; stop it with `/watcher debug simulate stop`. These commands let you test without waiting for normal phase timers.
 
 ## Requirements
 
