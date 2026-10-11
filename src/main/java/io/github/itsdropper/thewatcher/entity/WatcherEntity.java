@@ -1,5 +1,6 @@
 package io.github.itsdropper.thewatcher.entity;
 
+import io.github.itsdropper.thewatcher.TheWatcher;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -144,7 +145,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 boolean teleported = false;
                 int attentionPenalty = Math.min(attentionTicks / 20, 10);
                 int teleportChance = Math.max(8, 28 - attentionPenalty * 2);
-                if (hiddenMoveCooldown <= 0 && unseenTicks >= 8 && random.nextInt(100) < teleportChance) {
+                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0 && unseenTicks >= 8 && random.nextInt(100) < teleportChance) {
                     teleported = tryHiddenTeleport(world, player, false);
                     hiddenMoveCooldown = (debugSimulation ? 16 : 35) + random.nextInt(46);
                     if (teleported) {
@@ -181,7 +182,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             case RETREATING -> {
                 lookAtPlayer(player);
                 boolean teleported = false;
-                if (hiddenMoveCooldown <= 0 && random.nextInt(100) < 62) {
+                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0 && random.nextInt(100) < 62) {
                     teleported = tryHiddenTeleport(world, player, true);
                     hiddenMoveCooldown = 8 + random.nextInt(15);
                     if (teleported) {
@@ -259,7 +260,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     private void tryDreadEffect(ServerWorld world, PlayerEntity player) {
-        if (dreadEffectCooldown > 0 || phase == Phase.IDLE || squaredDistanceTo(player) > 20.0D * 20.0D) return;
+        if (!TheWatcher.DREAD_EFFECTS_ENABLED || dreadEffectCooldown > 0 || phase == Phase.IDLE || squaredDistanceTo(player) > 20.0D * 20.0D) return;
         dreadEffectCooldown = 100 + random.nextInt(220);
         if (random.nextFloat() < 0.58F) {
             world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE,
