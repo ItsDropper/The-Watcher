@@ -238,7 +238,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     player.getEyePos(), destinationEyes,
                     RaycastContext.ShapeType.COLLIDER,
                     RaycastContext.FluidHandling.NONE, player));
-            if (sightCheck.getType() == BlockHitResult.Type.MISS) {
+            Vec3d destinationDirection = destinationEyes.subtract(player.getEyePos()).normalize();
+            boolean destinationInView = player.getRotationVec(1.0F).normalize()
+                    .dotProduct(destinationDirection) > 0.15D;
+            // A destination may be visible from the player's current position only if solid cover hides it.
+            if (sightCheck.getType() == BlockHitResult.Type.MISS && destinationInView) {
                 continue;
             }
 
