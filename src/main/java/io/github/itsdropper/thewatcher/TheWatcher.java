@@ -60,13 +60,13 @@ public class TheWatcher implements ModInitializer {
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
-        if (!night || world.getTime() % 80L != 0L) {
+        if (!night || world.getTime() % 240L != 0L) {
             return;
         }
 
         for (var player : world.getPlayers()) {
             player.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.DARKNESS, 100, 0, true, false, false));
+                    StatusEffects.DARKNESS, 35, 0, true, false, false));
         }
     }
 
