@@ -8,11 +8,12 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
 - When the player directly watches it, The Watcher freezes completely. It has no look-around goal and always uses its idle animation.
-- During stalking, it moves quickly while unobserved and sometimes teleports to a covered position. Teleports have a cooldown and are intentionally not guaranteed; its response adapts to how long the player keeps watching it.
-- Retreating is deliberately abrupt: while unseen, it can jump 20–32 blocks to a covered position; while visible, it sprints away instead of teleporting.
+- During stalking, The Watcher does not walk toward the player. It stays still and may relocate only after it is outside the player's view, using a covered position near the configured render-distance edge. Stalking teleports have no teleport sound, so the player should notice the new position rather than hear the move.
+- The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
+- Retreating is deliberately abrupt: while unseen, it can jump to a covered position; while visible, it sprints away instead of teleporting.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
 - Nearby encounters can trigger randomized cave ambience, spatial Enderman-like sounds, and brief Darkness bursts instead of constant predictable effects.
-- The pause menu includes a **The Watcher Settings** screen for toggling dread effects, night darkness, and unpredictable teleporting.
+- The pause menu includes **The Watcher Settings** for toggling dread effects, night darkness, and unpredictable teleporting.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
 - The entity does not use the usual automatic target and continuous melee goals.
 
@@ -27,8 +28,8 @@ These commands require operator permission level 2 and are intended for a world/
 | `/watcher debug` | Show the command list |
 | `/watcher debug spawn` | Spawn a Watcher five blocks in front of you |
 | `/watcher debug status` | Show phase, phase ticks, debug lock, health, distance, and target |
-| `/watcher debug phase observe` | Force it to observe and look at you |
-| `/watcher debug phase stalk` | Lock it into stalking; it advances when you are not looking at it |
+| `/watcher debug phase observe` | Lock it into the stationary observing phase |
+| `/watcher debug phase stalk` | Lock it into stationary stalking with hidden long-range teleports |
 | `/watcher debug phase escalate` | Lock it into escalation; it pursues and attacks once when close |
 | `/watcher debug phase retreat` | Lock it into retreating behavior |
 | `/watcher debug phase auto` | Remove the debug lock and resume automatic night behavior |
