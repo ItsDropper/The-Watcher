@@ -75,7 +75,7 @@ public final class WatcherCommands {
         watcher.refreshPositionAndAngles(x, player.getY(), z, player.getYaw() + 180.0F, 0.0F);
         source.getWorld().spawnEntity(watcher);
         source.sendFeedback(() -> Text.literal(
-                "Spawned The Watcher 5 blocks ahead. Use /watcher debug status."), false);
+                "Spawned The Watcher. Use /watcher debug status to inspect it."), false);
         return 1;
     }
 
@@ -188,17 +188,14 @@ public final class WatcherCommands {
     }
 
     /**
-     * Simulations are deliberately spawned where the player can actually see them.
-     * The normal stalking logic can then move the Watcher toward the render edge after
-     * the player looks away. Spawning at the literal render edge is unreliable because
-     * terrain, fog and chunk tracking can make the first sighting invisible.
+     * Simulations start close enough to verify visually, in front of the player, on safe loaded ground.
+     * Once the player looks away, the normal stalking logic relocates the Watcher to its distant band.
+     * Starting at the render edge made debugging dependent on fog, terrain, and chunk tracking.
      */
     private static Vec3d findDistantSimulationPosition(ServerWorld world, ServerPlayerEntity player) {
-        int chunks = WatcherStalkingDirector.renderDistanceChunks(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
-        double radius = Math.max(56.0D,
-                Math.min(104.0D, WatcherStalkingDirector.renderDistanceBlocks(chunks) * 0.42D));
-        double[] angleOffsets = {24.0D, -24.0D, 30.0D, -30.0D, 36.0D, -36.0D, 42.0D, -42.0D};
-        double[] radiusScales = {1.0D, 0.9D, 0.8D, 0.7D};
+        double radius = 12.0D;
+        double[] angleOffsets = {0.0D, 8.0D, -8.0D, 16.0D, -16.0D, 24.0D, -24.0D};
+        double[] radiusScales = {1.0D, 1.25D, 1.5D, 2.0D};
 
         for (double radiusScale : radiusScales) {
             double candidateRadius = radius * radiusScale;
