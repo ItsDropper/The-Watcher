@@ -444,6 +444,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     public void resumeAutomaticPhases() {
         debugSimulation = false;
         debugPhaseLocked = false;
+        debugPhaseAutoAdvance = false;
         setPhase(Phase.IDLE);
     }
 
