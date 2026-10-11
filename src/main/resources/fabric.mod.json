@@ -1,39 +1,39 @@
 {
-	"schemaVersion": 1,
-	"id": "the-watcher",
-	"version": "${version}",
-	"name": "The Watcher",
-	"description": "Horror mod.",
-	"authors": [
-		"ItzDropper"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "MIT",
-	"icon": "assets/the-watcher/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"io.github.itsdropper.thewatcher.TheWatcher"
-		],
-		"client": [
-			"io.github.itsdropper.thewatcher.client.TheWatcherClient"
-		]
-	},
-	"mixins": [
-		"the-watcher.mixins.json",
-		{
-			"config": "the-watcher.client.mixins.json",
-			"environment": "client"
-		}
-	],
-	"depends": {
-		"fabricloader": ">=0.19.5",
-		"minecraft": "~1.21.1",
-		"java": ">=21",
-		"fabric-api": "*",
-		"geckolib": ">=4.8.3"
-	}
+  "schemaVersion": 1,
+  "id": "the-watcher",
+  "version": "${version}",
+  "name": "The Watcher",
+  "description": "An early-development horror mod for Fabric 1.21.1.",
+  "authors": [
+    "ItzDropper"
+  ],
+  "contact": {
+    "homepage": "https://github.com/ItsDropper/The-Watcher",
+    "sources": "https://github.com/ItsDropper/The-Watcher",
+    "issues": "https://github.com/ItsDropper/The-Watcher/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/the-watcher/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.itsdropper.thewatcher.TheWatcher"
+    ],
+    "client": [
+      "io.github.itsdropper.thewatcher.client.TheWatcherClient"
+    ]
+  },
+  "mixins": [
+    "the-watcher.mixins.json",
+    {
+      "config": "the-watcher.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "geckolib": ">=4.8.3"
+  }
 }
