@@ -23,17 +23,19 @@ public class TheWatcher implements ModInitializer {
     public static final String MOD_ID = "the-watcher";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    // Debug command can toggle this at runtime. Darkness is applied only at night.
     public static volatile boolean NIGHT_DARKNESS_ENABLED = true;
     public static volatile boolean DREAD_EFFECTS_ENABLED = true;
     public static volatile boolean TELEPORTS_ENABLED = true;
+
+    // Updated by the client settings screen from Minecraft's actual view-distance option.
+    public static volatile int WATCHER_RENDER_DISTANCE_CHUNKS = 12;
 
     public static final EntityType<WatcherEntity> WATCHER = Registry.register(
             Registries.ENTITY_TYPE,
             id("watcher"),
             FabricEntityTypeBuilder.create(SpawnGroup.MONSTER, WatcherEntity::new)
                     .dimensions(EntityDimensions.fixed(0.75F, 2.7F))
-                    .trackRangeBlocks(96)
+                    .trackRangeBlocks(512)
                     .trackedUpdateRate(2)
                     .build()
     );
@@ -58,7 +60,6 @@ public class TheWatcher implements ModInitializer {
         }
 
         for (var player : world.getPlayers()) {
-            // Refresh before expiry to keep the effect continuous without an icon or particles.
             player.addStatusEffect(new StatusEffectInstance(
                     StatusEffects.DARKNESS, 100, 0, true, false, false));
         }
