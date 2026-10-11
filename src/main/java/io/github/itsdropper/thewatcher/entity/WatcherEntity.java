@@ -13,7 +13,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Heightmap;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -46,8 +50,10 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     private Phase phase = Phase.IDLE;
     private int phaseTicks;
+    private int hiddenMoveCooldown;
     private boolean attemptedEscalationAttack;
     private boolean debugPhaseLocked;
+    private boolean debugSimulation;
 
     public WatcherEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
@@ -68,22 +74,26 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
+        if (hiddenMoveCooldown > 0) {
+            hiddenMoveCooldown--;
+        }
+
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
 
-        // Debug-forced phases deliberately work during daytime and outside the normal range.
-        if (!debugPhaseLocked && !night) {
+        // Debug simulation is a complete, accelerated encounter that works during daytime.
+        if (!debugPhaseLocked && !debugSimulation && !night) {
             resetToIdle();
             return;
         }
 
         PlayerEntity player = null;
-        if (debugPhaseLocked && getTarget() instanceof PlayerEntity current
+        if ((debugPhaseLocked || debugSimulation) && getTarget() instanceof PlayerEntity current
                 && current.isAlive() && !current.isSpectator()) {
             player = current;
         }
 
-        double targetRange = debugPhaseLocked ? DEBUG_TARGET_RANGE : TARGET_RANGE;
+        double targetRange = (debugPhaseLocked || debugSimulation) ? DEBUG_TARGET_RANGE : TARGET_RANGE;
         if (player == null) {
             player = world.getPlayers().stream()
                     .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
@@ -93,7 +103,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         if (player == null) {
-            if (!debugPhaseLocked) {
+            if (!debugPhaseLocked && !debugSimulation) {
                 resetToIdle();
             } else {
                 getNavigation().stop();
@@ -106,7 +116,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         if (phase != Phase.IDLE && squaredDistanceTo(player) <= 24.0D * 24.0D
                 && world.getTime() % 200L == 0L) {
-            // A rare, spatially located cue makes the entity feel present without constant noise.
             world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_STARE,
                     SoundCategory.HOSTILE, 0.4F, 0.65F + random.nextFloat() * 0.25F);
 
@@ -121,47 +130,121 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             case OBSERVING -> {
                 lookAtPlayer(player);
                 getNavigation().stop();
-                if (!debugPhaseLocked && phaseTicks >= OBSERVE_TICKS) {
+                int duration = debugSimulation ? 50 : OBSERVE_TICKS;
+                if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.STALKING);
                 }
             }
             case STALKING -> {
                 lookAtPlayer(player);
-                // The Watcher advances while it is not being watched, then freezes when noticed.
-                if (!isPlayerLookingAtWatcher(player)
-                        && squaredDistanceTo(player) > 5.5D * 5.5D) {
-                    getNavigation().startMovingTo(player, 0.55D);
+                boolean visible = player.canSee(this);
+                if (!visible) {
+                    // When unseen, it moves unnaturally quickly and may reposition behind cover.
+                    if (hiddenMoveCooldown <= 0 && tryHiddenTeleport(world, player, false)) {
+                        hiddenMoveCooldown = debugSimulation ? 12 + random.nextInt(10)
+                                : 18 + random.nextInt(20);
+                        getNavigation().stop();
+                    } else if (squaredDistanceTo(player) > 4.0D * 4.0D) {
+                        getNavigation().startMovingTo(player, 1.65D);
+                    } else {
+                        getNavigation().stop();
+                    }
                 } else {
+                    // It must never teleport while visible. Freeze if the player can see it.
                     getNavigation().stop();
                 }
-                if (!debugPhaseLocked && phaseTicks >= STALK_TICKS) {
+
+                int duration = debugSimulation ? 180 : STALK_TICKS;
+                if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.ESCALATING);
                 }
             }
             case ESCALATING -> {
                 lookAtPlayer(player);
-                getNavigation().startMovingTo(player, 0.82D);
+                getNavigation().startMovingTo(player, 1.05D);
 
-                // One attack attempt per escalation; no ordinary continuous melee loop.
                 if (!attemptedEscalationAttack && squaredDistanceTo(player) <= 2.6D * 2.6D) {
                     attemptedEscalationAttack = true;
                     tryAttack(player);
                 }
 
-                if (!debugPhaseLocked && phaseTicks >= ESCALATE_TICKS) {
+                int duration = debugSimulation ? 100 : ESCALATE_TICKS;
+                if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.RETREATING);
                 }
             }
             case RETREATING -> {
-                if (phaseTicks == 1) {
-                    moveAwayFrom(player);
-                }
                 lookAtPlayer(player);
-                if (!debugPhaseLocked && phaseTicks >= RETREAT_TICKS) {
+                boolean visible = player.canSee(this);
+                if (!visible) {
+                    // Retreats vanish into cover, then reappear far away rather than running normally.
+                    if (hiddenMoveCooldown <= 0 && tryHiddenTeleport(world, player, true)) {
+                        hiddenMoveCooldown = 2 + random.nextInt(4);
+                        getNavigation().stop();
+                    } else {
+                        moveAwayFrom(player, 2.0D);
+                    }
+                } else {
+                    // No retreat teleport is allowed while the player has line of sight.
+                    moveAwayFrom(player, 2.0D);
+                }
+
+                int duration = debugSimulation ? 50 : RETREAT_TICKS;
+                if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.OBSERVING);
                 }
             }
         }
+    }
+
+    /**
+     * Teleports only when the Watcher itself is already out of sight, and only to a
+     * grounded candidate with solid cover between the player and the destination.
+     */
+    private boolean tryHiddenTeleport(ServerWorld world, PlayerEntity player, boolean retreat) {
+        if (player.canSee(this)) {
+            return false;
+        }
+
+        int attempts = 14;
+        for (int i = 0; i < attempts; i++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            double minRadius = retreat ? 20.0D : 7.0D;
+            double maxRadius = retreat ? 32.0D : 16.0D;
+            double radius = minRadius + random.nextDouble() * (maxRadius - minRadius);
+            int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
+            int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
+
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                continue;
+            }
+
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            BlockPos feet = new BlockPos(x, y, z);
+            BlockPos ground = feet.down();
+
+            if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                    || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                    || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
+                continue;
+            }
+
+            Vec3d destinationEyes = new Vec3d(x + 0.5D, y + 1.4D, z + 0.5D);
+            BlockHitResult sightCheck = world.raycast(new RaycastContext(
+                    player.getEyePos(), destinationEyes,
+                    RaycastContext.ShapeType.COLLIDER,
+                    RaycastContext.FluidHandling.NONE, player));
+            if (sightCheck.getType() == BlockHitResult.Type.MISS) {
+                continue;
+            }
+
+            requestTeleport(x + 0.5D, y, z + 0.5D);
+            getNavigation().stop();
+            lookAtPlayer(player);
+            return true;
+        }
+
+        return false;
     }
 
     private boolean isPlayerLookingAtWatcher(PlayerEntity player) {
@@ -184,7 +267,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         getLookControl().lookAt(player, 30.0F, 30.0F);
     }
 
-    private void moveAwayFrom(PlayerEntity player) {
+    private void moveAwayFrom(PlayerEntity player, double speed) {
         double dx = getX() - player.getX();
         double dz = getZ() - player.getZ();
         double length = Math.sqrt(dx * dx + dz * dz);
@@ -195,9 +278,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             length = 1.0D;
         }
 
-        double destinationX = getX() + (dx / length) * 16.0D;
-        double destinationZ = getZ() + (dz / length) * 16.0D;
-        getNavigation().startMovingTo(destinationX, getY(), destinationZ, 0.75D);
+        double destinationX = getX() + (dx / length) * 24.0D;
+        double destinationZ = getZ() + (dz / length) * 24.0D;
+        getNavigation().startMovingTo(destinationX, getY(), destinationZ, speed);
     }
 
     public Phase getPhase() {
@@ -212,20 +295,48 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return debugPhaseLocked;
     }
 
+    public boolean isDebugSimulation() {
+        return debugSimulation;
+    }
+
     public void forceDebugPhase(Phase newPhase, PlayerEntity player) {
         if (newPhase == null || player == null) {
             return;
         }
 
+        debugSimulation = false;
         debugPhaseLocked = true;
         phase = newPhase;
         phaseTicks = 0;
+        hiddenMoveCooldown = 0;
         attemptedEscalationAttack = false;
         setTarget(player);
         getNavigation().stop();
     }
 
+    public void startDebugSimulation(PlayerEntity player) {
+        if (player == null) {
+            return;
+        }
+
+        debugPhaseLocked = false;
+        debugSimulation = true;
+        phase = Phase.OBSERVING;
+        phaseTicks = 0;
+        hiddenMoveCooldown = 0;
+        attemptedEscalationAttack = false;
+        setTarget(player);
+        getNavigation().stop();
+    }
+
+    public void stopDebugSimulation() {
+        debugSimulation = false;
+        debugPhaseLocked = false;
+        resetToIdle();
+    }
+
     public void resumeAutomaticPhases() {
+        debugSimulation = false;
         debugPhaseLocked = false;
         setPhase(Phase.IDLE);
     }
