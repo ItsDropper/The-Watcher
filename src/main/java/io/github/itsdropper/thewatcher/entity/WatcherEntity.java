@@ -64,9 +64,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
     @Override
     protected void initGoals() {
-        // No vanilla combat/target goals: the Watcher is controlled by its own state machine.
         this.goalSelector.add(0, new SwimGoal(this));
-        // No look-around goal: The Watcher is deliberately unnaturally still.
+        // No look-around or movement goals: stalking should feel unnaturally still.
     }
 
     @Override
@@ -83,7 +82,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
 
-        // Debug simulation is a complete, accelerated encounter that works during daytime.
         if (!debugPhaseLocked && !debugSimulation && !night) {
             resetToIdle();
             return;
@@ -133,31 +131,27 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         switch (phase) {
             case IDLE -> setPhase(Phase.OBSERVING);
             case OBSERVING -> {
-                lookAtPlayer(player);
+                // Keep the entity still; do not track the player with its head.
                 getNavigation().stop();
+                setVelocity(0.0D, getVelocity().y, 0.0D);
                 int duration = debugSimulation ? 50 : OBSERVE_TICKS;
                 if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.STALKING);
                 }
             }
             case STALKING -> {
-                lookAtPlayer(player);
-                boolean teleported = false;
-                int attentionPenalty = Math.min(attentionTicks / 20, 10);
-                int teleportChance = Math.max(8, 28 - attentionPenalty * 2);
-                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0 && unseenTicks >= 8 && random.nextInt(100) < teleportChance) {
-                    teleported = tryHiddenTeleport(world, player, false);
-                    hiddenMoveCooldown = (debugSimulation ? 16 : 35) + random.nextInt(46);
+                // Stalking is stationary. It only relocates after leaving the player's view.
+                getNavigation().stop();
+                setVelocity(0.0D, getVelocity().y, 0.0D);
+                int teleportChance = debugSimulation ? 45 : 24;
+                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
+                        && unseenTicks >= 12 && random.nextInt(100) < teleportChance) {
+                    boolean teleported = tryHiddenTeleport(world, player, false);
+                    hiddenMoveCooldown = (debugSimulation ? 30 : 90) + random.nextInt(91);
                     if (teleported) {
-                        world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT,
-                                SoundCategory.HOSTILE, 0.65F, 0.55F + random.nextFloat() * 0.35F);
+                        // No teleport sound: the player should discover the new position, not hear the move.
                         getNavigation().stop();
                     }
-                }
-                if (!teleported && squaredDistanceTo(player) > 4.0D * 4.0D) {
-                    getNavigation().startMovingTo(player, attentionTicks > 100 ? 1.85D : 1.55D);
-                } else {
-                    getNavigation().stop();
                 }
 
                 int duration = debugSimulation ? 180 : STALK_TICKS;
@@ -182,7 +176,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             case RETREATING -> {
                 lookAtPlayer(player);
                 boolean teleported = false;
-                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0 && random.nextInt(100) < 62) {
+                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
+                        && !isWithinPlayerView(player) && random.nextInt(100) < 62) {
                     teleported = tryHiddenTeleport(world, player, true);
                     hiddenMoveCooldown = 8 + random.nextInt(15);
                     if (teleported) {
@@ -202,20 +197,25 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     /**
-     * Teleports only when the Watcher itself is already out of sight, and only to a
-     * grounded candidate with solid cover between the player and the destination.
+     * Stalking teleports aim just inside the configured client render-distance edge.
+     * A candidate must be loaded, safe to stand on, and hidden behind solid cover.
      */
     private boolean tryHiddenTeleport(ServerWorld world, PlayerEntity player, boolean retreat) {
-        if (isPlayerWatching(player)) {
+        if (isWithinPlayerView(player)) {
             return false;
         }
 
-        int attempts = 14;
+        int attempts = 40;
+        int renderBlocks = Math.max(4, TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS) * 16;
         for (int i = 0; i < attempts; i++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
-            double minRadius = retreat ? 20.0D : 7.0D;
-            double maxRadius = retreat ? 32.0D : 16.0D;
-            double radius = minRadius + random.nextDouble() * (maxRadius - minRadius);
+            double radius;
+            if (retreat) {
+                radius = 24.0D + random.nextDouble() * 24.0D;
+            } else {
+                // Stay roughly one chunk inside the view-distance edge, so it can be glimpsed at range.
+                radius = Math.max(48.0D, renderBlocks - 16.0D - random.nextDouble() * 20.0D);
+            }
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
 
@@ -244,7 +244,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
             requestTeleport(x + 0.5D, y, z + 0.5D);
             getNavigation().stop();
-            lookAtPlayer(player);
             return true;
         }
 
@@ -257,6 +256,18 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 getEyeY() - player.getEyeY(), getZ() - player.getZ()).normalize();
         Vec3d look = player.getRotationVec(1.0F).normalize();
         return look.dotProduct(toWatcher) > 0.965D;
+    }
+
+    /**
+     * Conservative view-cone check: never teleport while the entity is visible in front of
+     * the player, even if the player is not aiming the crosshair directly at it.
+     */
+    private boolean isWithinPlayerView(PlayerEntity player) {
+        if (!player.canSee(this)) return false;
+        Vec3d toWatcher = new Vec3d(getX() - player.getX(),
+                getEyeY() - player.getEyeY(), getZ() - player.getZ()).normalize();
+        Vec3d look = player.getRotationVec(1.0F).normalize();
+        return look.dotProduct(toWatcher) > 0.15D;
     }
 
     private void tryDreadEffect(ServerWorld world, PlayerEntity player) {
