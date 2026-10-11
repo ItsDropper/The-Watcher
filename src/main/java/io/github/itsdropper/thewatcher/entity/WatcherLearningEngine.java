@@ -22,7 +22,9 @@ public final class WatcherLearningEngine {
     private boolean previousWatched;
 
     public void observe(boolean watched, double distance) {
-        observedTicks = Math.min(Long.MAX_VALUE, observedTicks + 1L);
+        if (observedTicks < Long.MAX_VALUE) {
+            observedTicks++;
+        }
         averagePlayerDistance = blend(averagePlayerDistance, clamp(distance, 0.0D, 512.0D));
 
         if (!hasPreviousState) {
