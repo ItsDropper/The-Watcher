@@ -8,7 +8,8 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
 - When the player directly watches it, The Watcher freezes completely. It has no look-around goal and always uses its idle animation.
-- During stalking, The Watcher does not walk toward the player. It stays still and may relocate only after it is outside the player's view, using a covered position near the configured render-distance edge. Stalking teleports have no teleport sound, so the player should notice the new position rather than hear the move.
+- During stalking, The Watcher does not walk toward the player. It uses the live Minecraft render-distance option, and relocates to a narrow band just inside the visible distance edge. If it starts too close, it prioritizes moving away as soon as you stop looking at it. Candidate positions must be safe and outside your current view or hidden by solid cover. Stalking teleports are silent; the intent is to catch a distant silhouette at the edge of visibility, not to pop up beside you.
+- Render distance is sampled continuously, so changing Minecraft's video setting takes effect without reopening The Watcher Settings. `/watcher debug status` reports the current stalking distance band.
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
 - Retreating is deliberately abrupt: while unseen, it can jump to a covered position; while visible, it sprints away instead of teleporting.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
