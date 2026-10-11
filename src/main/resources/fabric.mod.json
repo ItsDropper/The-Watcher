@@ -1,0 +1,39 @@
+{
+	"schemaVersion": 1,
+	"id": "the-watcher",
+	"version": "${version}",
+	"name": "The Watcher",
+	"description": "Horror mod.",
+	"authors": [
+		"ItzDropper"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/the-watcher/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.itsdropper.thewatcher.TheWatcher"
+		],
+		"client": [
+			"io.github.itsdropper.thewatcher.client.TheWatcherClient"
+		]
+	},
+	"mixins": [
+		"the-watcher.mixins.json",
+		{
+			"config": "the-watcher.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"geckolib": ">=4.8.3"
+	}
+}
