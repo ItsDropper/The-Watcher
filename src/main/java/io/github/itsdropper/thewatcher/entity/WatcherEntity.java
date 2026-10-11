@@ -406,6 +406,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         debugSimulation = false;
         debugPhaseLocked = true;
+        debugPhaseAutoAdvance = newPhase == Phase.ESCALATING;
         phase = newPhase;
         phaseTicks = 0;
         hiddenMoveCooldown = 0;
@@ -424,6 +425,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         debugPhaseLocked = false;
         debugSimulation = true;
+        debugPhaseAutoAdvance = false;
         phase = Phase.OBSERVING;
         phaseTicks = 0;
         hiddenMoveCooldown = 0;
@@ -435,6 +437,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     public void stopDebugSimulation() {
         debugSimulation = false;
         debugPhaseLocked = false;
+        debugPhaseAutoAdvance = false;
         resetToIdle();
     }
 
