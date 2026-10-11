@@ -3,6 +3,7 @@ package io.github.itsdropper.thewatcher.command;
 import com.mojang.brigadier.CommandDispatcher;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
+import io.github.itsdropper.thewatcher.entity.WatcherStalkingDirector;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -77,7 +78,7 @@ public final class WatcherCommands {
         WatcherEntity watcher = findNearestWatcher(player);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No Watcher found within 64 blocks. Use /watcher debug spawn."));
+            source.sendError(Text.literal("No Watcher found within the current stalking search range. Use /watcher debug spawn."));
             return 0;
         }
 
@@ -87,6 +88,10 @@ public final class WatcherCommands {
                 + ", simulation=" + watcher.isDebugSimulation()
                 + ", health=" + String.format(java.util.Locale.ROOT, "%.1f", watcher.getHealth())
                 + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", player.distanceTo(watcher))
+                + ", renderDistance=" + TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS + " chunks"
+                + ", stalkingBand=" + String.format(java.util.Locale.ROOT, "%.0f-%.0f blocks",
+                        WatcherStalkingDirector.minimumStalkingDistance(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS),
+                        WatcherStalkingDirector.maximumStalkingDistance(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS))
                 + ", target=" + (watcher.getTarget() == null ? "none" : watcher.getTarget().getName().getString())), false);
         return 1;
     }
@@ -97,7 +102,7 @@ public final class WatcherCommands {
         WatcherEntity watcher = findNearestWatcher(player);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No Watcher found within 64 blocks. Use /watcher debug spawn."));
+            source.sendError(Text.literal("No Watcher found within the current stalking search range. Use /watcher debug spawn."));
             return 0;
         }
 
@@ -167,13 +172,14 @@ public final class WatcherCommands {
     private static int stopSimulation(ServerCommandSource source)
             throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity player = source.getPlayerOrThrow();
+        double searchRange = WatcherStalkingDirector.targetRange(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS) + 64.0D;
         List<WatcherEntity> simulations = player.getWorld().getEntitiesByClass(
-                WatcherEntity.class, player.getBoundingBox().expand(256.0D), WatcherEntity::isDebugSimulation);
+                WatcherEntity.class, player.getBoundingBox().expand(searchRange), WatcherEntity::isDebugSimulation);
         WatcherEntity watcher = simulations.stream()
                 .min(Comparator.comparingDouble(player::squaredDistanceTo)).orElse(null);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No simulated Watcher found within 256 blocks."));
+            source.sendError(Text.literal("No simulated Watcher found within the current stalking search range."));
             return 0;
         }
 
@@ -189,8 +195,9 @@ public final class WatcherCommands {
     }
 
     private static WatcherEntity findNearestWatcher(ServerPlayerEntity player) {
+        double searchRange = WatcherStalkingDirector.targetRange(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS) + 64.0D;
         List<WatcherEntity> watchers = player.getWorld().getEntitiesByClass(
-                WatcherEntity.class, player.getBoundingBox().expand(64.0D), entity -> true);
+                WatcherEntity.class, player.getBoundingBox().expand(searchRange), entity -> true);
         return watchers.stream().min(Comparator.comparingDouble(player::squaredDistanceTo)).orElse(null);
     }
 }
