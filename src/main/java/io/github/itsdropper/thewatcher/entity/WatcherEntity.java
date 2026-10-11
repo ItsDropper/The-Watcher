@@ -181,7 +181,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     tryAttack(player);
                 }
 
-                int duration = ESCALATE_TICKS;
+                int duration = debugPhaseAutoAdvance ? 45 : ESCALATE_TICKS;
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.RETREATING);
                 }
