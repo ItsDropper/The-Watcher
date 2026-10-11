@@ -7,7 +7,8 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 ## Current gameplay
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
-- During stalking, it approaches when you are not looking directly at it and freezes when you notice it.
+- During stalking, it freezes while visible. When out of sight, it moves at high speed and can reposition behind solid cover; hidden teleports are rejected if the player has line of sight to the Watcher or its destination.
+- Retreating is deliberately abrupt: while unseen, it can jump 20–32 blocks to a covered position; while visible, it sprints away instead of teleporting.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
 - When it is nearby, occasional Enderman-like audio cues and short Darkness bursts add pressure.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
@@ -32,8 +33,10 @@ These commands require operator permission level 2 and are intended for a world/
 | `/watcher debug darkness on` | Enable extra Overworld night darkness |
 | `/watcher debug darkness off` | Disable extra Overworld night darkness |
 | `/watcher debug despawn` | Remove the nearest Watcher within 64 blocks |
+| `/watcher debug simulate` | Spawn a Watcher if needed and run an accelerated observe → stalk → escalate → retreat encounter against you |
+| `/watcher debug simulate stop` | Stop the simulated encounter |
 
-A phase forced with a debug command stays locked until `/watcher debug phase auto` is used. This lets you test the behavior during daytime and without waiting for the normal phase timer.
+A phase forced with a debug command stays locked until `/watcher debug phase auto` is used. The simulation command instead runs a shortened encounter during any time of day; stop it with `/watcher debug simulate stop`. These commands let you test without waiting for normal phase timers.
 
 ## Requirements
 
