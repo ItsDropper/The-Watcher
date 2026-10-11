@@ -15,6 +15,9 @@
   "license": "MIT",
   "icon": "assets/the-watcher/icon.png",
   "environment": "*",
+  "mixins": [
+    "the-watcher.mixins.json"
+  ],
   "entrypoints": {
     "main": [
       "io.github.itsdropper.thewatcher.TheWatcher"
