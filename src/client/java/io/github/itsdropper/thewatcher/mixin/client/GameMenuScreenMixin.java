@@ -25,7 +25,7 @@ public abstract class GameMenuScreenMixin {
         this.addDrawableChild(ButtonWidget.builder(Text.literal("The Watcher Settings"),
                 button -> MinecraftClient.getInstance().setScreen(new WatcherSettingsScreen(screen)))
                 .dimensions(MinecraftClient.getInstance().getWindow().getScaledWidth() / 2 - 100,
-                        MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 96, 200, 20)
+                        MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 144, 200, 20)
                 .build());
     }
 }
