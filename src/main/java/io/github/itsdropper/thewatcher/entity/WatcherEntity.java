@@ -96,8 +96,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             player = current;
         }
 
-        double targetRange = Math.max(TARGET_RANGE,
-                TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS * 16.0D + 32.0D);
+        int renderChunks = WatcherStalkingDirector.renderDistanceChunks(
+                TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
+        double targetRange = Math.max(TARGET_RANGE, WatcherStalkingDirector.targetRange(renderChunks));
         if (player == null) {
             player = world.getPlayers().stream()
                     .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
@@ -151,11 +152,15 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 setVelocity(0.0D, getVelocity().y, 0.0D);
                 int baseTeleportChance = 24;
                 int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
+                double distance = Math.sqrt(squaredDistanceTo(player));
+                boolean tooClose = WatcherStalkingDirector.isTooCloseForStalking(distance, renderChunks);
+                int unseenThreshold = tooClose ? 2 : learningEngine.getHiddenTeleportDelayTicks();
+                boolean relocationRoll = tooClose || random.nextInt(100) < teleportChance;
                 if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
-                        && unseenTicks >= learningEngine.getHiddenTeleportDelayTicks()
-                        && random.nextInt(100) < teleportChance) {
+                        && unseenTicks >= unseenThreshold && relocationRoll) {
                     boolean teleported = tryHiddenTeleport(world, player, false);
-                    hiddenMoveCooldown = 90 + random.nextInt(91);
+                    // Failed candidate searches retry quickly; successful relocations get a longer quiet period.
+                    hiddenMoveCooldown = teleported ? 100 + random.nextInt(101) : 12 + random.nextInt(17);
                     if (teleported) {
                         // No teleport sound: the player should discover the new position, not hear the move.
                         getNavigation().stop();
@@ -213,16 +218,21 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return false;
         }
 
-        int attempts = 40;
-        int renderBlocks = Math.max(4, TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS) * 16;
+        int attempts = 72;
+        int renderChunks = WatcherStalkingDirector.renderDistanceChunks(
+                TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
+        int renderBlocks = (int) WatcherStalkingDirector.renderDistanceBlocks(renderChunks);
         for (int i = 0; i < attempts; i++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
             double radius;
             if (retreat) {
-                radius = 24.0D + random.nextDouble() * 24.0D;
+                // Retreats leave the immediate area, but do not use the extreme stalking ring.
+                radius = Math.max(32.0D, Math.min(64.0D,
+                        WatcherStalkingDirector.minimumStalkingDistance(renderChunks) * 0.38D))
+                        + random.nextDouble() * 12.0D;
             } else {
-                // Stay roughly one chunk inside the view-distance edge, so it can be glimpsed at range.
-                radius = Math.max(48.0D, renderBlocks - 16.0D - random.nextDouble() * 20.0D);
+                // Relocate just inside the render edge, with a narrow distance band for distant sightings.
+                radius = WatcherStalkingDirector.candidateRadius(renderChunks, random.nextDouble());
             }
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
@@ -283,12 +293,33 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     private void tryDreadEffect(ServerWorld world, PlayerEntity player) {
-        if (!TheWatcher.DREAD_EFFECTS_ENABLED || dreadEffectCooldown > 0 || phase == Phase.IDLE || squaredDistanceTo(player) > 20.0D * 20.0D) return;
-        dreadEffectCooldown = 100 + random.nextInt(220);
+        if (!TheWatcher.DREAD_EFFECTS_ENABLED || dreadEffectCooldown > 0 || phase == Phase.IDLE) {
+            return;
+        }
+
+        double distance = Math.sqrt(squaredDistanceTo(player));
+        int renderChunks = WatcherStalkingDirector.renderDistanceChunks(
+                TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
+
+        // A rare, quiet cave cue at the player's position makes the distant Watcher feel present
+        // without giving away its exact location or making teleporting audible.
+        if (phase == Phase.STALKING
+                && WatcherHorrorDirector.shouldPlayDistantCue(distance, renderChunks, random.nextFloat())) {
+            dreadEffectCooldown = WatcherHorrorDirector.nextDistantCueCooldown(random.nextInt(221));
+            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
+                    SoundCategory.AMBIENT, 0.16F, 0.72F + random.nextFloat() * 0.35F);
+            return;
+        }
+
+        if (distance > 20.0D) {
+            return;
+        }
+
+        dreadEffectCooldown = WatcherHorrorDirector.nextCloseCueCooldown(random.nextInt(221));
         if (random.nextFloat() < 0.58F) {
             world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
                     SoundCategory.AMBIENT, 0.45F, 0.55F + random.nextFloat() * 0.55F);
-        } else if (squaredDistanceTo(player) < 12.0D * 12.0D) {
+        } else if (distance < 12.0D) {
             player.addStatusEffect(new StatusEffectInstance(
                     StatusEffects.DARKNESS, 35 + random.nextInt(30), 0, true, false, false));
             world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_STARE,
