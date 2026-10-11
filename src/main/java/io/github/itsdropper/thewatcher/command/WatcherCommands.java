@@ -153,30 +153,37 @@ public final class WatcherCommands {
             throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity player = source.getPlayerOrThrow();
         WatcherEntity watcher = findNearestWatcher(player);
+        boolean created = watcher == null;
 
-        if (watcher == null) {
-            WatcherEntity created = TheWatcher.WATCHER.create(source.getWorld());
-            if (created == null) {
+        if (created) {
+            watcher = TheWatcher.WATCHER.create(source.getWorld());
+            if (watcher == null) {
                 source.sendError(Text.literal("Could not create The Watcher for simulation."));
                 return 0;
             }
+        }
 
-            Vec3d spawnPosition = findDistantSimulationPosition(source.getWorld(), player);
-            if (spawnPosition == null) {
-                source.sendError(Text.literal(
-                        "Could not find a safe, loaded stalking position near your render-distance edge. Try lowering render distance or moving to open terrain."));
-                return 0;
-            }
+        // Always reposition, including when reusing an existing entity. Otherwise a
+        // previous invisible/edge-spawned Watcher makes every later simulation invisible too.
+        Vec3d spawnPosition = findDistantSimulationPosition(source.getWorld(), player);
+        if (spawnPosition == null) {
+            if (created) watcher.discard();
+            source.sendError(Text.literal(
+                    "Could not find a safe, visible simulation position in loaded terrain. Move to open ground and try again."));
+            return 0;
+        }
 
-            created.refreshPositionAndAngles(spawnPosition.x, spawnPosition.y, spawnPosition.z,
-                    player.getYaw() + 180.0F, 0.0F);
-            source.getWorld().spawnEntity(created);
-            watcher = created;
+        watcher.refreshPositionAndAngles(spawnPosition.x, spawnPosition.y, spawnPosition.z,
+                player.getYaw() + 180.0F, 0.0F);
+        if (created) {
+            source.getWorld().spawnEntity(watcher);
         }
 
         watcher.startDebugSimulation(player);
+        double distance = player.getPos().distanceTo(spawnPosition);
         source.sendFeedback(() -> Text.literal(
-                "Started a 4x time-scaled encounter using normal Watcher behavior: observe -> stalk -> escalate -> retreat. Looking directly at it still pauses its phase timer. Use /watcher debug simulate stop to end it."), false);
+                "Simulation started. Watcher placed in clear sight " + String.format(java.util.Locale.ROOT, "%.0f", distance)
+                        + " blocks away. Look away to let the encounter advance; escalation now performs a short rush and then retreats. Use /watcher debug status or /watcher debug simulate stop."), false);
         return 1;
     }
 
