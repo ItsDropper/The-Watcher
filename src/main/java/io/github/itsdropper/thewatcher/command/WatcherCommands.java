@@ -184,28 +184,38 @@ public final class WatcherCommands {
      */
     private static Vec3d findDistantSimulationPosition(ServerWorld world, ServerPlayerEntity player) {
         int chunks = WatcherStalkingDirector.renderDistanceChunks(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
-        double[] angleOffsets = {74.0D, 82.0D, 90.0D, 98.0D, 106.0D};
+        double[] angleOffsets = {58.0D, 62.0D, 66.0D, 70.0D, 74.0D,
+                -58.0D, -62.0D, -66.0D, -70.0D, -74.0D};
         double[] radiusSamples = {0.25D, 0.5D, 0.75D};
 
+        // Prefer the render-edge band, but back off in one-chunk steps if the
+        // server has not loaded the client's entire render distance.
         for (double angleOffset : angleOffsets) {
             for (double radiusSample : radiusSamples) {
-                double radius = WatcherStalkingDirector.candidateRadius(chunks, radiusSample);
-                double angle = Math.toRadians(player.getYaw()) + Math.PI / 2.0D
-                        + Math.toRadians(angleOffset);
-                int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
-                int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
+                double desiredRadius = WatcherStalkingDirector.candidateRadius(chunks, radiusSample);
+                for (double backoff = 0.0D; backoff <= 96.0D; backoff += 16.0D) {
+                    double radius = desiredRadius - backoff;
+                    if (radius < 48.0D) {
+                        break;
+                    }
 
-                if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                    continue;
-                }
+                    double angle = Math.toRadians(player.getYaw()) + Math.PI / 2.0D
+                            + Math.toRadians(angleOffset);
+                    int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
+                    int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
 
-                int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
-                BlockPos feet = new BlockPos(x, y, z);
-                BlockPos ground = feet.down();
-                if (world.getBlockState(ground).isSolidBlock(world, ground)
-                        && world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
-                        && world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
-                    return new Vec3d(x + 0.5D, y, z + 0.5D);
+                    if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                        continue;
+                    }
+
+                    int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    BlockPos feet = new BlockPos(x, y, z);
+                    BlockPos ground = feet.down();
+                    if (world.getBlockState(ground).isSolidBlock(world, ground)
+                            && world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                            && world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
+                        return new Vec3d(x + 0.5D, y, z + 0.5D);
+                    }
                 }
             }
         }
