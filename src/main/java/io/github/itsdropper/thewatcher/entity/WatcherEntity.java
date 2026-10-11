@@ -1,7 +1,6 @@
 package io.github.itsdropper.thewatcher.entity;
 
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -51,6 +50,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private Phase phase = Phase.IDLE;
     private int phaseTicks;
     private int hiddenMoveCooldown;
+    private int dreadEffectCooldown;
+    private int attentionTicks;
+    private int unseenTicks;
     private boolean attemptedEscalationAttack;
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
@@ -63,7 +65,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     protected void initGoals() {
         // No vanilla combat/target goals: the Watcher is controlled by its own state machine.
         this.goalSelector.add(0, new SwimGoal(this));
-        this.goalSelector.add(5, new LookAroundGoal(this));
+        // No look-around goal: The Watcher is deliberately unnaturally still.
     }
 
     @Override
@@ -74,9 +76,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
-        if (hiddenMoveCooldown > 0) {
-            hiddenMoveCooldown--;
-        }
+        if (hiddenMoveCooldown > 0) hiddenMoveCooldown--;
+        if (dreadEffectCooldown > 0) dreadEffectCooldown--;
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
@@ -114,16 +115,19 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         setTarget(player);
         phaseTicks++;
 
-        if (phase != Phase.IDLE && squaredDistanceTo(player) <= 24.0D * 24.0D
-                && world.getTime() % 200L == 0L) {
-            world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_STARE,
-                    SoundCategory.HOSTILE, 0.4F, 0.65F + random.nextFloat() * 0.25F);
-
-            if (squaredDistanceTo(player) <= 18.0D * 18.0D) {
-                player.addStatusEffect(new StatusEffectInstance(
-                        StatusEffects.DARKNESS, 45, 0, true, false, false));
-            }
+        boolean watched = isPlayerWatching(player);
+        if (watched) {
+            attentionTicks = Math.min(attentionTicks + 1, 1200);
+            unseenTicks = 0;
+            getNavigation().stop();
+            setVelocity(0.0D, getVelocity().y, 0.0D);
+            if (phase != Phase.IDLE) tryDreadEffect(world, player);
+            return;
         }
+
+        unseenTicks = Math.min(unseenTicks + 1, 1200);
+        attentionTicks = Math.max(0, attentionTicks - 2);
+        if (phase != Phase.IDLE) tryDreadEffect(world, player);
 
         switch (phase) {
             case IDLE -> setPhase(Phase.OBSERVING);
@@ -137,20 +141,21 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             }
             case STALKING -> {
                 lookAtPlayer(player);
-                boolean visible = player.canSee(this);
-                if (!visible) {
-                    // When unseen, it moves unnaturally quickly and may reposition behind cover.
-                    if (hiddenMoveCooldown <= 0 && tryHiddenTeleport(world, player, false)) {
-                        hiddenMoveCooldown = debugSimulation ? 12 + random.nextInt(10)
-                                : 18 + random.nextInt(20);
-                        getNavigation().stop();
-                    } else if (squaredDistanceTo(player) > 4.0D * 4.0D) {
-                        getNavigation().startMovingTo(player, 1.65D);
-                    } else {
+                boolean teleported = false;
+                int attentionPenalty = Math.min(attentionTicks / 20, 10);
+                int teleportChance = Math.max(8, 28 - attentionPenalty * 2);
+                if (hiddenMoveCooldown <= 0 && unseenTicks >= 8 && random.nextInt(100) < teleportChance) {
+                    teleported = tryHiddenTeleport(world, player, false);
+                    hiddenMoveCooldown = (debugSimulation ? 16 : 35) + random.nextInt(46);
+                    if (teleported) {
+                        world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT,
+                                SoundCategory.HOSTILE, 0.65F, 0.55F + random.nextFloat() * 0.35F);
                         getNavigation().stop();
                     }
+                }
+                if (!teleported && squaredDistanceTo(player) > 4.0D * 4.0D) {
+                    getNavigation().startMovingTo(player, attentionTicks > 100 ? 1.85D : 1.55D);
                 } else {
-                    // It must never teleport while visible. Freeze if the player can see it.
                     getNavigation().stop();
                 }
 
@@ -175,19 +180,17 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             }
             case RETREATING -> {
                 lookAtPlayer(player);
-                boolean visible = player.canSee(this);
-                if (!visible) {
-                    // Retreats vanish into cover, then reappear far away rather than running normally.
-                    if (hiddenMoveCooldown <= 0 && tryHiddenTeleport(world, player, true)) {
-                        hiddenMoveCooldown = 2 + random.nextInt(4);
-                        getNavigation().stop();
-                    } else {
-                        moveAwayFrom(player, 2.0D);
+                boolean teleported = false;
+                if (hiddenMoveCooldown <= 0 && random.nextInt(100) < 62) {
+                    teleported = tryHiddenTeleport(world, player, true);
+                    hiddenMoveCooldown = 8 + random.nextInt(15);
+                    if (teleported) {
+                        world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT,
+                                SoundCategory.HOSTILE, 0.8F, 0.45F + random.nextFloat() * 0.25F);
                     }
-                } else {
-                    // No retreat teleport is allowed while the player has line of sight.
-                    moveAwayFrom(player, 2.0D);
                 }
+                if (!teleported) moveAwayFrom(player, 2.2D);
+                else getNavigation().stop();
 
                 int duration = debugSimulation ? 50 : RETREAT_TICKS;
                 if (!debugPhaseLocked && phaseTicks >= duration) {
@@ -202,7 +205,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
      * grounded candidate with solid cover between the player and the destination.
      */
     private boolean tryHiddenTeleport(ServerWorld world, PlayerEntity player, boolean retreat) {
-        if (player.canSee(this)) {
+        if (isPlayerWatching(player)) {
             return false;
         }
 
@@ -245,6 +248,28 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         return false;
+    }
+
+    private boolean isPlayerWatching(PlayerEntity player) {
+        if (!player.canSee(this)) return false;
+        Vec3d toWatcher = new Vec3d(getX() - player.getX(),
+                getEyeY() - player.getEyeY(), getZ() - player.getZ()).normalize();
+        Vec3d look = player.getRotationVec(1.0F).normalize();
+        return look.dotProduct(toWatcher) > 0.965D;
+    }
+
+    private void tryDreadEffect(ServerWorld world, PlayerEntity player) {
+        if (dreadEffectCooldown > 0 || phase == Phase.IDLE || squaredDistanceTo(player) > 20.0D * 20.0D) return;
+        dreadEffectCooldown = 100 + random.nextInt(220);
+        if (random.nextFloat() < 0.58F) {
+            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE,
+                    SoundCategory.AMBIENT, 0.45F, 0.55F + random.nextFloat() * 0.55F);
+        } else if (squaredDistanceTo(player) < 12.0D * 12.0D) {
+            player.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.DARKNESS, 35 + random.nextInt(30), 0, true, false, false));
+            world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_STARE,
+                    SoundCategory.HOSTILE, 0.3F, 0.5F + random.nextFloat() * 0.3F);
+        }
     }
 
     private void resetToIdle() {
@@ -299,6 +324,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         phase = newPhase;
         phaseTicks = 0;
         hiddenMoveCooldown = 0;
+        dreadEffectCooldown = 0;
+        attentionTicks = 0;
+        unseenTicks = 0;
         attemptedEscalationAttack = false;
         setTarget(player);
         getNavigation().stop();
