@@ -33,7 +33,7 @@ These commands require operator permission level 2 and are intended for a world/
 | `/watcher debug status` | Show phase, phase ticks, debug lock, health, distance, and target |
 | `/watcher debug phase observe` | Lock it into the stationary observing phase |
 | `/watcher debug phase stalk` | Lock it into stationary stalking with hidden long-range teleports |
-| `/watcher debug phase escalate` | Lock it into escalation; it pursues and attacks once when close |
+| `/watcher debug phase escalate` | Trigger a short pursuit/attack rush, then retreat automatically |
 | `/watcher debug phase retreat` | Lock it into retreating behavior |
 | `/watcher debug phase auto` | Remove the debug lock and resume automatic night behavior |
 | `/watcher debug darkness on` | Enable extra Overworld night darkness |
@@ -42,7 +42,7 @@ These commands require operator permission level 2 and are intended for a world/
 | `/watcher debug simulate` | Place a Watcher nearby in clear sight and run an accelerated observe → stalk → escalate → retreat encounter against you |
 | `/watcher debug simulate stop` | Stop the simulated encounter |
 
-Debug commands search a wide area so the Watcher can still be recovered after a distant relocation. A phase forced with a debug command stays locked until `/watcher debug phase auto` is used. The simulation command instead runs a shortened encounter during any time of day; stop it with `/watcher debug simulate stop`. These commands let you test without waiting for normal phase timers.
+Debug commands search a wide area so the Watcher can still be recovered after a distant relocation. Forced observe, stalk, and retreat phases stay locked until `/watcher debug phase auto` is used. Forced escalation performs a short rush and retreat, then locks again. The simulation command runs an accelerated encounter during any time of day; stop it with `/watcher debug simulate stop`. These commands let you test without waiting for normal phase timers.
 
 ## Requirements
 
