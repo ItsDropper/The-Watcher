@@ -18,6 +18,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Heightmap;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -309,8 +310,22 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (phase == Phase.STALKING
                 && WatcherHorrorDirector.shouldPlayDistantCue(distance, renderChunks, random.nextFloat())) {
             dreadEffectCooldown = WatcherHorrorDirector.nextDistantCueCooldown(random.nextInt(221));
-            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
-                    SoundCategory.AMBIENT, 0.16F, 0.72F + random.nextFloat() * 0.35F);
+            float cue = random.nextFloat();
+            if (cue < 0.50F) {
+                Vec3d look = player.getRotationVec(1.0F).normalize();
+                BlockPos behind = BlockPos.ofFloored(player.getX() - look.x * 3.0D,
+                        player.getY(), player.getZ() - look.z * 3.0D);
+                world.playSound(null, behind, SoundEvents.BLOCK_STONE_STEP,
+                        SoundCategory.PLAYERS, 0.22F, 0.75F + random.nextFloat() * 0.4F);
+            } else if (cue < 0.85F) {
+                world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
+                        SoundCategory.AMBIENT, 0.13F, 0.62F + random.nextFloat() * 0.5F);
+            } else {
+                Vec3d look = player.getRotationVec(1.0F).normalize();
+                world.spawnParticles(ParticleTypes.ASH,
+                        player.getX() - look.x * 3.0D, player.getY() + 0.4D,
+                        player.getZ() - look.z * 3.0D, 5, 0.25D, 0.25D, 0.25D, 0.005D);
+            }
             return;
         }
 
