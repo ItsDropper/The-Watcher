@@ -69,13 +69,19 @@ public final class WatcherCommands {
             return 0;
         }
 
-        double yawRadians = Math.toRadians(player.getYaw());
-        double x = player.getX() - Math.sin(yawRadians) * 5.0D;
-        double z = player.getZ() + Math.cos(yawRadians) * 5.0D;
-        watcher.refreshPositionAndAngles(x, player.getY(), z, player.getYaw() + 180.0F, 0.0F);
+        Vec3d position = findDistantSimulationPosition(source.getWorld(), player);
+        if (position == null) {
+            watcher.discard();
+            source.sendError(Text.literal(
+                    "No safe, visible ground found nearby. Move to open ground and try again."));
+            return 0;
+        }
+
+        watcher.refreshPositionAndAngles(position.x, position.y, position.z,
+                player.getYaw() + 180.0F, 0.0F);
         source.getWorld().spawnEntity(watcher);
         source.sendFeedback(() -> Text.literal(
-                "Spawned The Watcher. Use /watcher debug status to inspect it."), false);
+                "Spawned The Watcher on safe ground in front of you. Use /watcher debug status."), false);
         return 1;
     }
 
