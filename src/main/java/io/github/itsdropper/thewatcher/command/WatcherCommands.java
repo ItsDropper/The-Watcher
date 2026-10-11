@@ -90,7 +90,7 @@ public final class WatcherCommands {
         WatcherEntity watcher = findNearestWatcher(player);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No loaded Watcher found within 512 blocks. Use /watcher debug spawn or /watcher debug simulate."));
+            source.sendError(Text.literal("No loaded Watcher found within 2048 blocks. Use /watcher debug spawn or /watcher debug simulate."));
             return 0;
         }
 
@@ -130,7 +130,7 @@ public final class WatcherCommands {
         WatcherEntity watcher = findNearestWatcher(player);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No loaded Watcher found within 512 blocks. Use /watcher debug spawn."));
+            source.sendError(Text.literal("No loaded Watcher found within 2048 blocks. Use /watcher debug spawn."));
             return 0;
         }
 
@@ -249,7 +249,7 @@ public final class WatcherCommands {
     private static int stopSimulation(ServerCommandSource source)
             throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity player = source.getPlayerOrThrow();
-        double searchRange = 512.0D;
+        double searchRange = 2048.0D;
         List<WatcherEntity> simulations = player.getWorld().getEntitiesByClass(
                 WatcherEntity.class, player.getBoundingBox().expand(searchRange), WatcherEntity::isDebugSimulation);
         WatcherEntity watcher = simulations.stream()
@@ -274,7 +274,7 @@ public final class WatcherCommands {
     private static WatcherEntity findNearestWatcher(ServerPlayerEntity player) {
         // Debug controls must still find an entity after a failed/overlong relocation.
         // Keep the lookup independent of the render-distance-derived stalking band.
-        double searchRange = 512.0D;
+        double searchRange = 2048.0D;
         List<WatcherEntity> watchers = player.getWorld().getEntitiesByClass(
                 WatcherEntity.class, player.getBoundingBox().expand(searchRange), entity -> true);
         return watchers.stream().min(Comparator.comparingDouble(player::squaredDistanceTo)).orElse(null);
