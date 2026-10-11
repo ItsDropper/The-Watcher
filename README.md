@@ -15,12 +15,11 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
 - Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
 - Close encounters can trigger randomized cave ambience, an Enderman-like stare cue, and short Darkness bursts instead of constant predictable effects.
-- The Watcher can now appear naturally and very rarely in Overworld hostile-mob spawns at night; it is not intended to replace ordinary mobs or appear constantly.
 - The pause menu includes **The Watcher Settings** for toggling dread effects, night darkness, and unpredictable teleporting.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
 - The entity does not use the usual automatic target and continuous melee goals.
 
-The Watcher currently does **not** have natural spawn rules. Spawn it for testing with the debug command or vanilla `/summon the-watcher:watcher`.
+Natural spawning is not yet considered release-ready; use `/watcher debug spawn` or vanilla `/summon the-watcher:watcher` for predictable testing. The entity is persistent while stalking so vanilla distance-based despawning cannot break the render-edge mechanic; natural encounters clean themselves up after 30 seconds of daytime.
 
 ## Debug commands
 
