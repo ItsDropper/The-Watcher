@@ -263,7 +263,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (!TheWatcher.DREAD_EFFECTS_ENABLED || dreadEffectCooldown > 0 || phase == Phase.IDLE || squaredDistanceTo(player) > 20.0D * 20.0D) return;
         dreadEffectCooldown = 100 + random.nextInt(220);
         if (random.nextFloat() < 0.58F) {
-            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE,
+            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
                     SoundCategory.AMBIENT, 0.45F, 0.55F + random.nextFloat() * 0.55F);
         } else if (squaredDistanceTo(player) < 12.0D * 12.0D) {
             player.addStatusEffect(new StatusEffectInstance(
