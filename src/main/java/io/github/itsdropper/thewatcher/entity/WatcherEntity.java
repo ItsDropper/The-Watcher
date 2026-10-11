@@ -93,7 +93,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             player = current;
         }
 
-        double targetRange = (debugPhaseLocked || debugSimulation) ? DEBUG_TARGET_RANGE : TARGET_RANGE;
+        double targetRange = (debugPhaseLocked || debugSimulation) ? DEBUG_TARGET_RANGE\n                : Math.max(TARGET_RANGE, TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS * 16.0D + 32.0D);
         if (player == null) {
             player = world.getPlayers().stream()
                     .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
