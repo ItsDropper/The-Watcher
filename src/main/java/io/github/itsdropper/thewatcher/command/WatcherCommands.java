@@ -222,6 +222,13 @@ public final class WatcherCommands {
                 }
 
                 Vec3d eyes = new Vec3d(x + 0.5D, y + 1.4D, z + 0.5D);
+                Vec3d toCandidate = eyes.subtract(player.getEyePos()).normalize();
+                // Require the spawn point to be in the player's forward view cone,
+                // not merely unobstructed somewhere behind or beside the camera.
+                if (player.getRotationVec(1.0F).normalize().dotProduct(toCandidate) < 0.82D) {
+                    continue;
+                }
+
                 BlockHitResult sight = world.raycast(new RaycastContext(
                         player.getEyePos(), eyes, RaycastContext.ShapeType.COLLIDER,
                         RaycastContext.FluidHandling.NONE, player));
