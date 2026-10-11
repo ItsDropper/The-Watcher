@@ -47,7 +47,7 @@ public final class WatcherCommands {
                                 .then(literal("auto").executes(context -> resumeAutomatic(context.getSource()))))
                         .then(literal("darkness")
                                 .then(literal("on").executes(context -> setDarkness(context.getSource(), true)))
-                                .then(literal("off").executes(context -> setDarkness(context.getSource(), false)))));
+                                .then(literal("off").executes(context -> setDarkness(context.getSource(), false))))));
     }
 
     private static int spawnWatcher(ServerCommandSource source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
