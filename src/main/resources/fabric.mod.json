@@ -23,17 +23,11 @@
       "io.github.itsdropper.thewatcher.client.TheWatcherClient"
     ]
   },
-  "mixins": [
-    "the-watcher.mixins.json",
-    {
-      "config": "the-watcher.client.mixins.json",
-      "environment": "client"
-    }
-  ],
   "depends": {
     "fabricloader": ">=0.19.5",
     "minecraft": "~1.21.1",
     "java": ">=21",
+    "fabric-api": "*",
     "geckolib": ">=4.8.3"
   }
 }
