@@ -323,13 +323,13 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     @Override
-    protected void writeCustomDataToNbt(NbtCompound nbt) {
+    public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
         learningEngine.writeToNbt(nbt);
     }
 
     @Override
-    protected void readCustomDataFromNbt(NbtCompound nbt) {
+    public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
         learningEngine.readFromNbt(nbt);
     }
