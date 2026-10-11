@@ -28,12 +28,13 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: spawn | status | phase <observe|stalk|escalate|retreat> | darkness <on|off>"),
+                                    "Watcher debug: spawn | status | despawn | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
                                     false);
                             return 1;
                         })
                         .then(literal("spawn").executes(context -> spawnWatcher(context.getSource())))
                         .then(literal("status").executes(context -> showStatus(context.getSource())))
+                        .then(literal("despawn").executes(context -> despawnNearest(context.getSource())))
                         .then(literal("phase")
                                 .then(literal("observe").executes(context ->
                                         setNearestPhase(context.getSource(), WatcherEntity.Phase.OBSERVING)))
@@ -42,10 +43,11 @@ public final class WatcherCommands {
                                 .then(literal("escalate").executes(context ->
                                         setNearestPhase(context.getSource(), WatcherEntity.Phase.ESCALATING)))
                                 .then(literal("retreat").executes(context ->
-                                        setNearestPhase(context.getSource(), WatcherEntity.Phase.RETREATING))))
+                                        setNearestPhase(context.getSource(), WatcherEntity.Phase.RETREATING)))
+                                .then(literal("auto").executes(context -> resumeAutomatic(context.getSource()))))
                         .then(literal("darkness")
                                 .then(literal("on").executes(context -> setDarkness(context.getSource(), true)))
-                                .then(literal("off").executes(context -> setDarkness(context.getSource(), false))))));
+                                .then(literal("off").executes(context -> setDarkness(context.getSource(), false)))));
     }
 
     private static int spawnWatcher(ServerCommandSource source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -62,7 +64,8 @@ public final class WatcherCommands {
         double z = player.getZ() + Math.cos(yawRadians) * 5.0D;
         watcher.refreshPositionAndAngles(x, player.getY(), z, player.getYaw() + 180.0F, 0.0F);
         source.getWorld().spawnEntity(watcher);
-        source.sendFeedback(() -> Text.literal("Spawned The Watcher 5 blocks ahead. Use /watcher debug status."), false);
+        source.sendFeedback(() -> Text.literal(
+                "Spawned The Watcher 5 blocks ahead. Use /watcher debug status."), false);
         return 1;
     }
 
@@ -77,7 +80,9 @@ public final class WatcherCommands {
 
         source.sendFeedback(() -> Text.literal("The Watcher: phase=" + watcher.getPhase()
                 + ", phaseTicks=" + watcher.getPhaseTicks()
+                + ", debugLock=" + watcher.isDebugPhaseLocked()
                 + ", health=" + String.format(java.util.Locale.ROOT, "%.1f", watcher.getHealth())
+                + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", player.distanceTo(watcher))
                 + ", target=" + (watcher.getTarget() == null ? "none" : watcher.getTarget().getName().getString())), false);
         return 1;
     }
@@ -92,8 +97,40 @@ public final class WatcherCommands {
             return 0;
         }
 
-        watcher.setPhase(phase);
-        source.sendFeedback(() -> Text.literal("Forced nearest Watcher into phase: " + phase), false);
+        watcher.forceDebugPhase(phase, player);
+        source.sendFeedback(() -> Text.literal(
+                "Forced nearest Watcher into " + phase + ". Phase is debug-locked until /watcher debug phase auto."), false);
+        return 1;
+    }
+
+    private static int resumeAutomatic(ServerCommandSource source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        WatcherEntity watcher = findNearestWatcher(player);
+
+        if (watcher == null) {
+            source.sendError(Text.literal("No Watcher found within 64 blocks. Use /watcher debug spawn."));
+            return 0;
+        }
+
+        watcher.resumeAutomaticPhases();
+        source.sendFeedback(() -> Text.literal(
+                "Watcher debug lock removed. Automatic night phases resumed."), false);
+        return 1;
+    }
+
+    private static int despawnNearest(ServerCommandSource source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        WatcherEntity watcher = findNearestWatcher(player);
+
+        if (watcher == null) {
+            source.sendError(Text.literal("No Watcher found within 64 blocks."));
+            return 0;
+        }
+
+        watcher.discard();
+        source.sendFeedback(() -> Text.literal("Removed the nearest Watcher."), false);
         return 1;
     }
 
