@@ -160,7 +160,7 @@ public final class WatcherCommands {
 
         watcher.startDebugSimulation(player);
         source.sendFeedback(() -> Text.literal(
-                "Started a simulated encounter: observe -> stalk -> escalate -> retreat. Use /watcher debug simulate stop to end it."), false);
+                "Started a 4x time-scaled encounter using normal Watcher behavior: observe -> stalk -> escalate -> retreat. Looking directly at it still pauses its phase timer. Use /watcher debug simulate stop to end it."), false);
         return 1;
     }
 
