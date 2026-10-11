@@ -28,13 +28,16 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: spawn | status | despawn | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
+                                    "Watcher debug: spawn | status | despawn | simulate [stop] | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
                                     false);
                             return 1;
                         })
                         .then(literal("spawn").executes(context -> spawnWatcher(context.getSource())))
                         .then(literal("status").executes(context -> showStatus(context.getSource())))
                         .then(literal("despawn").executes(context -> despawnNearest(context.getSource())))
+                        .then(literal("simulate")
+                                .executes(context -> startSimulation(context.getSource()))
+                                .then(literal("stop").executes(context -> stopSimulation(context.getSource()))))
                         .then(literal("phase")
                                 .then(literal("observe").executes(context ->
                                         setNearestPhase(context.getSource(), WatcherEntity.Phase.OBSERVING)))
@@ -81,6 +84,7 @@ public final class WatcherCommands {
         source.sendFeedback(() -> Text.literal("The Watcher: phase=" + watcher.getPhase()
                 + ", phaseTicks=" + watcher.getPhaseTicks()
                 + ", debugLock=" + watcher.isDebugPhaseLocked()
+                + ", simulation=" + watcher.isDebugSimulation()
                 + ", health=" + String.format(java.util.Locale.ROOT, "%.1f", watcher.getHealth())
                 + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", player.distanceTo(watcher))
                 + ", target=" + (watcher.getTarget() == null ? "none" : watcher.getTarget().getName().getString())), false);
@@ -131,6 +135,50 @@ public final class WatcherCommands {
 
         watcher.discard();
         source.sendFeedback(() -> Text.literal("Removed the nearest Watcher."), false);
+        return 1;
+    }
+
+    private static int startSimulation(ServerCommandSource source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        WatcherEntity watcher = findNearestWatcher(player);
+
+        if (watcher == null) {
+            WatcherEntity created = TheWatcher.WATCHER.create(source.getWorld());
+            if (created == null) {
+                source.sendError(Text.literal("Could not create The Watcher for simulation."));
+                return 0;
+            }
+
+            double yawRadians = Math.toRadians(player.getYaw());
+            double x = player.getX() - Math.sin(yawRadians) * 9.0D;
+            double z = player.getZ() + Math.cos(yawRadians) * 9.0D;
+            created.refreshPositionAndAngles(x, player.getY(), z, player.getYaw() + 180.0F, 0.0F);
+            source.getWorld().spawnEntity(created);
+            watcher = created;
+        }
+
+        watcher.startDebugSimulation(player);
+        source.sendFeedback(() -> Text.literal(
+                "Started a simulated encounter: observe -> stalk -> escalate -> retreat. Use /watcher debug simulate stop to end it."), false);
+        return 1;
+    }
+
+    private static int stopSimulation(ServerCommandSource source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        List<WatcherEntity> simulations = player.getWorld().getEntitiesByClass(
+                WatcherEntity.class, player.getBoundingBox().expand(256.0D), WatcherEntity::isDebugSimulation);
+        WatcherEntity watcher = simulations.stream()
+                .min(Comparator.comparingDouble(player::squaredDistanceTo)).orElse(null);
+
+        if (watcher == null) {
+            source.sendError(Text.literal("No simulated Watcher found within 256 blocks."));
+            return 0;
+        }
+
+        watcher.stopDebugSimulation();
+        source.sendFeedback(() -> Text.literal("Stopped the simulated encounter."), false);
         return 1;
     }
 
