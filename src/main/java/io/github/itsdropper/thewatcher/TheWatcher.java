@@ -4,6 +4,8 @@ import io.github.itsdropper.thewatcher.command.WatcherCommands;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
+import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.minecraft.entity.EntityDimensions;
@@ -44,6 +46,9 @@ public class TheWatcher implements ModInitializer {
     public void onInitialize() {
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         WatcherCommands.register();
+        // Extremely low weight: the entity can appear naturally in the Overworld at night
+        // without turning ordinary hostile-mob spawning into constant Watcher encounters.
+        BiomeModifications.addSpawn(BiomeSelectors.foundInOverworld(), SpawnGroup.MONSTER, WATCHER, 1, 1, 1);
         ServerTickEvents.END_WORLD_TICK.register(TheWatcher::applyNightDarkness);
         LOGGER.info("The Watcher entity and debug commands registered.");
     }
