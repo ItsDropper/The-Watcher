@@ -25,6 +25,8 @@ public class TheWatcher implements ModInitializer {
 
     // Debug command can toggle this at runtime. Darkness is applied only at night.
     public static volatile boolean NIGHT_DARKNESS_ENABLED = true;
+    public static volatile boolean DREAD_EFFECTS_ENABLED = true;
+    public static volatile boolean TELEPORTS_ENABLED = true;
 
     public static final EntityType<WatcherEntity> WATCHER = Registry.register(
             Registries.ENTITY_TYPE,
