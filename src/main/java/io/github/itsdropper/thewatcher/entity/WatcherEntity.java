@@ -142,7 +142,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 getNavigation().stop();
                 setVelocity(0.0D, getVelocity().y, 0.0D);
                 int duration = OBSERVE_TICKS;
-                if (!debugPhaseLocked && phaseTicks >= duration) {
+                if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.STALKING);
                 }
             }
@@ -168,7 +168,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 }
 
                 int duration = learningEngine.adjustStalkDuration(STALK_TICKS);
-                if (!debugPhaseLocked && phaseTicks >= duration) {
+                if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.ESCALATING);
                 }
             }
@@ -182,7 +182,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 }
 
                 int duration = ESCALATE_TICKS;
-                if (!debugPhaseLocked && phaseTicks >= duration) {
+                if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.RETREATING);
                 }
             }
@@ -202,8 +202,10 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 else getNavigation().stop();
 
                 int duration = RETREAT_TICKS;
-                if (!debugPhaseLocked && phaseTicks >= duration) {
+                if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.OBSERVING);
+                    debugPhaseAutoAdvance = false;
+                    debugPhaseLocked = true;
                 }
             }
         }
