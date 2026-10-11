@@ -78,8 +78,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
-        if (hiddenMoveCooldown > 0) hiddenMoveCooldown--;
-        if (dreadEffectCooldown > 0) dreadEffectCooldown--;
+        int tickScale = debugSimulation ? 4 : 1;
+        hiddenMoveCooldown = Math.max(0, hiddenMoveCooldown - tickScale);
+        dreadEffectCooldown = Math.max(0, dreadEffectCooldown - tickScale);
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
@@ -95,9 +96,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             player = current;
         }
 
-        double targetRange = (debugPhaseLocked || debugSimulation)
-                ? DEBUG_TARGET_RANGE
-                : Math.max(TARGET_RANGE, TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS * 16.0D + 32.0D);
+        double targetRange = Math.max(TARGET_RANGE,
+                TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS * 16.0D + 32.0D);
         if (player == null) {
             player = world.getPlayers().stream()
                     .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
@@ -129,8 +129,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         // A watched entity's phase timer pauses; it should not escalate just because the player stares.
-        phaseTicks++;
-        unseenTicks = Math.min(unseenTicks + 1, 1200);
+        phaseTicks = Math.min(phaseTicks + tickScale, 72000);
+        unseenTicks = Math.min(unseenTicks + tickScale, 1200);
         attentionTicks = Math.max(0, attentionTicks - 2);
         if (phase != Phase.IDLE) tryDreadEffect(world, player);
 
@@ -140,7 +140,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 // Keep the entity still; do not track the player with its head.
                 getNavigation().stop();
                 setVelocity(0.0D, getVelocity().y, 0.0D);
-                int duration = debugSimulation ? 50 : OBSERVE_TICKS;
+                int duration = OBSERVE_TICKS;
                 if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.STALKING);
                 }
@@ -149,20 +149,20 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 // Stalking is stationary. It only relocates after leaving the player's view.
                 getNavigation().stop();
                 setVelocity(0.0D, getVelocity().y, 0.0D);
-                int baseTeleportChance = debugSimulation ? 45 : 24;
+                int baseTeleportChance = 24;
                 int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
                 if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
                         && unseenTicks >= learningEngine.getHiddenTeleportDelayTicks()
                         && random.nextInt(100) < teleportChance) {
                     boolean teleported = tryHiddenTeleport(world, player, false);
-                    hiddenMoveCooldown = (debugSimulation ? 30 : 90) + random.nextInt(91);
+                    hiddenMoveCooldown = 90 + random.nextInt(91);
                     if (teleported) {
                         // No teleport sound: the player should discover the new position, not hear the move.
                         getNavigation().stop();
                     }
                 }
 
-                int duration = debugSimulation ? 180 : learningEngine.adjustStalkDuration(STALK_TICKS);
+                int duration = learningEngine.adjustStalkDuration(STALK_TICKS);
                 if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.ESCALATING);
                 }
@@ -176,7 +176,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     tryAttack(player);
                 }
 
-                int duration = debugSimulation ? 100 : ESCALATE_TICKS;
+                int duration = ESCALATE_TICKS;
                 if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.RETREATING);
                 }
@@ -196,7 +196,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 if (!teleported) moveAwayFrom(player, 2.2D);
                 else getNavigation().stop();
 
-                int duration = debugSimulation ? 50 : RETREAT_TICKS;
+                int duration = RETREAT_TICKS;
                 if (!debugPhaseLocked && phaseTicks >= duration) {
                     setPhase(Phase.OBSERVING);
                 }
