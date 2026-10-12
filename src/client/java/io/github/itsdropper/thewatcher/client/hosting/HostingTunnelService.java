@@ -9,8 +9,6 @@ import java.net.Socket;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
@@ -20,10 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.crypto.Cipher;
-import javax.crypto.Mac;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 
 public final class HostingTunnelService {
@@ -316,7 +310,7 @@ public final class HostingTunnelService {
         }
 
         protected void sendControlFrame(byte type, int channel, String direction) {
-            sendFrame(controlFrame(type, channel, secret, direction));
+            sendFrame(TunnelCrypto.controlFrame(type, channel, secret, direction));
         }
 
         @Override
@@ -349,7 +343,7 @@ public final class HostingTunnelService {
             Frame parsed = parseFrame(frame);
             if (parsed == null) throw new IOException("Invalid relay frame.");
             if (parsed.type == 1) {
-                if (!verifyControlFrame(frame, secret, "guest-to-host") || channels.size() >= 8
+                if (!TunnelCrypto.verifyControlFrame(frame, secret, "guest-to-host") || channels.size() >= 8
                         || seenChannels.size() >= 4096 || !seenChannels.add(parsed.channel)) throw new IOException("Invalid channel open.");
                 Socket local = new Socket();
                 try {
@@ -374,7 +368,7 @@ public final class HostingTunnelService {
                 if (parsed.sequence != channel.incomingSequence.getAndIncrement()) {
                     throw new IOException("Invalid data sequence.");
                 }
-                byte[] plaintext = decrypt(frame, secret, "guest-to-host");
+                byte[] plaintext = TunnelCrypto.decrypt(frame, secret, "guest-to-host");
                 channel.socket.getOutputStream().write(plaintext);
                 channel.socket.getOutputStream().flush();
             } else if (parsed.type == 3) {
@@ -447,11 +441,11 @@ public final class HostingTunnelService {
                 if (parsed.sequence != channel.incomingSequence.getAndIncrement()) {
                     throw new IOException("Invalid data sequence.");
                 }
-                byte[] plaintext = decrypt(frame, secret, "host-to-guest");
+                byte[] plaintext = TunnelCrypto.decrypt(frame, secret, "host-to-guest");
                 channel.socket.getOutputStream().write(plaintext);
                 channel.socket.getOutputStream().flush();
             } else if (parsed.type == 3) {
-                if (!verifyControlFrame(frame, secret, "host-to-guest")) throw new IOException("Invalid close frame.");
+                if (!TunnelCrypto.verifyControlFrame(frame, secret, "host-to-guest")) throw new IOException("Invalid close frame.");
                 closeChannel(channel, false);
             } else {
                 throw new IOException("Unexpected open frame.");
@@ -505,79 +499,6 @@ public final class HostingTunnelService {
         return new Frame(type, channel, sequence);
     }
 
-    private static byte[] controlFrame(byte type, int channel, byte[] secret, String direction) {
-        ByteBuffer header = ByteBuffer.allocate(5);
-        header.put(type).putInt(channel);
-        byte[] prefix = header.array();
-        byte[] mac = hmac(secret, concat(prefix, direction.getBytes(StandardCharsets.UTF_8)));
-        return concat(prefix, mac);
-    }
-
-    private static boolean verifyControlFrame(byte[] frame, byte[] secret, String direction) {
-        if (frame.length != 37) return false;
-        byte type = frame[0];
-        int channel = ByteBuffer.wrap(frame, 1, 4).getInt();
-        byte[] expected = controlFrame(type, channel, secret, direction);
-        return MessageDigest.isEqual(expected, frame);
-    }
-
-    private static byte[] encrypt(byte[] plaintext, byte[] secret, String direction, int channel, long sequence)
-            throws GeneralSecurityException {
-        byte[] header = dataHeader(channel, sequence);
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(deriveKey(secret, direction, channel), "AES"),
-                new GCMParameterSpec(128, nonce(sequence)));
-        cipher.updateAAD(header);
-        return concat(header, cipher.doFinal(plaintext));
-    }
-
-    private static byte[] decrypt(byte[] frame, byte[] secret, String direction) throws GeneralSecurityException {
-        ByteBuffer buffer = ByteBuffer.wrap(frame);
-        byte type = buffer.get();
-        int channel = buffer.getInt();
-        long sequence = buffer.getLong();
-        if (type != 2 || channel == 0 || sequence < 0) throw new GeneralSecurityException("Invalid data header.");
-        byte[] header = dataHeader(channel, sequence);
-        byte[] encrypted = java.util.Arrays.copyOfRange(frame, 13, frame.length);
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(deriveKey(secret, direction, channel), "AES"),
-                new GCMParameterSpec(128, nonce(sequence)));
-        cipher.updateAAD(header);
-        return cipher.doFinal(encrypted);
-    }
-
-    private static byte[] deriveKey(byte[] secret, String direction, int channel) throws GeneralSecurityException {
-        java.security.MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        digest.update("TheWatcher.Hosting.v1|".getBytes(StandardCharsets.UTF_8));
-        digest.update(secret);
-        digest.update(("|" + direction + "|" + channel).getBytes(StandardCharsets.UTF_8));
-        return digest.digest();
-    }
-
-    private static byte[] hmac(byte[] secret, byte[] value) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret, "HmacSHA256"));
-            return mac.doFinal(value);
-        } catch (GeneralSecurityException error) {
-            throw new IllegalStateException("Required HMAC algorithm is unavailable.", error);
-        }
-    }
-
-    private static byte[] dataHeader(int channel, long sequence) {
-        return ByteBuffer.allocate(13).put((byte) 2).putInt(channel).putLong(sequence).array();
-    }
-
-    private static byte[] nonce(long sequence) {
-        return ByteBuffer.allocate(12).putInt(0).putLong(sequence).array();
-    }
-
-    private static byte[] concat(byte[] first, byte[] second) {
-        byte[] result = java.util.Arrays.copyOf(first, first.length + second.length);
-        System.arraycopy(second, 0, result, first.length, second.length);
-        return result;
-    }
-
     private static void startSocketReader(Endpoint endpoint, Channel channel, String direction) {
         IO.execute(() -> {
             byte[] buffer = new byte[16 * 1024];
@@ -587,7 +508,7 @@ public final class HostingTunnelService {
                     if (read == 0) continue;
                     long sequence = channel.outgoingSequence.getAndIncrement();
                     if (sequence < 0) throw new IOException("Tunnel sequence exhausted.");
-                    byte[] payload = encrypt(java.util.Arrays.copyOf(buffer, read), endpoint.secret,
+                    byte[] payload = TunnelCrypto.encrypt(java.util.Arrays.copyOf(buffer, read), endpoint.secret,
                             direction, channel.id, sequence);
                     endpoint.sendFrame(payload);
                 }
