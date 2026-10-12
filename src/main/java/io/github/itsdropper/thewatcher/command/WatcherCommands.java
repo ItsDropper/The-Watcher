@@ -101,6 +101,8 @@ public final class WatcherCommands {
                 + ", health=" + String.format(java.util.Locale.ROOT, "%.1f", watcher.getHealth())
                 + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", player.distanceTo(watcher))
                 + ", renderDistance=" + TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS + " chunks"
+                + ", learnedSafetyBonus=" + String.format(java.util.Locale.ROOT, "%.1f blocks", watcher.getLearnedSafetyDistanceBonus(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS))
+                + ", proximityPressure=" + String.format(java.util.Locale.ROOT, "%.2f", watcher.getProximityPressure())
                 + ", stalkingBand=" + String.format(java.util.Locale.ROOT, "%.0f-%.0f blocks",
                         WatcherStalkingDirector.minimumStalkingDistance(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS),
                         WatcherStalkingDirector.maximumStalkingDistance(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS))
