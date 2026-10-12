@@ -41,6 +41,8 @@ public final class WatcherRunManager {
             }
             run = new RunState(world.getTime(), WatcherWorldOptions.getRunLengthHours(),
                     world.random.nextInt(6_001) + 3_600L);
+            run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
+            WatcherTowerGenerator.resetForRun();
             RUNS.put(world, run);
             WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
         }
@@ -57,6 +59,15 @@ public final class WatcherRunManager {
 
         if (world.getTime() % 20L == 0L) {
             samplePlayers(world, run);
+        }
+
+        if (world.getTime() >= run.nextTowerAt) {
+            ServerPlayerEntity explorer = choosePlayer(world, run);
+            if (explorer != null && WatcherTowerGenerator.tryGenerate(world, explorer)) {
+                run.nextTowerAt = world.getTime() + world.random.nextInt(18_001) + 18_000L;
+            } else {
+                run.nextTowerAt = world.getTime() + 6_000L;
+            }
         }
 
         if (!run.revealed && elapsed >= run.revealDelayTicks && isNight(world)) {
@@ -80,10 +91,9 @@ public final class WatcherRunManager {
             Vec3d previous = run.lastPositions.put(id, current);
             if (previous != null) {
                 double moved = current.distanceTo(previous);
-                run.explorationScore += Math.min(moved, 8.0D);
-                if (player.isSprinting()) {
-                    run.explorationScore += 0.5D;
-                }
+                double activity = Math.min(moved, 8.0D) + (player.isSprinting() ? 0.5D : 0.0D);
+                run.explorationScore += activity;
+                run.playerExplorationScores.merge(id, activity, Double::sum);
             }
         }
     }
@@ -102,7 +112,7 @@ public final class WatcherRunManager {
         if (players.size() == 1 || world.random.nextFloat() < 0.65F) {
             return players.stream()
                     .max(Comparator.comparingDouble(player ->
-                            run.lastPositions.containsKey(player.getUuid()) ? run.explorationScore : 0.0D))
+                            run.playerExplorationScores.getOrDefault(player.getUuid(), 0.0D)))
                     .orElse(players.get(world.random.nextInt(players.size())));
         }
         return players.get(world.random.nextInt(players.size()));
@@ -169,6 +179,8 @@ public final class WatcherRunManager {
         private final int runLengthHours;
         private final long revealDelayTicks;
         private final Map<UUID, Vec3d> lastPositions = new java.util.HashMap<>();
+        private final Map<UUID, Double> playerExplorationScores = new java.util.HashMap<>();
+        private long nextTowerAt;
         private UUID naturalWatcherUuid;
         private double explorationScore;
         private boolean revealed;
