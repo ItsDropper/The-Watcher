@@ -84,7 +84,6 @@ public final class CameraFeedScreen extends Screen {
         }
         viewEntity.setYaw(yaw);
         viewEntity.setPitch(pitch);
-        viewEntity.setHeadYaw(yaw);
         return true;
     }
 
