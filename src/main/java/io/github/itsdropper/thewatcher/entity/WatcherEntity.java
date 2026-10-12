@@ -67,6 +67,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean debugPhaseAutoAdvance;
     private boolean naturalRunEntity;
     private int navigationCheckCooldown;
+    private int cameraWanderCooldown;
     private int navigationStuckChecks;
     private Vec3d lastNavigationCheckPosition;
 
@@ -183,20 +184,21 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
-        // Correct personal-space violations during both observing and stalking, not just stalking.
-        // Ordinary cooldowns prevent teleport spam; an extreme close approach bypasses them.
+        // Only the STALKING phase may teleport. During OBSERVING, proximity is corrected
+        // by walking away, keeping the Watcher's movement visible and less aggressive.
         if (tooCloseForPhase && (proximityCorrectionCooldown <= 0 || distance < 24.0D)) {
-            proximityRelocated = TheWatcher.TELEPORTS_ENABLED
-                    && (hiddenMoveCooldown <= 0 || distance < 24.0D)
-                    && !isWithinPlayerView(player)
-                    && tryHiddenTeleport(world, player, false);
+            if (phase == Phase.STALKING) {
+                proximityRelocated = TheWatcher.TELEPORTS_ENABLED
+                        && (hiddenMoveCooldown <= 0 || distance < 24.0D)
+                        && !isWithinPlayerView(player)
+                        && tryHiddenTeleport(world, player, false);
+            }
             if (proximityRelocated) {
                 hiddenMoveCooldown = 240 + random.nextInt(241);
                 proximityCorrectionCooldown = 80 + random.nextInt(61);
                 getNavigation().stop();
                 resetNavigationRecovery();
             } else {
-                // If terrain/chunk/view constraints prevent a safe teleport, create distance by walking.
                 moveAwayFrom(player, 1.8D);
                 proximityCorrectionCooldown = 20 + random.nextInt(21);
             }
@@ -211,13 +213,12 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         switch (phase) {
             case IDLE -> setPhase(Phase.OBSERVING);
             case OBSERVING -> {
-                // Stillness is the default, but not at close range: preserve the retreat path
-                // until the learned minimum distance has been restored.
-                if (!tooCloseForPhase || proximityRelocated) {
-                    getNavigation().stop();
-                    setVelocity(0.0D, getVelocity().y, 0.0D);
-                } else if (getNavigation().isIdle()) {
-                    moveAwayFrom(player, 1.8D);
+                // While unobserved, the Watcher patrols around nearby surveillance cameras.
+                // It does not teleport in this phase; its movements should be physically traceable.
+                if (tooCloseForPhase && !proximityRelocated) {
+                    if (getNavigation().isIdle()) moveAwayFrom(player, 1.8D);
+                } else {
+                    wanderNearCamera(world);
                 }
                 int duration = OBSERVE_TICKS;
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
@@ -526,6 +527,55 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         getNavigation().startMovingTo(destinationX, getY(), destinationZ, speed);
     }
 
+    private void wanderNearCamera(ServerWorld world) {
+        if (cameraWanderCooldown > 0) {
+            cameraWanderCooldown--;
+            return;
+        }
+        cameraWanderCooldown = 40 + random.nextInt(61);
+
+        SurveillanceCameraBlockEntity nearest = null;
+        double nearestDistance = 64.0D * 64.0D;
+        int chunkX = getBlockPos().getX() >> 4;
+        int chunkZ = getBlockPos().getZ() >> 4;
+        for (int cx = chunkX - 4; cx <= chunkX + 4; cx++) {
+            for (int cz = chunkZ - 4; cz <= chunkZ + 4; cz++) {
+                net.minecraft.world.chunk.WorldChunk chunk =
+                        world.getChunkManager().getWorldChunk(cx, cz, false);
+                if (chunk == null) continue;
+                for (var blockEntity : chunk.getBlockEntities().values()) {
+                    if (!(blockEntity instanceof SurveillanceCameraBlockEntity camera)) continue;
+                    double distance = camera.getPos().getSquaredDistance(getBlockPos());
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearest = camera;
+                    }
+                }
+            }
+        }
+
+        if (!getNavigation().isIdle()) return;
+        double angle = random.nextDouble() * Math.PI * 2.0D;
+        double radius = nearest == null ? 8.0D + random.nextDouble() * 12.0D
+                : 5.0D + random.nextDouble() * 11.0D;
+        double anchorX = nearest == null ? getX() : nearest.getPos().getX() + 0.5D;
+        double anchorZ = nearest == null ? getZ() : nearest.getPos().getZ() + 0.5D;
+        int x = (int) Math.floor(anchorX + Math.cos(angle) * radius);
+        int z = (int) Math.floor(anchorZ + Math.sin(angle) * radius);
+        if (!world.isChunkLoaded(x >> 4, z >> 4)) return;
+        int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+        BlockPos feet = new BlockPos(x, y, z);
+        BlockPos ground = feet.down();
+        if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
+                || !world.getBlockState(feet).getFluidState().isEmpty()
+                || !world.getBlockState(feet.up()).getFluidState().isEmpty()) {
+            return;
+        }
+        getNavigation().startMovingTo(x + 0.5D, y, z + 0.5D, 0.85D);
+    }
+
     private void recoverStuckRetreat(ServerWorld world, PlayerEntity player) {
         if (navigationCheckCooldown > 0) {
             navigationCheckCooldown--;
@@ -547,7 +597,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         getNavigation().stop();
-        boolean recovered = TheWatcher.TELEPORTS_ENABLED
+        boolean recovered = phase == Phase.STALKING
+                && TheWatcher.TELEPORTS_ENABLED
                 && !isWithinPlayerView(player)
                 && tryHiddenTeleport(world, player, true);
         if (recovered) {
