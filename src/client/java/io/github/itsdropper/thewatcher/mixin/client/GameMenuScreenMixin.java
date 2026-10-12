@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher.mixin.client;
 
 import io.github.itsdropper.thewatcher.client.WatcherSettingsScreen;
+import io.github.itsdropper.thewatcher.client.hosting.HostingScreen;
 import io.github.itsdropper.thewatcher.mixin.client.ScreenAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
@@ -21,6 +22,12 @@ public abstract class GameMenuScreenMixin {
                 button -> MinecraftClient.getInstance().setScreen(new WatcherSettingsScreen(screen)))
                 .dimensions(MinecraftClient.getInstance().getWindow().getScaledWidth() / 2 - 100,
                         MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 144, 200, 20)
+                .build());
+
+        accessor.theWatcher$addDrawableChild(ButtonWidget.builder(Text.literal("Host / Join World"), button ->
+                MinecraftClient.getInstance().setScreen(new HostingScreen(screen)))
+                .dimensions(MinecraftClient.getInstance().getWindow().getScaledWidth() / 2 - 100,
+                        MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 168, 200, 20)
                 .build());
     }
 }
