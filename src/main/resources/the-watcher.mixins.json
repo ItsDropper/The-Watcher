@@ -6,7 +6,8 @@
   "client": [
     "client.GameMenuScreenMixin",
     "client.ScreenAccessor",
-    "client.CreateWorldScreenMixin"
+    "client.CreateWorldScreenMixin",
+    "client.CameraZoomMixin"
   ],
   "injectors": {
     "defaultRequire": 1
