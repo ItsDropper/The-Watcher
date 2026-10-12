@@ -162,7 +162,7 @@ public final class WatcherSettingsScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
+        super.render(context, mouseX, mouseY, delta);
         int centerX = this.width / 2;
         int top = Math.max(10, this.height / 5 - 8);
         context.drawCenteredTextWithShadow(textRenderer, "THE WATCHER", centerX, top - 24, 0xE0E0E0);
@@ -185,7 +185,6 @@ public final class WatcherSettingsScreen extends Screen {
                     "The Watcher learns from your movement and where you look.",
                     centerX, this.height - 56, 0x909090);
         }
-        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
