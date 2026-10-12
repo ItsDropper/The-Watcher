@@ -10,6 +10,7 @@ public class TheWatcherClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         EntityRendererRegistry.register(TheWatcher.WATCHER, WatcherRenderer::new);
+        CameraAlertHud.register();
         // Keep the common stalking policy synchronized with the actual Minecraft option,
         // even if the player never opens The Watcher's settings screen.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
