@@ -153,6 +153,10 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         setTarget(player);
 
+        // Keep the Watcher's head and body oriented toward its current player target,
+        // including while it is standing still in OBSERVING/STALKING.
+        lookAtPlayer(player);
+
         boolean watched = isPlayerWatching(player);
         double distance = Math.sqrt(squaredDistanceTo(player));
         learningEngine.observe(watched, distance);
