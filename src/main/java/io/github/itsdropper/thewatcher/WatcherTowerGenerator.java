@@ -407,7 +407,8 @@ public final class WatcherTowerGenerator {
                     RawFilteredPair.of("At 03:17, every camera showed the same empty corridor. The monitor in the locked room showed all four of us standing behind the operator. There were only three of us on shift."),
                     RawFilteredPair.of("If you found this tower, take the supplies. Do not sleep here. The top floor is not safer; it only gives you fewer directions to look. — M.")
             )));
-            chest.setStack(0, logbook);\n            ItemStack evidence = new ItemStack(Items.PAPER);\n            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));\n            chest.setStack(9, evidence);
+            chest.setStack(0, logbook);
+            ItemStack evidence = new ItemStack(Items.PAPER);\n            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));\n            chest.setStack(9, evidence);
 
             Item[] supplies = {Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
                     Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.COMPASS, Items.SPYGLASS,
