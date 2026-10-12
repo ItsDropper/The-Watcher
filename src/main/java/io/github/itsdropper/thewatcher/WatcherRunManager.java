@@ -66,6 +66,11 @@ public final class WatcherRunManager {
                     return;
                 }
                 RUNS.put(world, run);
+                if (!run.ended && WatcherTowerGenerator.snapshotBuiltRegions().isEmpty()) {
+                    // Upgrade older active saves that began before spawn towers existed.
+                    WatcherTowerGenerator.generateGuaranteedSpawnTower(world);
+                    saveRun(world, run);
+                }
             }
         }
 
