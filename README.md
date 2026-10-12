@@ -43,6 +43,25 @@ These commands require operator permission level 2 and are intended for a world/
 
 Debug commands search a wide area so the Watcher can still be recovered after a distant relocation. Forced observe, stalk, and retreat phases stay locked until `/watcher debug phase auto` is used. Forced escalation performs a short rush and retreat, then locks again. The simulation command runs an accelerated encounter during any time of day; stop it with `/watcher debug simulate stop`. These commands let you test without waiting for normal phase timers.
 
+## Horror expansion: structures and local AI
+
+The run can now place several distinct exploration sites in suitable, already-loaded terrain in addition to the guaranteed watchtower:
+
+- **Abandoned cabin** — a boarded-up shelter with a survivor's journal.
+- **Ritual shrine** — a moss-covered stone site with chained pillars and a multi-part account of the failed offerings.
+- **Ruined expedition camp** — a derelict campsite with an expedition log.
+- **Watchtower** — the original lookout with its own logbook and supplies.
+
+Each site uses a different book to reveal another part of the setting. These are currently built by the run manager in existing loaded terrain, not registered as vanilla world-generation structures. If no valid site can be placed, the run retries instead of treating the attempt as successful.
+
+### Optional Ollama horror director
+
+The Watcher can optionally connect to a **local Ollama** instance. This is disabled by default and uses the configured endpoint (default `http://localhost:11434`) and model name (default `llama3.2`). In the pause menu, open **The Watcher Settings**, enable **Local Ollama AI**, enter the model name installed in Ollama, select a system-prompt preset or edit the prompt, and save.
+
+The model is asked for a small JSON directive at a slow interval. It can choose a short in-game whisper, a brief Darkness effect, false footsteps, or a bounded Watcher phase (observe, stalk, retreat). It can also choose silence. The model cannot run commands, execute code, or directly change arbitrary blocks. If Ollama is unavailable, the ordinary non-AI horror behavior continues; network failures are logged without blocking the server tick.
+
+To use it, install and run Ollama locally, pull a model you have available, then enter that exact model name in the settings. The model name is not downloaded automatically by the mod. For a LAN world, the Ollama endpoint must be reachable from the machine running the integrated/server world. Only send prompts to an endpoint you trust.
+
 ## Requirements
 
 - Minecraft **1.21.1**
