@@ -16,7 +16,7 @@ function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-function validRoomId(value) {
+export function validRoomId(value) {
   return typeof value === "string" && ROOM_ID_PATTERN.test(value);
 }
 
