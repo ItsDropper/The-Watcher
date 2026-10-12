@@ -407,7 +407,7 @@ public final class WatcherTowerGenerator {
                     RawFilteredPair.of("At 03:17, every camera showed the same empty corridor. The monitor in the locked room showed all four of us standing behind the operator. There were only three of us on shift."),
                     RawFilteredPair.of("If you found this tower, take the supplies. Do not sleep here. The top floor is not safer; it only gives you fewer directions to look. — M.")
             )));
-            chest.setStack(0, logbook);
+            chest.setStack(0, logbook);\n            ItemStack evidence = new ItemStack(Items.PAPER);\n            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));\n            chest.setStack(9, evidence);
 
             Item[] supplies = {Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
                     Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.COMPASS, Items.SPYGLASS,
@@ -579,3 +579,28 @@ public final class WatcherTowerGenerator {
         Item[] supplies = {
                 Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
                 Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.STRING,
+                Items.COMPASS, Items.SPYGLASS, Items.GOLDEN_APPLE, Items.IRON_PICKAXE,
+                Items.SHIELD, Items.NAME_TAG, Items.ENDER_PEARL, TheWatcher.SURVEILLANCE_CAMERA_ITEM
+        };
+        for (int slot = 1; slot <= 8; slot++) {
+            Item item = supplies[world.random.nextInt(supplies.length)];
+            boolean single = item == Items.COMPASS || item == Items.SPYGLASS
+                    || item == Items.GOLDEN_APPLE || item == Items.IRON_PICKAXE
+                    || item == Items.SHIELD || item == Items.NAME_TAG
+                    || item == Items.ENDER_PEARL || item == TheWatcher.SURVEILLANCE_CAMERA_ITEM;
+            chest.setStack(slot, new ItemStack(item, single ? 1 : 2 + world.random.nextInt(5)));
+        }
+
+        // Each location hides one distinct evidence page. All four are required to expose the Watcher.
+        String evidenceName = pages.get(0).startsWith("E.'s journal") ? "Evidence: Cabin"
+                : pages.get(0).startsWith("ARCHIVE FRAGMENT") ? "Evidence: Shrine"
+                : pages.get(0).startsWith("EXPEDITION LOG") ? "Evidence: Expedition"
+                : "Evidence: Unknown";
+        if (!evidenceName.endsWith("Unknown")) {
+            ItemStack evidence = new ItemStack(Items.PAPER);
+            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal(evidenceName));
+            chest.setStack(9, evidence);
+        }
+        chest.markDirty();
+    }
+}
