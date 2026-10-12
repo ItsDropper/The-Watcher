@@ -28,6 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class HostingTunnelService {
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final long MAX_QUEUED_BYTES = 8L * 1024 * 1024;
     private static final ExecutorService IO = Executors.newCachedThreadPool(task -> {
         Thread thread = new Thread(task, "TheWatcher-Hosting");
         thread.setDaemon(true);
@@ -173,6 +174,7 @@ public final class HostingTunnelService {
         });
         private final Object sendLock = new Object();
         private CompletableFuture<?> sendTail = CompletableFuture.completedFuture(null);
+        private final AtomicLong queuedBytes = new AtomicLong();
         private final ByteArrayOutputStream textParts = new ByteArrayOutputStream();
         private final ByteArrayOutputStream binaryParts = new ByteArrayOutputStream();
         protected volatile java.net.http.WebSocket webSocket;
@@ -255,12 +257,22 @@ public final class HostingTunnelService {
             }
             if (complete != null) {
                 byte[] frame = complete;
-                serial.execute(() -> {
-                    try { handleFrame(frame); }
-                    catch (Exception error) { close(); }
-                });
+                try {
+                    serial.execute(() -> {
+                        try { handleFrame(frame); }
+                        catch (Exception error) { close(); }
+                        finally {
+                            if (!closed) socket.request(1);
+                        }
+                    });
+                } catch (java.util.concurrent.RejectedExecutionException ignored) {
+                    socket.abort();
+                }
+            } else {
+                // Continue receiving fragments of the current message; after a complete
+                // message, request the next one only after it has been processed.
+                socket.request(1);
             }
-            socket.request(1);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -289,9 +301,17 @@ public final class HostingTunnelService {
         protected void sendFrame(byte[] frame) {
             java.net.http.WebSocket socket = webSocket;
             if (closed || socket == null || socket.isOutputClosed()) return;
+            long queued = queuedBytes.addAndGet(frame.length);
+            if (queued > MAX_QUEUED_BYTES) {
+                queuedBytes.addAndGet(-frame.length);
+                close();
+                return;
+            }
+            int frameBytes = frame.length;
             synchronized (sendLock) {
                 sendTail = sendTail.handle((ignored, error) -> null)
-                        .thenCompose(ignored -> socket.sendBinary(ByteBuffer.wrap(frame), true));
+                        .thenCompose(ignored -> socket.sendBinary(ByteBuffer.wrap(frame), true))
+                        .whenComplete((ignored, error) -> queuedBytes.addAndGet(-frameBytes));
             }
         }
 
