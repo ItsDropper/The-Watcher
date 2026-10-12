@@ -34,6 +34,11 @@ public final class WatcherCommands {
     private static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(literal("watcher")
                 .requires(source -> source.hasPermissionLevel(2))
+                .executes(context -> {
+                    context.getSource().sendFeedback(() -> Text.literal(
+                            "The Watcher: mode on|off | debug ending|spawn|status|structures|despawn|simulate|phase|darkness"), false);
+                    return 1;
+                })
                 .then(literal("mode")
                         .then(literal("on").executes(context -> startMode(context.getSource())))
                         .then(literal("off").executes(context -> stopMode(context.getSource()))))
