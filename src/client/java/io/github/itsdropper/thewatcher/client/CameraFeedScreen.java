@@ -119,9 +119,10 @@ public final class CameraFeedScreen extends Screen {
 
     private void setViewRotation(float yaw, float pitch) {
         float clampedPitch = MathHelper.clamp(pitch, -89.0F, 89.0F);
-        // Set the entity's rotation as one operation and synchronize interpolation values.
-        // Updating only yaw/pitch can be overwritten by camera interpolation on some mappings.
-        viewEntity.setRotation(yaw, clampedPitch);
+        // Use public setters (Entity#setRotation is protected in this Minecraft version).
+        // Synchronize previous values so camera interpolation does not introduce jitter.
+        viewEntity.setYaw(yaw);
+        viewEntity.setPitch(clampedPitch);
         viewEntity.setBodyYaw(yaw);
         viewEntity.setHeadYaw(yaw);
         viewEntity.prevYaw = yaw;
