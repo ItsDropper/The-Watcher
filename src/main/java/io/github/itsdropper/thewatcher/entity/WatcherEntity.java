@@ -140,7 +140,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         boolean watched = isPlayerWatching(player);
         double distance = Math.sqrt(squaredDistanceTo(player));
         learningEngine.observe(watched, distance);
-        boolean distanceSensitivePhase = phase == Phase.OBSERVING || phase == Phase.STALKING;
+        // The simulation deliberately starts close and visible; normal gameplay still enforces distance in OBSERVING.
+        boolean distanceSensitivePhase = phase == Phase.STALKING
+                || (phase == Phase.OBSERVING && !debugSimulation);
         if (distanceSensitivePhase) {
             learningEngine.observeStalkingDistance(distance, renderChunks);
         }
@@ -599,6 +601,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         phase = newPhase;
         phaseTicks = 0;
         hiddenMoveCooldown = 0;
+        proximityCorrectionCooldown = 0;
         dreadEffectCooldown = 0;
         attentionTicks = 0;
         unseenTicks = 0;
@@ -618,6 +621,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         phase = Phase.OBSERVING;
         phaseTicks = 0;
         hiddenMoveCooldown = 0;
+        proximityCorrectionCooldown = 0;
         attemptedEscalationAttack = false;
         setTarget(player);
         getNavigation().stop();
