@@ -93,6 +93,7 @@ public final class WatcherRunManager {
             ensureWatcherPresent(world, run);
         }
         WatcherOllamaDirector.tick(world, run.revealed);
+        WatcherAtmosphereDirector.tick(world, run.revealed);
 
         if (world.getTime() % 20L == 0L) {
             samplePlayers(world, run);
