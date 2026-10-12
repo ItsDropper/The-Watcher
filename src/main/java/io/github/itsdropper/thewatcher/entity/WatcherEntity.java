@@ -3,6 +3,7 @@ package io.github.itsdropper.thewatcher.entity;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlockEntity;
 import net.minecraft.block.Blocks;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -167,9 +168,12 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (distanceSensitivePhase) {
             learningEngine.observeStalkingDistance(distance, renderChunks);
         }
+        long localTime = Math.floorMod(world.getTimeOfDay(), 24_000L);
+        boolean nightStalking = localTime >= 13_000L && localTime < 23_000L;
         double minimumSafeDistance = Math.max(26.0D,
                 WatcherStalkingDirector.minimumStalkingDistance(renderChunks)
-                        - learningEngine.getLearnedApproachBonus());
+                        - learningEngine.getLearnedApproachBonus()
+                        + (nightStalking ? 7.0D : 0.0D));
         boolean tooCloseForPhase = distanceSensitivePhase && distance < minimumSafeDistance;
         boolean proximityRelocated = false;
 
@@ -322,6 +326,18 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             } else {
                 radius = WatcherStalkingDirector.candidateRadius(renderChunks, random.nextDouble(),
                         -learningEngine.getLearnedApproachBonus());
+                long time = Math.floorMod(world.getTimeOfDay(), 24_000L);
+                boolean night = time >= 13_000L && time < 23_000L;
+                if (night) {
+                    // Most night sightings stay near the outer edge; rarely, the Watcher
+                    // breaks that pattern and appears a little closer.
+                    if (random.nextInt(100) < 12) {
+                        radius = Math.max(30.0D, radius - 14.0D);
+                    } else {
+                        radius = Math.min(WatcherStalkingDirector.renderDistanceBlocks(renderChunks) - 3.0D,
+                                radius + 8.0D);
+                    }
+                }
             }
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
@@ -330,11 +346,12 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 continue;
             }
 
-            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
             BlockPos feet = new BlockPos(x, y, z);
             BlockPos ground = feet.down();
 
-            if (!world.getBlockState(ground).isSolidBlock(world, ground)
+            if (!(world.getBlockState(ground).isSolidBlock(world, ground)
+                    || world.getBlockState(ground).isIn(BlockTags.LEAVES))
                     || isUnsafeGround(world.getBlockState(ground))
                     || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
                     || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
@@ -378,7 +395,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 int sx = x + sampleOffset[0];
                 int sz = z + sampleOffset[1];
                 if (world.isChunkLoaded(sx >> 4, sz >> 4)) {
-                    surroundingHeight += world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, sx, sz);
+                    surroundingHeight += world.getTopY(Heightmap.Type.MOTION_BLOCKING, sx, sz);
                     heightSamples++;
                 }
             }
