@@ -12,7 +12,7 @@ public record CameraListPayload(List<BlockPos> positions) implements CustomPaylo
     public static final Id<CameraListPayload> ID =
             new Id<>(TheWatcher.id("camera_list"));
     public static final PacketCodec<RegistryByteBuf, CameraListPayload> CODEC = PacketCodec.of(
-            (RegistryByteBuf buf, CameraListPayload payload) -> {
+            (CameraListPayload payload, RegistryByteBuf buf) -> {
                 buf.writeVarInt(payload.positions().size());
                 for (BlockPos pos : payload.positions()) buf.writeLong(pos.asLong());
             },
