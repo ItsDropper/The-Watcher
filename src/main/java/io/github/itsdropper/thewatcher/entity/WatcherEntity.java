@@ -67,6 +67,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean attemptedEscalationAttack;
     private int ambushCooldown;
     private int closeJumpscareCooldown;
+    private int watchedAttackCooldown;
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
@@ -140,6 +141,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         dreadEffectCooldown = Math.max(0, dreadEffectCooldown - tickScale);
         ambushCooldown = Math.max(0, ambushCooldown - tickScale);
         closeJumpscareCooldown = Math.max(0, closeJumpscareCooldown - tickScale);
+        watchedAttackCooldown = Math.max(0, watchedAttackCooldown - tickScale);
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
@@ -207,6 +209,34 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (watched) {
             attentionTicks = Math.min(attentionTicks + 1, 1200);
             unseenTicks = 0;
+
+            // Being watched still freezes the stalking movement, but it must not make the
+            // Watcher harmless forever. If it has closed the gap, it can strike while visible.
+            if (phase == Phase.STALKING && attentionTicks >= 100 && distance <= 3.2D
+                    && watchedAttackCooldown <= 0) {
+                watchedAttackCooldown = 60;
+                boolean hit = tryAttack(player);
+                world.playSound(null, player.getBlockPos(),
+                        hit ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG : SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                        SoundCategory.HOSTILE, 0.9F, hit ? 0.65F : 0.8F);
+                if (hit) {
+                    player.addStatusEffect(new StatusEffectInstance(
+                            StatusEffects.DARKNESS, 30, 0, false, false, true));
+                }
+            }
+
+            if (phase == Phase.ESCALATING) {
+                lookAtPlayer(player);
+                getNavigation().startMovingTo(player, 1.2D);
+                if (squaredDistanceTo(player) <= 2.6D * 2.6D && !attemptedEscalationAttack) {
+                    attemptedEscalationAttack = true;
+                    if (!tryAttack(player)) {
+                        // One failed attempt should not waste the whole escalation window.
+                        attemptedEscalationAttack = false;
+                    }
+                }
+            }
+
             if (tooCloseForPhase) {
                 // A nearby Watcher must not freeze in the player's face. It retreats on foot
                 // while watched and only attempts hidden relocation after leaving the view cone.
