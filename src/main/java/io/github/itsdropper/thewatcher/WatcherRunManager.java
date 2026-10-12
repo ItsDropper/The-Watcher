@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.WeakHashMap;
  */
 public final class WatcherRunManager {
     private static final Map<ServerWorld, RunState> RUNS = new WeakHashMap<>();
+    private static final Set<ServerWorld> CHECKED_WORLDS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final long TICKS_PER_HOUR = 72_000L;
 
     private WatcherRunManager() {
@@ -50,9 +52,13 @@ public final class WatcherRunManager {
                 run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
                 WatcherTowerGenerator.resetForRun();
                 RUNS.put(world, run);
+                CHECKED_WORLDS.add(world);
                 WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
                 saveRun(world, run);
             } else {
+                if (!CHECKED_WORLDS.add(world)) {
+                    return;
+                }
                 run = loadRun(world);
                 if (run == null) {
                     return;
