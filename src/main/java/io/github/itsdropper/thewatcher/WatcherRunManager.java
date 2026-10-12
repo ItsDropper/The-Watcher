@@ -2,6 +2,7 @@ package io.github.itsdropper.thewatcher;
 
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -180,10 +181,11 @@ public final class WatcherRunManager {
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
             if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
 
-            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
             BlockPos feet = new BlockPos(x, y, z);
             BlockPos ground = feet.down();
-            if (!world.getBlockState(ground).isSolidBlock(world, ground)
+            if (!(world.getBlockState(ground).isSolidBlock(world, ground)
+                    || world.getBlockState(ground).isIn(BlockTags.LEAVES))
                     || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
                     || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
                     || !world.getBlockState(feet.up(2)).getCollisionShape(world, feet.up(2)).isEmpty()
@@ -200,7 +202,7 @@ public final class WatcherRunManager {
                 int sx = x + offset[0];
                 int sz = z + offset[1];
                 if (world.isChunkLoaded(sx >> 4, sz >> 4)) {
-                    heightSum += world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, sx, sz);
+                    heightSum += world.getTopY(Heightmap.Type.MOTION_BLOCKING, sx, sz);
                     samples++;
                 }
             }
