@@ -32,7 +32,8 @@ public final class CameraMonitorScreen extends Screen {
     protected void init() {
         refreshCameras();
         int centerX = width / 2;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), button -> refreshCameras())
+        addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), button ->
+                MinecraftClient.getInstance().setScreen(new CameraMonitorScreen()))
                 .dimensions(centerX - 104, height - 32, 100, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), button -> close())
                 .dimensions(centerX + 4, height - 32, 100, 20).build());
