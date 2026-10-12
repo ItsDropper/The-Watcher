@@ -17,7 +17,7 @@ test("allows HTTP only when explicitly configured behind a TLS-terminating platf
   t.after(async () => relay.close());
   const response = await fetch(`http://127.0.0.1:${address.port}/health`);
   assert.equal(response.status, 200);
-  assert.equal(await response.text(), "ok\\n");
+  assert.equal(await response.text(), "ok\n");
 });
 
 test("accepts only a well-formed authenticated-control envelope", () => {
