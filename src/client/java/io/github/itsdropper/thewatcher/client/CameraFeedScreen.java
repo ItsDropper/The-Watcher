@@ -1,9 +1,9 @@
 package io.github.itsdropper.thewatcher.client;
 
-import io.github.itsdropper.thewatcher.CameraNetwork;
+import io.github.itsdropper.thewatcher.CameraFeedClosePayload;
+import io.github.itsdropper.thewatcher.CameraFeedOpenPayload;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlock;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -57,7 +57,7 @@ public final class CameraFeedScreen extends Screen {
         Entity previous = client.getCameraEntity();
         view.setId(-2_147_000_001);
         client.world.addEntity(view);
-        ClientPlayNetworking.send(CameraNetwork.OPEN_FEED, PacketByteBufs.create().writeBlockPos(pos));
+        ClientPlayNetworking.send(new CameraFeedOpenPayload(pos));
         CameraFeedScreen screen = new CameraFeedScreen(pos, networkScreen, previous, view, client.world);
         client.setCameraEntity(view);
         return screen;
@@ -147,7 +147,7 @@ public final class CameraFeedScreen extends Screen {
     private void restorePlayerView() {
         if (restored) return;
         restored = true;
-        ClientPlayNetworking.send(CameraNetwork.CLOSE_FEED, PacketByteBufs.create());
+        ClientPlayNetworking.send(new CameraFeedClosePayload());
         if (client != null && previousCameraEntity != null) {
             client.setCameraEntity(previousCameraEntity);
         }
