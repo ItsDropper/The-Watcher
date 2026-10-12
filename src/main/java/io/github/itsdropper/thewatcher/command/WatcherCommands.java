@@ -114,7 +114,7 @@ public final class WatcherCommands {
         WatcherEntity watcher = findNearestWatcher(player);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No Watcher found within the current stalking search range. Use /watcher debug spawn."));
+            source.sendError(Text.literal("No loaded Watcher found within 2048 blocks. Use /watcher debug spawn."));
             return 0;
         }
 
@@ -146,7 +146,7 @@ public final class WatcherCommands {
         WatcherEntity watcher = findNearestWatcher(player);
 
         if (watcher == null) {
-            source.sendError(Text.literal("No Watcher found within 64 blocks."));
+            source.sendError(Text.literal("No loaded Watcher found within 2048 blocks."));
             return 0;
         }
 
