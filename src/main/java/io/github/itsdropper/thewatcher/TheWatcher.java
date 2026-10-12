@@ -42,6 +42,7 @@ public class TheWatcher implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        WatcherOllamaConfig.load();
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         WatcherCommands.register();
         ServerTickEvents.END_WORLD_TICK.register(TheWatcher::applyNightDarkness);
