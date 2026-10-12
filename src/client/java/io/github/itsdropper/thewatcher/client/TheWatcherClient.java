@@ -5,6 +5,7 @@ import io.github.itsdropper.thewatcher.CameraListPayload;
 import io.github.itsdropper.thewatcher.CameraListRequestPayload;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.client.render.WatcherRenderer;
+import io.github.itsdropper.thewatcher.client.hosting.HostingTunnelService;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -64,6 +65,7 @@ public class TheWatcherClient implements ClientModInitializer {
                         client.getSoundManager().stop(endingMusic);
                         endingMusic = null;
                     }
+                    HostingTunnelService.closeActiveSession();
                 }));
 
         openCameraMonitorKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
