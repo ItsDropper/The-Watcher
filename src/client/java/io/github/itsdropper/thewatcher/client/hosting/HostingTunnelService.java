@@ -344,7 +344,7 @@ public final class HostingTunnelService {
         @Override protected void onControlMessage(String message) {
             // Relay-generated disconnect notifications may close a channel only.
             // They are deliberately not treated as authenticated game data.
-            String prefix = "{\\"type\\":\\"channel-closed\\",\\"channelId\\":";
+            String prefix = "{\"type\":\"channel-closed\",\"channelId\":";
             if (!message.startsWith(prefix) || !message.endsWith("}")) return;
             String rawChannel = message.substring(prefix.length(), message.length() - 1);
             try {
