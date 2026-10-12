@@ -55,7 +55,7 @@ public final class WatcherAtmosphereDirector {
 
             PlayerState state = states.computeIfAbsent(player.getUuid(), ignored -> {
                 PlayerState created = new PlayerState();
-                created.nextEventAt = world.getTime() + 2_400L + world.random.nextInt(3_601);
+                created.nextEventAt = world.getTime() + 6_000L + world.random.nextInt(6_001);
                 created.lastYaw = player.getYaw();
                 created.lastPosition = player.getPos();
                 created.hasLastSample = true;
@@ -86,12 +86,12 @@ public final class WatcherAtmosphereDirector {
 
             // Sometimes the director chooses silence. The lack of a payoff is intentional.
             float roll = world.random.nextFloat();
-            if (roll >= 0.22F) {
+            if (roll >= 0.42F) {
                 deliverCue(world, player, state);
                 state.events++;
             }
 
-            state.nextEventAt = world.getTime() + 1_800L + world.random.nextInt(4_801);
+            state.nextEventAt = world.getTime() + 6_000L + world.random.nextInt(9_001);
         }
     }
 
@@ -120,6 +120,18 @@ public final class WatcherAtmosphereDirector {
         int light = world.getLightLevel(player.getBlockPos());
         boolean dark = light <= 7 || isNight(world);
         int event = world.random.nextInt(100);
+
+        // A rare, unhelpful camera warning is more unsettling than constant narration.
+        // It never gives coordinates and is separated by the long event cooldown above.
+        if (event < 4 && isNight(world) && state.events >= 2) {
+            String[] alerts = {
+                    "CAMERA NETWORK: UNKNOWN MOVEMENT",
+                    "CAMERA NETWORK: FRAME MISMATCH",
+                    "CAMERA NETWORK: SIGNAL INTEGRITY LOST"
+            };
+            player.sendMessage(Text.literal(alerts[world.random.nextInt(alerts.length)]), true);
+            return;
+        }
 
         if (event < 39) {
             double distance = state.stillTicks > 600 ? 2.4D : 2.8D + world.random.nextDouble() * 2.4D;
