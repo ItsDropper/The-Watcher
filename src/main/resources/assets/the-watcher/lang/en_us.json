@@ -1,4 +1,6 @@
 {
   "entity.the-watcher.watcher": "The Watcher",
-  "block.the-watcher.surveillance_camera": "Surveillance Camera"
+  "block.the-watcher.surveillance_camera": "Surveillance Camera",
+  "key.the-watcher.camera_monitor": "Open Camera Monitor",
+  "category.the-watcher": "The Watcher"
 }
