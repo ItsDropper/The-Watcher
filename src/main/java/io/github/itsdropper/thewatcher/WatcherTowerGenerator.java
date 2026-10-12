@@ -407,6 +407,7 @@ public final class WatcherTowerGenerator {
             for (int slot = 1; slot <= 5; slot++) {
                 Item item = supplies[world.random.nextInt(supplies.length)];
                 int count = item == Items.IRON_INGOT || item == Items.COMPASS || item == Items.SPYGLASS
+                        || item == TheWatcher.SURVEILLANCE_CAMERA_ITEM
                         ? 1 : 1 + world.random.nextInt(4);
                 chest.setStack(slot, new ItemStack(item, count));
             }
