@@ -7,6 +7,7 @@ import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.client.render.WatcherRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.sound.PositionedSoundInstance;
@@ -55,6 +56,15 @@ public class TheWatcherClient implements ClientModInitializer {
                 }));
         ClientPlayNetworking.registerGlobalReceiver(CameraListPayload.ID, (payload, context) ->
                 context.client().execute(() -> CameraMonitorScreen.receiveCameras(payload.positions())));
+
+        // Never leave the ending soundtrack running after leaving a world or server.
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+                client.execute(() -> {
+                    if (endingMusic != null) {
+                        client.getSoundManager().stop(endingMusic);
+                        endingMusic = null;
+                    }
+                }));
 
         openCameraMonitorKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.the-watcher.camera_monitor", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V,
