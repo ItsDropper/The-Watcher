@@ -2,6 +2,7 @@ package io.github.itsdropper.thewatcher;
 
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -116,6 +117,20 @@ public final class WatcherOllamaDirector {
         if (player == null) return;
 
         switch (directive.event) {
+            case "observe", "stalk", "retreat" -> {
+                WatcherEntity watcher = world.getEntitiesByClass(WatcherEntity.class,
+                                player.getBoundingBox().expand(256.0D),
+                                WatcherEntity::isNaturalRunEntity).stream()
+                        .min(java.util.Comparator.comparingDouble(player::squaredDistanceTo)).orElse(null);
+                if (watcher != null) {
+                    switch (directive.event) {
+                        case "observe" -> watcher.setPhase(WatcherEntity.Phase.OBSERVING);
+                        case "stalk" -> watcher.setPhase(WatcherEntity.Phase.STALKING);
+                        case "retreat" -> watcher.setPhase(WatcherEntity.Phase.RETREATING);
+                        default -> { }
+                    }
+                }
+            }
             case "whisper" -> {
                 if (!directive.message.isBlank()) {
                     player.sendMessage(Text.literal(directive.message), true);
@@ -141,7 +156,8 @@ public final class WatcherOllamaDirector {
         if (event == null) return null;
         event = event.trim().toLowerCase(java.util.Locale.ROOT);
         if (!event.equals("whisper") && !event.equals("darkness")
-                && !event.equals("footsteps") && !event.equals("none")) {
+                && !event.equals("footsteps") && !event.equals("observe")
+                && !event.equals("stalk") && !event.equals("retreat") && !event.equals("none")) {
             event = "none";
         }
         if (message == null) message = "";
