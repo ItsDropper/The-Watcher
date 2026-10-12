@@ -53,9 +53,10 @@ public final class CameraNetwork {
                 || !world.getBlockState(pos).isOf(TheWatcher.SURVEILLANCE_CAMERA)) return;
 
         FeedSession session = new FeedSession(world, player.getX(), player.getY(), player.getZ(),
-                player.getYaw(), player.getPitch(), player.getVelocity(), player.isInvulnerable());
+                player.getYaw(), player.getPitch(), player.getVelocity(), player.isInvulnerable(), player.hasNoGravity());
         SESSIONS.put(player.getUuid(), session);
         player.setInvulnerable(true);
+        player.setNoGravity(true);
 
         ChunkPos center = new ChunkPos(pos);
         for (int x = center.x - 2; x <= center.x + 2; x++) {
@@ -72,7 +73,10 @@ public final class CameraNetwork {
         // Vanilla streams terrain around the server-side player, not around client-only camera entities.
         float facingYaw = world.getBlockState(pos).contains(SurveillanceCameraBlock.FACING)
                 ? world.getBlockState(pos).get(SurveillanceCameraBlock.FACING).asRotation() : 180.0F;
-        player.teleport(world, pos.getX() + 0.5D, pos.getY() - 0.7D, pos.getZ() + 0.5D,
+        var facing = world.getBlockState(pos).contains(SurveillanceCameraBlock.FACING)
+                ? world.getBlockState(pos).get(SurveillanceCameraBlock.FACING) : net.minecraft.util.math.Direction.NORTH;
+        player.teleport(world, pos.getX() + 0.5D + facing.getOffsetX() * 2.5D,
+                pos.getY() + 0.1D, pos.getZ() + 0.5D + facing.getOffsetZ() * 2.5D,
                 facingYaw, 0.0F);
         player.setVelocity(Vec3d.ZERO);
         player.velocityModified = true;
@@ -95,9 +99,10 @@ public final class CameraNetwork {
         player.setVelocity(session.velocity());
         player.velocityModified = true;
         player.setInvulnerable(session.wasInvulnerable());
+        player.setNoGravity(session.hadNoGravity());
     }
 
     private record FeedSession(ServerWorld world, double x, double y, double z, float yaw, float pitch,
-                               Vec3d velocity, boolean wasInvulnerable) {
+                               Vec3d velocity, boolean wasInvulnerable, boolean hadNoGravity) {
     }
 }
