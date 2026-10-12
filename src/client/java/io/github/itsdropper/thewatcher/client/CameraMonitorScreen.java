@@ -1,11 +1,10 @@
 package io.github.itsdropper.thewatcher.client;
 
-import io.github.itsdropper.thewatcher.CameraNetwork;
+import io.github.itsdropper.thewatcher.CameraListRequestPayload;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlock;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlockEntity;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -27,6 +26,7 @@ public final class CameraMonitorScreen extends Screen {
     private static final int MAX_VISIBLE_CAMERAS = 8;
     private static List<BlockPos> serverCameras = List.of();
     private List<CameraStatus> cameras = List.of();
+    private final List<ButtonWidget> viewButtons = new ArrayList<>();
 
     public CameraMonitorScreen() {
         super(Text.literal("Camera Network"));
@@ -37,13 +37,13 @@ public final class CameraMonitorScreen extends Screen {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.currentScreen instanceof CameraMonitorScreen screen) {
             screen.refreshCameras();
-            screen.rebuildWidgets();
+            screen.updateViewButtons();
         }
     }
 
     @Override
     protected void init() {
-        ClientPlayNetworking.send(CameraNetwork.REQUEST, PacketByteBufs.create());
+        ClientPlayNetworking.send(new CameraListRequestPayload());
         refreshCameras();
         int centerX = width / 2;
         addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), button -> {
@@ -52,17 +52,18 @@ public final class CameraMonitorScreen extends Screen {
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), button -> close())
                 .dimensions(centerX + 4, height - 32, 100, 20).build());
 
-        int shown = Math.min(MAX_VISIBLE_CAMERAS, cameras.size());
+        viewButtons.clear();
         int panelWidth = Math.min(620, width - 20);
         int left = (width - panelWidth) / 2;
-        for (int i = 0; i < shown; i++) {
-            CameraStatus camera = cameras.get(i);
-            ButtonWidget view = ButtonWidget.builder(Text.literal("VIEW"), button -> openFeed(camera.pos()))
+        for (int i = 0; i < MAX_VISIBLE_CAMERAS; i++) {
+            final int index = i;
+            ButtonWidget view = ButtonWidget.builder(Text.literal("VIEW"), button -> openFeedAt(index))
                     .dimensions(left + panelWidth - 66, 82 + i * 29, 52, 20).build();
-            // A listed offline camera is still a valid remote-feed target.
-            view.active = true;
+            view.active = i < cameras.size();
+            viewButtons.add(view);
             addDrawableChild(view);
         }
+        updateViewButtons();
     }
 
     private void refreshCameras() {
@@ -84,6 +85,17 @@ public final class CameraMonitorScreen extends Screen {
         found.sort(Comparator.comparingDouble(camera ->
                 client.player.squaredDistanceTo(Vec3d.ofCenter(camera.pos()))));
         cameras = List.copyOf(found);
+    }
+
+    private void updateViewButtons() {
+        for (int i = 0; i < viewButtons.size(); i++) {
+            viewButtons.get(i).active = i < cameras.size();
+        }
+    }
+
+    private void openFeedAt(int index) {
+        if (index < 0 || index >= cameras.size()) return;
+        openFeed(cameras.get(index).pos());
     }
 
     private void openFeed(BlockPos pos) {
