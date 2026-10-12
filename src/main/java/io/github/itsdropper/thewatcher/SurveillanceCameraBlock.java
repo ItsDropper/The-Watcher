@@ -1,16 +1,16 @@
 package io.github.itsdropper.thewatcher;
 
 import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.Blocks;
 import net.minecraft.sound.SoundEvents;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.server.world.ServerWorld;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.HorizontalFacingBlock;
-import net.minecraft.block.Mirror;
+import net.minecraft.util.BlockMirror;
 import net.minecraft.block.ShapeContext;
-import net.minecraft.block.BlockRotation;
+import net.minecraft.util.BlockRotation;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
@@ -26,6 +26,13 @@ import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 
 public class SurveillanceCameraBlock extends BlockWithEntity {
+    public static final MapCodec<SurveillanceCameraBlock> CODEC = createCodec(SurveillanceCameraBlock::new);
+
+    @Override
+    protected MapCodec<? extends BlockWithEntity> getCodec() {
+        return CODEC;
+    }
+
     public static final DirectionProperty FACING = HorizontalFacingBlock.FACING;
 
     private static final VoxelShape BODY = VoxelShapes.union(
@@ -57,7 +64,7 @@ public class SurveillanceCameraBlock extends BlockWithEntity {
                     }
                     if (watcher.getRandom().nextInt(4) == 0
                             && world.breakBlock(candidate, true, watcher)) {
-                        watcher.playSound(SoundEvents.BLOCK_IRON_BREAK, 0.8F, 0.55F);
+                        watcher.playSound(SoundEvents.BLOCK_METAL_BREAK, 0.8F, 0.55F);
                     }
                     return;
                 }
@@ -86,7 +93,7 @@ public class SurveillanceCameraBlock extends BlockWithEntity {
     }
 
     @Override
-    public BlockState mirror(BlockState state, Mirror mirror) {
+    public BlockState mirror(BlockState state, BlockMirror mirror) {
         return state.rotate(mirror.getRotation(state.get(FACING)));
     }
 
@@ -103,7 +110,7 @@ public class SurveillanceCameraBlock extends BlockWithEntity {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
             World world, BlockState state, BlockEntityType<T> type) {
-        return world.isClient ? null : validateTicker(world, type,
+        return world.isClient ? null : validateTicker(type,
                 TheWatcher.CAMERA_BLOCK_ENTITY, SurveillanceCameraBlockEntity::tick);
     }
 }
