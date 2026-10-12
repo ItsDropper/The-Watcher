@@ -13,6 +13,19 @@ This directory contains the **optional, database-free relay service** for world 
 
 TLS protects each client-to-relay hop. The client tunnel's authenticated encryption is separately required for end-to-end confidentiality and integrity; TLS alone is not end-to-end encryption.
 
+## Quick deploy for a test relay
+
+A Render blueprint is included at the repository root as `render.yaml`. To deploy a test relay:
+
+1. Open the repository in Render's Blueprint flow and authorize access to this GitHub repository.
+2. Review the service settings before creating it. The blueprint uses a free instance, which may sleep when idle and is for testing rather than reliable always-on hosting.
+3. Wait for the deployment to finish and copy the generated HTTPS hostname.
+4. Set the Watcher client relay URL to `wss://YOUR-HOSTNAME/tunnel` (replace the hostname with the one Render assigned).
+
+Render terminates public TLS at its edge. The blueprint therefore enables `WATCHER_TRUST_PROXY_TLS=true`, which allows HTTP only between the platform edge and this service. **Do not enable this setting on a server directly exposed to the public internet.** Self-managed deployments should keep using `TLS_CERT_FILE` and `TLS_KEY_FILE`.
+
+This makes relay deployment simpler, but does not create a permanent public Watcher endpoint automatically. The free test service may sleep, restart, or be unavailable, and restarting clears all active rooms. A production Essential-like experience still requires an owned, monitored relay deployment and real two-client testing.
+
 ## Requirements
 
 - Node.js 22+
