@@ -87,7 +87,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 The world-creation screen includes **Difficulty: Watcher** and **Run length** controls. Enabling Watcher difficulty selects the Large Biomes world preset. With the mode off, the mod does not start a natural Watcher run; the `/watcher debug` commands remain available for testing.
 
-A run begins with a randomized hidden-learning period. No natural Watcher entity exists during this stage, while the run samples player movement and exploration. The first reveal is delayed until a later night and uses the chat message `Watcher joined the game`. After the reveal, the Watcher can begin its normal stalking cycle. Run lengths are 1, 3, 6, or 12 in-game active hours, and the run state is saved with the world.
+A run begins with a randomized hidden-learning period. No natural Watcher entity exists during this stage, while the run samples player movement and exploration. The first reveal is delayed until a later night and uses the chat message `Watcher joined the game`. After the reveal, the Watcher can begin its normal stalking cycle. Run lengths are 1, 3, 6, or 12 hours of active play, counted by server ticks; the run state is saved with the world.
 
 During a run, the mod can construct up to five watchtowers in suitable, already-loaded, flat terrain. Each tower has a chest with randomized supplies and a logbook describing earlier inhabitants and their encounters with the Watcher. Tower placement is randomized and may be delayed when no suitable terrain is available.
 
