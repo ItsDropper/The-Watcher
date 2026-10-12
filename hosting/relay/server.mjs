@@ -12,10 +12,6 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 const ROOM_IDLE_TTL_MS = 10 * 60_000;
 const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 
-function sha256(value) {
-  return crypto.createHash("sha256").update(value).digest("hex");
-}
-
 export function validRoomId(value) {
   return typeof value === "string" && ROOM_ID_PATTERN.test(value);
 }
@@ -29,7 +25,6 @@ export function parseFrame(data) {
   if (channelId === 0 || ![1, 2, 3].includes(type)) return null;
   if ((type === 1 || type === 3) && data.length !== 37) return null;
   if (type === 2 && data.length < 29) return null; // header + sequence + AES-GCM tag
-  if (type === 3 && data.length !== 5) return null;
   return { type, channelId };
 }
 
