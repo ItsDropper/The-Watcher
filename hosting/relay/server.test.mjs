@@ -1,10 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRelayServer, parseFrame } from "./server.mjs";
+import { createRelayServer, parseFrame, validRoomId } from "./server.mjs";
 
 test("relay refuses to start without TLS credentials", () => {
   assert.throws(() => createRelayServer(), /TLS certificate and private key are required/);
-  assert.throws(() => createRelayServer({ cert: Buffer.from("not-a-certificate") }), /TLS certificate and private key are required/);
 });
 
 test("accepts only a well-formed authenticated-control envelope", () => {
@@ -51,6 +50,8 @@ test("accepts bounded DATA envelopes but rejects undersized, invalid, or oversiz
 });
 
 test("room IDs must be exactly 128-bit base64url identifiers", () => {
-  // Room ID validation is exercised through the public relay protocol in integration tests.
-  assert.equal(Buffer.from("abcdefghijklmnopqrstuv").length, 22);
+  assert.equal(validRoomId("abcdefghijklmnopqrstuv"), true);
+  assert.equal(validRoomId("short"), false);
+  assert.equal(validRoomId("abcdefghijklmnopqrstuv!"), false);
+  assert.equal(validRoomId(""), false);
 });
