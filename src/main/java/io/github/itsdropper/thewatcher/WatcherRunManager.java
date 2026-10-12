@@ -117,7 +117,6 @@ public final class WatcherRunManager {
             if (previous != null) {
                 double moved = current.distanceTo(previous);
                 double activity = Math.min(moved, 8.0D) + (player.isSprinting() ? 0.5D : 0.0D);
-                run.explorationScore += activity;
                 run.playerExplorationScores.merge(id, activity, Double::sum);
             }
         }
@@ -284,7 +283,6 @@ public final class WatcherRunManager {
         private final Map<UUID, Double> playerExplorationScores = new java.util.HashMap<>();
         private long nextTowerAt;
         private UUID naturalWatcherUuid;
-        private double explorationScore;
         private boolean revealed;
         private boolean ended;
 
