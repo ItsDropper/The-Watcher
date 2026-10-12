@@ -33,6 +33,9 @@ public final class CameraFeedScreen extends Screen {
     private double lastMouseX = Double.NaN;
     private double lastMouseY = Double.NaN;
     private boolean draggingLook;
+    private final int originalFov = MinecraftClient.getInstance().options.getFov().getValue();
+    private int zoomFov = 30;
+    private boolean zoomHeld;
 
     private CameraFeedScreen(BlockPos cameraPos, Screen networkScreen,
                              Entity previousCameraEntity, Entity viewEntity, World cameraWorld) {
@@ -80,6 +83,14 @@ public final class CameraFeedScreen extends Screen {
         super.tick();
         if (client == null || client.getWindow() == null) return;
         long window = client.getWindow().getHandle();
+        boolean holdingZoom = InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_C);
+        if (holdingZoom) {
+            zoomHeld = true;
+            client.options.getFov().setValue(zoomFov);
+        } else if (zoomHeld) {
+            client.options.getFov().setValue(originalFov);
+            zoomHeld = false;
+        }
         if (!cameraOrientationSet && client.world != null) {
             var chunk = client.world.getChunkManager().getWorldChunk(
                     cameraPos.getX() >> 4, cameraPos.getZ() >> 4, false);
@@ -142,6 +153,18 @@ public final class CameraFeedScreen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (client != null && client.getWindow() != null
+                && InputUtil.isKeyPressed(client.getWindow().getHandle(), GLFW.GLFW_KEY_C)) {
+            zoomFov = MathHelper.clamp(zoomFov - (int) Math.signum(verticalAmount) * 4, 10, 30);
+            client.options.getFov().setValue(zoomFov);
+            zoomHeld = true;
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
             draggingLook = true;
@@ -191,7 +214,7 @@ public final class CameraFeedScreen extends Screen {
         context.fill(0, height - 40, width, height, 0xFF0A0D12);
         context.drawText(textRenderer, "LIVE FEED  /  CAM " + cameraPos.getX() + " "
                 + cameraPos.getY() + " " + cameraPos.getZ(), 12, 10, 0xFFFF5555, false);
-        context.drawText(textRenderer, "Hold W/S: tilt   Hold A/D: rotate   Drag mouse: look 360°   ESC: return",
+        context.drawText(textRenderer, "W/S: tilt   A/D: rotate   Drag: look   Hold C: zoom   C + scroll: more zoom   ESC: return",
                 12, 25, 0xFFE4EAF2, false);
         super.render(context, mouseX, mouseY, delta);
     }
@@ -221,6 +244,8 @@ public final class CameraFeedScreen extends Screen {
     private void restorePlayerView() {
         if (restored) return;
         restored = true;
+        if (client != null) client.options.getFov().setValue(originalFov);
+        zoomHeld = false;
         ClientPlayNetworking.send(new CameraFeedClosePayload());
         if (client != null && previousCameraEntity != null) {
             client.setCameraEntity(previousCameraEntity);
