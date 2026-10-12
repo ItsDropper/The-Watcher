@@ -50,7 +50,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
     private static final int OBSERVE_TICKS = 100;
     private static final int STALK_TICKS = 500;
-    private static final int ESCALATE_TICKS = 160;
+    private static final int ESCALATE_TICKS = 400; // Keep pressure on the player for 20 seconds.
     private static final int RETREAT_TICKS = 100;
     private static final double TARGET_RANGE = 48.0D;
     private static final double DEBUG_TARGET_RANGE = 128.0D;
@@ -68,6 +68,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private int ambushCooldown;
     private int closeJumpscareCooldown;
     private int watchedAttackCooldown;
+    private int escalationAttackCooldown;
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
@@ -142,6 +143,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         ambushCooldown = Math.max(0, ambushCooldown - tickScale);
         closeJumpscareCooldown = Math.max(0, closeJumpscareCooldown - tickScale);
         watchedAttackCooldown = Math.max(0, watchedAttackCooldown - tickScale);
+        escalationAttackCooldown = Math.max(0, escalationAttackCooldown - tickScale);
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
@@ -228,11 +230,16 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             if (phase == Phase.ESCALATING) {
                 lookAtPlayer(player);
                 getNavigation().startMovingTo(player, 1.2D);
-                if (squaredDistanceTo(player) <= 2.6D * 2.6D && !attemptedEscalationAttack) {
-                    attemptedEscalationAttack = true;
-                    if (!tryAttack(player)) {
-                        // One failed attempt should not waste the whole escalation window.
-                        attemptedEscalationAttack = false;
+                if (squaredDistanceTo(player) <= 2.9D * 2.9D && escalationAttackCooldown <= 0) {
+                    // Keep attacking throughout escalation instead of permanently consuming one attempt.
+                    escalationAttackCooldown = 12;
+                    boolean hit = tryAttack(player);
+                    world.playSound(null, player.getBlockPos(),
+                            hit ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG : SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                            SoundCategory.HOSTILE, hit ? 0.95F : 0.55F, hit ? 0.65F : 0.9F);
+                    if (hit) {
+                        player.addStatusEffect(new StatusEffectInstance(
+                                StatusEffects.DARKNESS, 35, 0, false, false, true));
                     }
                 }
             }
@@ -358,9 +365,17 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 lookAtPlayer(player);
                 getNavigation().startMovingTo(player, 1.05D);
 
-                if (!attemptedEscalationAttack && squaredDistanceTo(player) <= 2.6D * 2.6D) {
-                    attemptedEscalationAttack = true;
-                    tryAttack(player);
+                if (squaredDistanceTo(player) <= 2.9D * 2.9D && escalationAttackCooldown <= 0) {
+                    // A short attack interval allows repeated real melee damage while in range.
+                    escalationAttackCooldown = 12;
+                    boolean hit = tryAttack(player);
+                    world.playSound(null, player.getBlockPos(),
+                            hit ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG : SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                            SoundCategory.HOSTILE, hit ? 0.95F : 0.55F, hit ? 0.65F : 0.9F);
+                    if (hit) {
+                        player.addStatusEffect(new StatusEffectInstance(
+                                StatusEffects.DARKNESS, 35, 0, false, false, true));
+                    }
                 }
 
                 int duration = debugPhaseAutoAdvance ? 45 : ESCALATE_TICKS;
@@ -783,6 +798,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         nbt.putInt("WatcherAttentionTicks", attentionTicks);
         nbt.putInt("WatcherUnseenTicks", unseenTicks);
         nbt.putBoolean("WatcherAttemptedEscalationAttack", attemptedEscalationAttack);
+        nbt.putInt("WatcherEscalationAttackCooldown", escalationAttackCooldown);
         nbt.putBoolean("WatcherNaturalRunEntity", naturalRunEntity);
         learningEngine.writeToNbt(nbt);
     }
@@ -806,6 +822,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         attentionTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherAttentionTicks")));
         unseenTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherUnseenTicks")));
         attemptedEscalationAttack = nbt.getBoolean("WatcherAttemptedEscalationAttack");
+        escalationAttackCooldown = Math.max(0, nbt.getInt("WatcherEscalationAttackCooldown"));
         naturalRunEntity = nbt.getBoolean("WatcherNaturalRunEntity");
         // Debug controls are session-only; never reload an entity stuck in a forced test phase.
         debugPhaseLocked = false;
@@ -964,6 +981,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         attentionTicks = 0;
         unseenTicks = 0;
         attemptedEscalationAttack = false;
+        escalationAttackCooldown = 0;
         setTarget(player);
         getNavigation().stop();
     }
@@ -1009,6 +1027,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             phaseTicks = 0;
             if (newPhase == Phase.ESCALATING) {
                 attemptedEscalationAttack = false;
+                escalationAttackCooldown = 0;
             }
         }
     }
