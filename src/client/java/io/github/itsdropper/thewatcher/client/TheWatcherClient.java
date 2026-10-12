@@ -1,6 +1,8 @@
 package io.github.itsdropper.thewatcher.client;
 
 import io.github.itsdropper.thewatcher.CameraNetwork;
+import io.github.itsdropper.thewatcher.CameraListPayload;
+import io.github.itsdropper.thewatcher.CameraListRequestPayload;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.client.render.WatcherRenderer;
 import net.fabricmc.api.ClientModInitializer;
@@ -12,7 +14,6 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
 
 public class TheWatcherClient implements ClientModInitializer {
     private static KeyBinding openCameraMonitorKey;
@@ -21,14 +22,8 @@ public class TheWatcherClient implements ClientModInitializer {
     public void onInitializeClient() {
         EntityRendererRegistry.register(TheWatcher.WATCHER, WatcherRenderer::new);
         CameraAlertHud.register();
-        ClientPlayNetworking.registerGlobalReceiver(CameraNetwork.CAMERA_LIST, (client, handler, buf, responseSender) -> {
-            int count = Math.min(buf.readVarInt(), 10000);
-            var cameras = new ArrayList<net.minecraft.util.math.BlockPos>(count);
-            for (int i = 0; i < count; i++) {
-                cameras.add(buf.readBlockPos().toImmutable());
-            }
-            client.execute(() -> CameraMonitorScreen.receiveCameras(cameras));
-        });
+        ClientPlayNetworking.registerGlobalReceiver(CameraListPayload.ID, (payload, context) ->
+                context.client().execute(() -> CameraMonitorScreen.receiveCameras(payload.positions())));
 
         openCameraMonitorKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.the-watcher.camera_monitor", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V,
