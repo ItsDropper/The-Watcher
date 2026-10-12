@@ -12,6 +12,7 @@ import net.minecraft.util.BlockMirror;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
@@ -70,6 +71,14 @@ public class SurveillanceCameraBlock extends BlockWithEntity {
                 }
             }
         }
+    }
+
+    @Override
+    public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+        if (world instanceof ServerWorld serverWorld) {
+            CameraRegistry.remove(serverWorld, pos);
+        }
+        super.onBreak(world, pos, state, player);
     }
 
     @Override
