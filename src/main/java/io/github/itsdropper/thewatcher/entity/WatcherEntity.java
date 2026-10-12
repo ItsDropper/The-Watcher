@@ -97,6 +97,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
+        if (naturalRunEntity && io.github.itsdropper.thewatcher.WatcherRunManager.shouldDiscardNaturalEntity(world)) {
+            discard();
+            return;
+        }
+
         int tickScale = debugSimulation ? 4 : 1;
         hiddenMoveCooldown = Math.max(0, hiddenMoveCooldown - tickScale);
         proximityCorrectionCooldown = Math.max(0, proximityCorrectionCooldown - tickScale);
