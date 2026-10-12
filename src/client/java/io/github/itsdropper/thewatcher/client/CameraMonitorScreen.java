@@ -104,8 +104,8 @@ public final class CameraMonitorScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Keep the game sharp and running behind the overlay. Screen.renderBackground()
-        // invokes Minecraft's blurred menu background in this version, so do not call it.
+        // Draw the opaque custom UI after the vanilla screen pass. renderBackground()
+        // is overridden below so the vanilla pass cannot blur the game or this UI.
         context.fill(0, 0, width, height, 0xB0000000);
         int centerX = width / 2;
         int panelWidth = Math.min(620, width - 20);
@@ -149,6 +149,11 @@ public final class CameraMonitorScreen extends Screen {
         }
 
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Deliberately no-op: vanilla menu background rendering applies blur.
     }
 
     @Override
