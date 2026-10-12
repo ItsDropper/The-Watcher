@@ -25,6 +25,7 @@ public final class CameraFeedScreen extends Screen {
     private final Entity viewEntity;
     private final World cameraWorld;
     private boolean restored;
+    private boolean cameraOrientationSet;
     private double lastMouseX = Double.NaN;
     private double lastMouseY = Double.NaN;
 
@@ -74,6 +75,17 @@ public final class CameraFeedScreen extends Screen {
         super.tick();
         if (client == null || client.getWindow() == null) return;
         long window = client.getWindow().getHandle();
+        if (!cameraOrientationSet && client.world != null) {
+            var chunk = client.world.getChunkManager().getWorldChunk(
+                    cameraPos.getX() >> 4, cameraPos.getZ() >> 4, false);
+            if (chunk != null && client.world.getBlockState(cameraPos).isOf(io.github.itsdropper.thewatcher.TheWatcher.SURVEILLANCE_CAMERA)) {
+                Direction facing = client.world.getBlockState(cameraPos).contains(SurveillanceCameraBlock.FACING)
+                        ? client.world.getBlockState(cameraPos).get(SurveillanceCameraBlock.FACING) : Direction.NORTH;
+                viewEntity.setYaw(facing.asRotation());
+                viewEntity.setPitch(0.0F);
+                cameraOrientationSet = true;
+            }
+        }
         float yaw = viewEntity.getYaw();
         float pitch = viewEntity.getPitch();
         float turn = 2.4F;
