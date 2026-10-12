@@ -22,6 +22,10 @@ public class TheWatcherClient implements ClientModInitializer {
     private static KeyBinding openCameraMonitorKey;
     private static PositionedSoundInstance endingMusic;
 
+    public static boolean isEndingMusicActive() {
+        return endingMusic != null;
+    }
+
     @Override
     public void onInitializeClient() {
         EntityRendererRegistry.register(TheWatcher.WATCHER, WatcherRenderer::new);
