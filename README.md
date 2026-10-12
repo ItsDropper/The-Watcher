@@ -8,7 +8,7 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
 - When the player directly watches it, The Watcher freezes completely. It has no look-around goal and always uses its idle animation.
-- During stalking, The Watcher does not walk toward the player. It uses the live Minecraft render-distance option, and relocates to a narrow band just inside the visible distance edge. If it starts too close, it prioritizes moving away as soon as you stop looking at it. Candidate positions must be safe and outside your current view or hidden by solid cover. Stalking teleports are silent; the intent is to catch a distant silhouette at the edge of visibility, not to pop up beside you.
+- During stalking, The Watcher compares safe relocation candidates and prefers elevated terrain, ridgelines, and positions above the player's usual height. At 12 chunks it normally stalks about 73–97 blocks away, and repeated close encounters can teach it to approach more boldly. It relocates only when outside your view or hidden by solid cover. Stalking teleports are silent; the goal is a silhouette you can actually spot, not an entity permanently at the render edge.
 - Render distance is sampled continuously, so changing Minecraft's video setting takes effect without reopening The Watcher Settings. `/watcher debug status` reports the current stalking distance band.
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
 - Retreating is deliberately abrupt: while unseen, it can jump to a covered position; while visible, it sprints away instead of teleporting.
@@ -29,7 +29,8 @@ These commands require operator permission level 2 and are intended for a world/
 | --- | --- |
 | `/watcher debug` | Show the command list |
 | `/watcher debug spawn` | Spawn a Watcher on safe ground in front of you |
-| `/watcher debug status` | Show phase, phase ticks, debug lock, health, distance, and target |
+| `/watcher debug status` | Show phase, distance, stalking band, and learned movement habits |
+| `/watcher debug structures` | Print the guaranteed watchtower, cabin, shrine, and camp coordinates |
 | `/watcher debug phase observe` | Lock it into the stationary observing phase |
 | `/watcher debug phase stalk` | Lock it into stationary stalking with hidden long-range teleports |
 | `/watcher debug phase escalate` | Trigger a short pursuit/attack rush, then retreat automatically |
