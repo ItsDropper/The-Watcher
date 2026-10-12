@@ -135,8 +135,10 @@ public final class WatcherRunManager {
             if (!groundState.isSolidBlock(world, ground)
                     || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
                     || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
+                    || !world.getBlockState(feet.up(2)).getCollisionShape(world, feet.up(2)).isEmpty()
                     || !world.getBlockState(feet).getFluidState().isEmpty()
-                    || !world.getBlockState(feet.up()).getFluidState().isEmpty()) {
+                    || !world.getBlockState(feet.up()).getFluidState().isEmpty()
+                    || !world.getBlockState(feet.up(2)).getFluidState().isEmpty()) {
                 continue;
             }
 
