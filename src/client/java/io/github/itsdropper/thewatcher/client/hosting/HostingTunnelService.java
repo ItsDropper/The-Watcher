@@ -1,5 +1,7 @@
 package io.github.itsdropper.thewatcher.client.hosting;
 
+import io.github.itsdropper.thewatcher.hosting.TunnelCrypto;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
