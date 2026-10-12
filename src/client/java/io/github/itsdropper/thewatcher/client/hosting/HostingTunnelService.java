@@ -341,6 +341,20 @@ public final class HostingTunnelService {
             this.localPort = localPort;
         }
 
+        @Override protected void onControlMessage(String message) {
+            // Relay-generated disconnect notifications may close a channel only.
+            // They are deliberately not treated as authenticated game data.
+            String prefix = "{\\"type\\":\\"channel-closed\\",\\"channelId\\":";
+            if (!message.startsWith(prefix) || !message.endsWith("}")) return;
+            String rawChannel = message.substring(prefix.length(), message.length() - 1);
+            try {
+                int channelId = Integer.parseInt(rawChannel);
+                Channel channel = channels.get(channelId);
+                if (channel != null) closeChannel(channel, false);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
         @Override protected void handleFrame(byte[] frame) throws Exception {
             Frame parsed = parseFrame(frame);
             if (parsed == null) throw new IOException("Invalid relay frame.");
