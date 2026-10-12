@@ -11,7 +11,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +149,10 @@ public final class WatcherRunManager {
     private static void endRun(ServerWorld world, RunState run) {
         run.ended = true;
         if (run.naturalWatcherUuid != null) {
-            world.getEntity(run.naturalWatcherUuid).ifPresent(entity -> entity.discard());
+            net.minecraft.entity.Entity entity = world.getEntity(run.naturalWatcherUuid);
+            if (entity != null) {
+                entity.discard();
+            }
         }
         for (ServerPlayerEntity player : world.getPlayers()) {
             player.sendMessage(Text.literal("The Watcher has gone quiet. This run is over."), false);
