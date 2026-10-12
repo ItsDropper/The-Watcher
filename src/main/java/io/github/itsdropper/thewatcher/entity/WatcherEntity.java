@@ -55,6 +55,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private Phase phase = Phase.IDLE;
     private int phaseTicks;
     private int hiddenMoveCooldown;
+    private int proximityCorrectionCooldown;
     private int dreadEffectCooldown;
     private int attentionTicks;
     private int unseenTicks;
@@ -90,6 +91,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         int tickScale = debugSimulation ? 4 : 1;
         hiddenMoveCooldown = Math.max(0, hiddenMoveCooldown - tickScale);
+        proximityCorrectionCooldown = Math.max(0, proximityCorrectionCooldown - tickScale);
         dreadEffectCooldown = Math.max(0, dreadEffectCooldown - tickScale);
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
@@ -136,14 +138,50 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         setTarget(player);
 
         boolean watched = isPlayerWatching(player);
-        learningEngine.observe(watched, Math.sqrt(squaredDistanceTo(player)));
+        double distance = Math.sqrt(squaredDistanceTo(player));
+        learningEngine.observe(watched, distance);
+        boolean distanceSensitivePhase = phase == Phase.OBSERVING || phase == Phase.STALKING;
+        if (distanceSensitivePhase) {
+            learningEngine.observeStalkingDistance(distance, renderChunks);
+        }
+        double minimumSafeDistance = WatcherStalkingDirector.minimumStalkingDistance(renderChunks)
+                + learningEngine.getLearnedSafetyDistanceBonus(renderChunks);
+        boolean tooCloseForPhase = distanceSensitivePhase && distance < minimumSafeDistance;
+        boolean proximityRelocated = false;
+
         if (watched) {
             attentionTicks = Math.min(attentionTicks + 1, 1200);
             unseenTicks = 0;
-            getNavigation().stop();
-            setVelocity(0.0D, getVelocity().y, 0.0D);
+            if (tooCloseForPhase) {
+                // A nearby Watcher must not freeze in the player's face. It retreats on foot
+                // while watched and only attempts hidden relocation after leaving the view cone.
+                moveAwayFrom(player, 1.65D);
+                recoverStuckRetreat(world, player);
+            } else {
+                getNavigation().stop();
+                setVelocity(0.0D, getVelocity().y, 0.0D);
+            }
             if (phase != Phase.IDLE) tryDreadEffect(world, player);
             return;
+        }
+
+        // Correct personal-space violations during both observing and stalking, not just stalking.
+        // Ordinary cooldowns prevent teleport spam; an extreme close approach bypasses them.
+        if (tooCloseForPhase && (proximityCorrectionCooldown <= 0 || distance < 24.0D)) {
+            proximityRelocated = TheWatcher.TELEPORTS_ENABLED
+                    && (hiddenMoveCooldown <= 0 || distance < 24.0D)
+                    && !isWithinPlayerView(player)
+                    && tryHiddenTeleport(world, player, false);
+            if (proximityRelocated) {
+                hiddenMoveCooldown = 100 + random.nextInt(101);
+                proximityCorrectionCooldown = 80 + random.nextInt(61);
+                getNavigation().stop();
+                resetNavigationRecovery();
+            } else {
+                // If terrain/chunk/view constraints prevent a safe teleport, create distance by walking.
+                moveAwayFrom(player, 1.8D);
+                proximityCorrectionCooldown = 20 + random.nextInt(21);
+            }
         }
 
         // A watched entity's phase timer pauses; it should not escalate just because the player stares.
@@ -155,26 +193,33 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         switch (phase) {
             case IDLE -> setPhase(Phase.OBSERVING);
             case OBSERVING -> {
-                // Keep the entity still; do not track the player with its head.
-                getNavigation().stop();
-                setVelocity(0.0D, getVelocity().y, 0.0D);
+                // Stillness is the default, but not at close range: preserve the retreat path
+                // until the learned minimum distance has been restored.
+                if (!tooCloseForPhase || proximityRelocated) {
+                    getNavigation().stop();
+                    setVelocity(0.0D, getVelocity().y, 0.0D);
+                } else if (getNavigation().isIdle()) {
+                    moveAwayFrom(player, 1.8D);
+                }
                 int duration = OBSERVE_TICKS;
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.STALKING);
                 }
             }
             case STALKING -> {
-                // Stalking is stationary. It only relocates after leaving the player's view.
-                getNavigation().stop();
-                setVelocity(0.0D, getVelocity().y, 0.0D);
+                // Stillness is part of the scare, but the Watcher keeps its distance first.
+                if (!tooCloseForPhase || proximityRelocated) {
+                    getNavigation().stop();
+                    setVelocity(0.0D, getVelocity().y, 0.0D);
+                } else if (getNavigation().isIdle()) {
+                    moveAwayFrom(player, 1.8D);
+                }
+
                 int baseTeleportChance = 24;
                 int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
-                double distance = Math.sqrt(squaredDistanceTo(player));
-                boolean tooClose = WatcherStalkingDirector.isTooCloseForStalking(distance, renderChunks);
-                int unseenThreshold = tooClose ? 2 : learningEngine.getHiddenTeleportDelayTicks();
-                boolean relocationRoll = tooClose || random.nextInt(100) < teleportChance;
-                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
-                        && unseenTicks >= unseenThreshold && relocationRoll) {
+                boolean relocationRoll = random.nextInt(100) < teleportChance;
+                if (!tooCloseForPhase && TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
+                        && unseenTicks >= learningEngine.getHiddenTeleportDelayTicks() && relocationRoll) {
                     boolean teleported = tryHiddenTeleport(world, player, false);
                     // Failed candidate searches retry quickly; successful relocations get a longer quiet period.
                     hiddenMoveCooldown = teleported ? 100 + random.nextInt(101) : 12 + random.nextInt(17);
@@ -256,7 +301,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                         + random.nextDouble() * 12.0D;
             } else {
                 // Relocate just inside the render edge, with a narrow distance band for distant sightings.
-                radius = WatcherStalkingDirector.candidateRadius(renderChunks, random.nextDouble());
+                radius = WatcherStalkingDirector.candidateRadius(renderChunks, random.nextDouble(),
+                        learningEngine.getLearnedSafetyDistanceBonus(renderChunks));
             }
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
@@ -475,6 +521,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         nbt.putString("WatcherPhase", (debugEncounter ? Phase.IDLE : phase).name());
         nbt.putInt("WatcherPhaseTicks", debugEncounter ? 0 : phaseTicks);
         nbt.putInt("WatcherHiddenMoveCooldown", hiddenMoveCooldown);
+        nbt.putInt("WatcherProximityCorrectionCooldown", proximityCorrectionCooldown);
         nbt.putInt("WatcherDreadEffectCooldown", dreadEffectCooldown);
         nbt.putInt("WatcherAttentionTicks", attentionTicks);
         nbt.putInt("WatcherUnseenTicks", unseenTicks);
@@ -497,6 +544,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
         phaseTicks = Math.max(0, nbt.getInt("WatcherPhaseTicks"));
         hiddenMoveCooldown = Math.max(0, nbt.getInt("WatcherHiddenMoveCooldown"));
+        proximityCorrectionCooldown = Math.max(0, nbt.getInt("WatcherProximityCorrectionCooldown"));
         dreadEffectCooldown = Math.max(0, nbt.getInt("WatcherDreadEffectCooldown"));
         attentionTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherAttentionTicks")));
         unseenTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherUnseenTicks")));
