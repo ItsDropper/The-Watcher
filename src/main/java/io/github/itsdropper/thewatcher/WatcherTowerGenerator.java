@@ -34,6 +34,16 @@ public final class WatcherTowerGenerator {
         towersBuilt = 0;
     }
 
+    public static Set<Long> snapshotBuiltRegions() {
+        return Set.copyOf(BUILT_REGIONS);
+    }
+
+    public static void restoreBuiltRegions(Set<Long> regions) {
+        BUILT_REGIONS.clear();
+        BUILT_REGIONS.addAll(regions);
+        towersBuilt = BUILT_REGIONS.size();
+    }
+
     public static boolean tryGenerate(ServerWorld world, ServerPlayerEntity player) {
         if (towersBuilt >= MAX_TOWERS_PER_SESSION) {
             return false;
