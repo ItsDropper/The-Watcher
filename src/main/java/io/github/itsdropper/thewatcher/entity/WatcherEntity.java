@@ -8,6 +8,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
@@ -74,9 +75,19 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
     public WatcherEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
-        // The stalking ring intentionally exceeds vanilla's usual despawn distance.
-        // Keep the entity alive until this mod explicitly ends its encounter.
+        // The Watcher is currently immortal and persistent while encounters are being tested.
         setPersistent();
+        setInvulnerable(true);
+    }
+
+    /**
+     * Prevent all ordinary damage from reducing health or killing the Watcher.
+     * Keep this override as well as the invulnerable entity flag so damage immunity
+     * does not depend solely on the entity's saved invulnerability state.
+     */
+    @Override
+    public boolean damage(DamageSource source, float amount) {
+        return false;
     }
 
     public void setNaturalRunEntity(boolean naturalRunEntity) {
@@ -479,7 +490,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
                         SoundCategory.AMBIENT, 0.13F, 0.62F + random.nextFloat() * 0.5F);
             } else {
-                Vec3d look = player.getRotationVec(1.0F).normalize();
                 world.spawnParticles(ParticleTypes.ASH,
                         player.getX() - look.x * 3.0D, player.getY() + 0.4D,
                         player.getZ() - look.z * 3.0D, 5, 0.25D, 0.25D, 0.25D, 0.005D);
