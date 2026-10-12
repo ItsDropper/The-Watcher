@@ -20,14 +20,14 @@ function validRoomId(value) {
   return typeof value === "string" && ROOM_ID_PATTERN.test(value);
 }
 
-function parseFrame(data) {
+export function parseFrame(data) {
   if (!Buffer.isBuffer(data) || data.length < 5 || data.length > MAX_MESSAGE_BYTES) {
     return null;
   }
   const type = data.readUInt8(0);
   const channelId = data.readUInt32BE(1);
   if (channelId === 0 || ![1, 2, 3].includes(type)) return null;
-  if (type === 1 && data.length !== 5) return null;
+  if ((type === 1 || type === 3) && data.length !== 37) return null;
   if (type === 2 && data.length < 29) return null; // header + sequence + AES-GCM tag
   if (type === 3 && data.length !== 5) return null;
   return { type, channelId };
@@ -91,7 +91,6 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
     noServer: true,
     maxPayload: MAX_MESSAGE_BYTES,
     perMessageDeflate: false,
-    clientTracking: false
   });
 
   function closeRoom(room, code = 1012, reason = "Host disconnected") {
