@@ -471,8 +471,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
-        nbt.putString("WatcherPhase", phase.name());
-        nbt.putInt("WatcherPhaseTicks", phaseTicks);
+        boolean debugEncounter = debugPhaseLocked || debugSimulation;
+        nbt.putString("WatcherPhase", (debugEncounter ? Phase.IDLE : phase).name());
+        nbt.putInt("WatcherPhaseTicks", debugEncounter ? 0 : phaseTicks);
         nbt.putInt("WatcherHiddenMoveCooldown", hiddenMoveCooldown);
         nbt.putInt("WatcherDreadEffectCooldown", dreadEffectCooldown);
         nbt.putInt("WatcherAttentionTicks", attentionTicks);
