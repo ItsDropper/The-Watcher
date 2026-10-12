@@ -156,6 +156,11 @@ public final class WatcherRunManager {
         return false;
     }
 
+    public static boolean shouldDiscardNaturalEntity(ServerWorld world) {
+        RunState run = RUNS.get(world);
+        return run != null && run.ended;
+    }
+
     private static void endRun(ServerWorld world, RunState run) {
         run.ended = true;
         if (run.naturalWatcherUuid != null) {
