@@ -30,6 +30,7 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Comparator;
+import java.util.Properties;
 
 public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     public enum Phase {
@@ -100,6 +101,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (naturalRunEntity && io.github.itsdropper.thewatcher.WatcherRunManager.shouldDiscardNaturalEntity(world, getUuid())) {
             discard();
             return;
+        }
+        if (naturalRunEntity) {
+            io.github.itsdropper.thewatcher.WatcherRunManager.captureLearning(world, this);
         }
 
         int tickScale = debugSimulation ? 4 : 1;
@@ -633,6 +637,14 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
     public double getLearnedApproachBonus() {
         return learningEngine.getLearnedApproachBonus();
+    }
+
+    public void writeLearningToProperties(Properties properties, String prefix) {
+        learningEngine.writeToProperties(properties, prefix);
+    }
+
+    public void readLearningFromProperties(Properties properties, String prefix) {
+        learningEngine.readFromProperties(properties, prefix);
     }
 
     public double getAverageHorizontalSpeed() {
