@@ -8,6 +8,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.text.Text;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
+import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 
@@ -54,21 +55,31 @@ public final class CameraAlertHud {
     }
 
     private static boolean cameraSeesWatcher(MinecraftClient client) {
-        for (var blockEntity : client.world.getBlockEntities()) {
-            if (!(blockEntity instanceof SurveillanceCameraBlockEntity camera)) {
-                continue;
-            }
-            Vec3d origin = Vec3d.ofCenter(camera.getPos()).add(0.0D, 0.51D, 0.0D);
-            Box scanBox = new Box(camera.getPos()).expand(48.0D);
-            for (WatcherEntity watcher : client.world.getEntitiesByClass(
-                    WatcherEntity.class, scanBox, Entity::isAlive)) {
-                if (watcher.squaredDistanceTo(origin) > 48.0D * 48.0D) {
+        int centerChunkX = client.player.getChunkPos().x;
+        int centerChunkZ = client.player.getChunkPos().z;
+        for (int chunkX = centerChunkX - 6; chunkX <= centerChunkX + 6; chunkX++) {
+            for (int chunkZ = centerChunkZ - 6; chunkZ <= centerChunkZ + 6; chunkZ++) {
+                WorldChunk chunk = client.world.getChunkManager().getWorldChunk(chunkX, chunkZ, false);
+                if (chunk == null) {
                     continue;
                 }
-                var hit = client.world.raycast(new RaycastContext(origin, watcher.getEyePos(),
-                        RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, watcher));
-                if (hit.getType() == HitResult.Type.MISS) {
-                    return true;
+                for (var blockEntity : chunk.getBlockEntities().values()) {
+                    if (!(blockEntity instanceof SurveillanceCameraBlockEntity camera)) {
+                        continue;
+                    }
+                    Vec3d origin = Vec3d.ofCenter(camera.getPos()).add(0.0D, 0.51D, 0.0D);
+                    Box scanBox = new Box(camera.getPos()).expand(48.0D);
+                    for (WatcherEntity watcher : client.world.getEntitiesByClass(
+                            WatcherEntity.class, scanBox, Entity::isAlive)) {
+                        if (watcher.squaredDistanceTo(origin) > 48.0D * 48.0D) {
+                            continue;
+                        }
+                        var hit = client.world.raycast(new RaycastContext(origin, watcher.getEyePos(),
+                                RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, watcher));
+                        if (hit.getType() == HitResult.Type.MISS) {
+                            return true;
+                        }
+                    }
                 }
             }
         }
