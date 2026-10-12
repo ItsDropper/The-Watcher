@@ -1,14 +1,12 @@
 package io.github.itsdropper.thewatcher.entity;
 
 /**
- * Spatial policy for long-range stalking. All distances are derived from the
- * player's configured render distance rather than a fixed block radius.
+ * Spatial policy for long-range stalking. The Watcher stays far enough away
+ * to be unsettling, but close enough that players can actually spot it.
  */
 public final class WatcherStalkingDirector {
     private static final int MIN_RENDER_CHUNKS = 4;
-    private static final double EDGE_MARGIN_BLOCKS = 10.0D;
-    private static final double INNER_JITTER_BLOCKS = 22.0D;
-    private static final double MINIMUM_STALK_DISTANCE = 56.0D;
+    private static final double MINIMUM_STALK_DISTANCE = 30.0D;
 
     private WatcherStalkingDirector() {
     }
@@ -22,31 +20,28 @@ public final class WatcherStalkingDirector {
     }
 
     /**
-     * The Watcher should sit near the outer visible ring, not in the player's
-     * immediate surroundings. The narrow band keeps sightings rare and distant.
+     * Use a closer, wider stalking band. At 12 chunks this puts the Watcher
+     * roughly 73-97 blocks away instead of hiding at the render-distance edge.
      */
     public static double minimumStalkingDistance(int configuredChunks) {
         return Math.max(MINIMUM_STALK_DISTANCE,
-                renderDistanceBlocks(configuredChunks) - EDGE_MARGIN_BLOCKS - INNER_JITTER_BLOCKS);
+                Math.min(76.0D, renderDistanceBlocks(configuredChunks) * 0.38D));
     }
 
     public static double maximumStalkingDistance(int configuredChunks) {
-        return Math.max(minimumStalkingDistance(configuredChunks) + 4.0D,
-                renderDistanceBlocks(configuredChunks) - EDGE_MARGIN_BLOCKS);
+        double renderLimit = Math.max(0.0D, renderDistanceBlocks(configuredChunks) - 8.0D);
+        return Math.max(minimumStalkingDistance(configuredChunks) + 8.0D,
+                Math.min(renderLimit, minimumStalkingDistance(configuredChunks) + 24.0D));
     }
 
     public static boolean isTooCloseForStalking(double distance, int configuredChunks) {
         return distance < minimumStalkingDistance(configuredChunks);
     }
 
-    /**
-     * Limit learned outward movement to the available distance before the render edge.
-     * This keeps the learning model from requesting destinations that are unlikely to be loaded.
-     */
     public static double clampLearnedOffset(int configuredChunks, double requestedOffset) {
         double renderBlocks = renderDistanceBlocks(configuredChunks);
-        double baseMaximum = maximumStalkingDistance(configuredChunks);
-        double availableOffset = Math.max(0.0D, renderBlocks - 2.0D - baseMaximum);
+        double availableOffset = Math.max(0.0D, renderBlocks - 2.0D
+                - maximumStalkingDistance(configuredChunks));
         return Math.max(0.0D, Math.min(Math.min(12.0D, availableOffset), requestedOffset));
     }
 
@@ -62,10 +57,6 @@ public final class WatcherStalkingDirector {
         return min + (max - min) * sample;
     }
 
-    /**
-     * How far the target may be before this entity should stop tracking it.
-     * Slight slack prevents target acquisition from oscillating at the edge.
-     */
     public static double targetRange(int configuredChunks) {
         return renderDistanceBlocks(configuredChunks) + 48.0D;
     }
