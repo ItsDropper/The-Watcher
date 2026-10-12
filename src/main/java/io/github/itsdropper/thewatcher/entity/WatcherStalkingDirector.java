@@ -51,9 +51,13 @@ public final class WatcherStalkingDirector {
 
     public static double candidateRadius(int configuredChunks, double unitSample, double learnedOffset) {
         double sample = Math.max(0.0D, Math.min(0.999999D, unitSample));
-        double offset = clampLearnedOffset(configuredChunks, learnedOffset);
-        double min = minimumStalkingDistance(configuredChunks) + offset;
-        double max = maximumStalkingDistance(configuredChunks) + offset;
+        double offset = learnedOffset < 0.0D
+                ? Math.max(-24.0D, learnedOffset)
+                : clampLearnedOffset(configuredChunks, learnedOffset);
+        double min = Math.max(24.0D, minimumStalkingDistance(configuredChunks) + offset);
+        double max = Math.max(min + 8.0D,
+                Math.min(renderDistanceBlocks(configuredChunks) - 8.0D,
+                        maximumStalkingDistance(configuredChunks) + offset));
         return min + (max - min) * sample;
     }
 
