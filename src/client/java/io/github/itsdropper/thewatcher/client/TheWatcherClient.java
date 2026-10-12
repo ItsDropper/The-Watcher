@@ -9,6 +9,8 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.sound.SoundCategory;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
@@ -22,6 +24,15 @@ public class TheWatcherClient implements ClientModInitializer {
     public void onInitializeClient() {
         EntityRendererRegistry.register(TheWatcher.WATCHER, WatcherRenderer::new);
         CameraAlertHud.register();
+        ClientPlayNetworking.registerGlobalReceiver(io.github.itsdropper.thewatcher.CameraNetwork.EndingMusicPayload.ID, (payload, context) ->
+                context.client().execute(() -> {
+                    if (payload.playing()) {
+                        if (context.client().getSoundManager().isPlaying(PositionedSoundInstance.music(TheWatcher.ENDING_THEME))) return;
+                        context.client().getSoundManager().play(PositionedSoundInstance.music(TheWatcher.ENDING_THEME));
+                    } else {
+                        context.client().getSoundManager().stop(TheWatcher.id("ending_theme"), SoundCategory.MUSIC);
+                    }
+                }));
         ClientPlayNetworking.registerGlobalReceiver(CameraListPayload.ID, (payload, context) ->
                 context.client().execute(() -> CameraMonitorScreen.receiveCameras(payload.positions())));
 
