@@ -151,7 +151,7 @@ public final class WatcherTowerGenerator {
 
         BlockPos spawn = world.getSpawnPos();
         for (int attempt = 0; attempt < 48; attempt++) {
-            // A 22-chunk square keeps even diagonal candidates within 32 chunks of spawn.
+            // A 16-chunk square keeps the tower near spawn while allowing safe alternatives.
             int chunkOffsetX = world.random.nextInt(33) - 16;
             int chunkOffsetZ = world.random.nextInt(33) - 16;
             if (chunkOffsetX == 0 && chunkOffsetZ == 0) {
