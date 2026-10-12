@@ -19,7 +19,7 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
 - The entity does not use the usual automatic target and continuous melee goals.
 
-Natural spawning is not yet considered release-ready; use `/watcher debug spawn` or vanilla `/summon the-watcher:watcher` for predictable testing. The entity is persistent while stalking so vanilla distance-based despawning cannot break the render-edge mechanic; natural encounters clean themselves up after 30 seconds of daytime.
+Natural runs begin with a hidden-learning phase and then announce the first reveal with `Watcher joined the game`. After that reveal, the run manager checks the natural entity every second and retries a replacement after ten seconds of absence. Use `/watcher debug spawn` or vanilla `/summon the-watcher:watcher` for predictable testing.
 
 ## Debug commands
 
@@ -108,6 +108,6 @@ The world-creation screen includes **Difficulty: Watcher** and **Run length** co
 
 A run begins with a randomized hidden-learning period. No natural Watcher entity exists during this stage, while the run samples player movement and exploration. The first reveal is delayed until a later night and uses the chat message `Watcher joined the game`. After the reveal, the Watcher can begin its normal stalking cycle. Run lengths are 1, 3, 6, or 12 hours of active play, counted by server ticks; the run state is saved with the world.
 
-During a run, the mod can construct up to five watchtowers in suitable, already-loaded, flat terrain. Each tower has a chest with randomized supplies and a logbook describing earlier inhabitants and their encounters with the Watcher. Tower placement is randomized and may be delayed when no suitable terrain is available.
+During a run, the mod guarantees a watchtower, abandoned cabin, ritual shrine, and ruined expedition camp near world spawn when safe placement is available. Each site has a distinct book and supplies. Additional structures can appear as players explore; guaranteed placements retry when terrain or region conflicts prevent placement.
 
-This progression is an early implementation: the run is randomized, but the learning model currently uses exploration/movement as its main signal. World-generation and in-game behavior still need a full Gradle build and in-game verification.
+This progression is still under active development. The adaptive model now tracks gaze timing, movement speed, sprinting, stationary behavior, typical height, and repeated close encounters. World-generation integration and in-game behavior still need gameplay verification.
