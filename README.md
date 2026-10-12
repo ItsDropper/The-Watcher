@@ -21,6 +21,15 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 
 Natural runs begin with a hidden-learning phase and then announce the first reveal with `Watcher joined the game`. After that reveal, the run manager checks the natural entity every second and retries a replacement after ten seconds of absence. Use `/watcher debug spawn` or vanilla `/summon the-watcher:watcher` for predictable testing.
 
+## Surveillance cameras (experimental)
+
+Place the **Surveillance Camera** block from the Redstone creative tab, or use `/give @s the-watcher:surveillance_camera` in a world with commands enabled.
+
+- Cameras check all directions within 48 blocks; a clear line of sight to The Watcher triggers a top-right camera-network alert without revealing the entity's coordinates.
+- A small chance of signal interference replaces the motion warning with **SIGNAL LOST**.
+- The Watcher can destroy a camera if it gets within roughly three blocks, so a camera network provides information, not protection.
+- The current implementation detects live sightings. A browsable recording history and dedicated monitor screen are not implemented yet.
+
 ## Debug commands
 
 These commands require operator permission level 2 and are intended for a world/server where you have permission to use commands.
