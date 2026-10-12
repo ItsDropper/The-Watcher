@@ -63,13 +63,17 @@ public final class WatcherTowerGenerator {
             }
             int chunkX = (spawn.getX() >> 4) + chunkOffsetX;
             int chunkZ = (spawn.getZ() >> 4) + chunkOffsetZ;
+            // Keep the starting tower at least ten chunks from the world origin (0, 0).
+            if ((long) chunkX * chunkX + (long) chunkZ * chunkZ < 100L) {
+                continue;
+            }
             int x = (chunkX << 4) + 8;
             int z = (chunkZ << 4) + 8;
 
             // Deliberately generate this candidate chunk now rather than waiting for exploration.
             world.getChunk(chunkX, chunkZ);
             int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
-            if (y <= world.getBottomY() + 2 || y + 12 >= world.getTopY()) {
+            if (y <= world.getBottomY() + 2 || y + 15 >= world.getTopY()) {
                 continue;
             }
 
@@ -81,9 +85,9 @@ public final class WatcherTowerGenerator {
             }
 
             // Prepare a compact, level footprint. The surrounding terrain remains untouched.
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    for (int dy = 0; dy <= 10; dy++) {
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dz = -5; dz <= 5; dz++) {
+                    for (int dy = 0; dy <= 14; dy++) {
                         world.setBlockState(new BlockPos(x + dx, y + dy, z + dz),
                                 net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
                     }
@@ -139,8 +143,8 @@ public final class WatcherTowerGenerator {
     }
 
     private static boolean isFlatAndClear(ServerWorld world, int x, int baseY, int z) {
-        for (int dx = -4; dx <= 4; dx++) {
-            for (int dz = -4; dz <= 4; dz++) {
+        for (int dx = -5; dx <= 5; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
                 int px = x + dx;
                 int pz = z + dz;
                 if (!world.isChunkLoaded(px >> 4, pz >> 4)) {
@@ -170,49 +174,110 @@ public final class WatcherTowerGenerator {
         int y0 = base.getY();
         int z0 = base.getZ();
         BlockState stone = net.minecraft.block.Blocks.STONE_BRICKS.getDefaultState();
-        BlockState weathered = net.minecraft.block.Blocks.MOSSY_STONE_BRICKS.getDefaultState();
-        BlockState roof = net.minecraft.block.Blocks.COBBLED_DEEPSLATE.getDefaultState();
+        BlockState cracked = net.minecraft.block.Blocks.CRACKED_STONE_BRICKS.getDefaultState();
+        BlockState mossy = net.minecraft.block.Blocks.MOSSY_STONE_BRICKS.getDefaultState();
+        BlockState deep = net.minecraft.block.Blocks.COBBLED_DEEPSLATE.getDefaultState();
+        BlockState polished = net.minecraft.block.Blocks.POLISHED_ANDESITE.getDefaultState();
+        BlockState wood = net.minecraft.block.Blocks.DARK_OAK_PLANKS.getDefaultState();
+        BlockState fence = net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState();
+        BlockState air = net.minecraft.block.Blocks.AIR.getDefaultState();
 
-        // A compact 9x9 footprint with a hollow shaft, narrow windows and a roof silhouette.
-        for (int dx = -4; dx <= 4; dx++) {
-            for (int dz = -4; dz <= 4; dz++) {
-                world.setBlockState(new BlockPos(x0 + dx, y0, z0 + dz), stone, 3);
-                for (int dy = 1; dy <= 9; dy++) {
-                    boolean wall = Math.abs(dx) == 4 || Math.abs(dz) == 4;
-                    if (!wall) continue;
-                    boolean doorway = dz == -4 && dx == 0 && dy <= 2;
-                    boolean windowGap = doorway || ((dy == 4 || dy == 7)
-                            && ((dx == 0 && Math.abs(dz) == 4) || (dz == 0 && Math.abs(dx) == 4)));
-                    if (!windowGap) {
-                        BlockState material = ((dx + dz + dy) % 5 == 0) ? weathered : stone;
+        // Broad stepped foundation, with a stone border to make the tower read clearly from a distance.
+        for (int dx = -5; dx <= 5; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
+                boolean edge = Math.abs(dx) == 5 || Math.abs(dz) == 5;
+                world.setBlockState(new BlockPos(x0 + dx, y0, z0 + dz), edge ? polished : stone, 3);
+                if (edge) {
+                    world.setBlockState(new BlockPos(x0 + dx, y0 + 1, z0 + dz), deep, 3);
+                }
+            }
+        }
+
+        // Tall stone shaft: thick corner piers, timber braces, slit windows, and a real doorway.
+        for (int dy = 1; dy <= 10; dy++) {
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dz = -5; dz <= 5; dz++) {
+                    boolean perimeter = Math.abs(dx) == 5 || Math.abs(dz) == 5;
+                    if (!perimeter) continue;
+
+                    boolean corner = Math.abs(dx) == 5 && Math.abs(dz) == 5;
+                    boolean doorway = dz == -5 && dx >= -1 && dx <= 1 && dy <= 3;
+                    boolean window = (dy == 4 || dy == 8)
+                            && ((dz == -5 && (dx == -2 || dx == 2))
+                            || (dz == 5 && (dx == -2 || dx == 2))
+                            || (dx == -5 && (dz == -2 || dz == 2))
+                            || (dx == 5 && (dz == -2 || dz == 2)));
+                    boolean timberBand = dy == 5 || dy == 9;
+                    if (doorway || window) {
+                        world.setBlockState(new BlockPos(x0 + dx, y0 + dy, z0 + dz), air, 3);
+                    } else if (corner && dy % 3 != 0) {
+                        world.setBlockState(new BlockPos(x0 + dx, y0 + dy, z0 + dz), polished, 3);
+                    } else if (timberBand && !corner) {
+                        world.setBlockState(new BlockPos(x0 + dx, y0 + dy, z0 + dz), wood, 3);
+                    } else {
+                        BlockState material = world.random.nextInt(8) == 0 ? mossy
+                                : world.random.nextInt(10) == 0 ? cracked : stone;
                         world.setBlockState(new BlockPos(x0 + dx, y0 + dy, z0 + dz), material, 3);
                     }
                 }
             }
         }
 
+        // Internal upper floor with an access opening, so the ladder remains usable.
         for (int dx = -4; dx <= 4; dx++) {
             for (int dz = -4; dz <= 4; dz++) {
-                if (Math.abs(dx) == 4 || Math.abs(dz) == 4 || dx == 0 || dz == 0) {
-                    world.setBlockState(new BlockPos(x0 + dx, y0 + 10, z0 + dz), roof, 3);
+                if (!(dx == 0 && dz >= -4 && dz <= -2)) {
+                    world.setBlockState(new BlockPos(x0 + dx, y0 + 6, z0 + dz), wood, 3);
                 }
             }
         }
 
-        // Interior access ladder and a single chest with a fixed historical log plus random supplies.
-        for (int dy = 1; dy <= 7; dy++) {
-            BlockPos ladderPos = new BlockPos(x0, y0 + dy, z0 - 3);
+        // Heavy roof ring and battlements: the crenellated silhouette makes it visible over trees.
+        for (int dx = -5; dx <= 5; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
+                boolean perimeter = Math.abs(dx) == 5 || Math.abs(dz) == 5;
+                if (perimeter) {
+                    world.setBlockState(new BlockPos(x0 + dx, y0 + 11, z0 + dz), deep, 3);
+                    boolean merlon = ((dx + dz) & 1) == 0;
+                    if (merlon) {
+                        world.setBlockState(new BlockPos(x0 + dx, y0 + 12, z0 + dz), stone, 3);
+                    }
+                } else if (Math.abs(dx) == 4 || Math.abs(dz) == 4) {
+                    world.setBlockState(new BlockPos(x0 + dx, y0 + 10, z0 + dz), deep, 3);
+                }
+            }
+        }
+
+        // Four corner turrets, a small central lookout, and warm lights under the parapet.
+        for (int dx : new int[]{-4, 4}) {
+            for (int dz : new int[]{-4, 4}) {
+                for (int dy = 11; dy <= 13; dy++) {
+                    world.setBlockState(new BlockPos(x0 + dx, y0 + dy, z0 + dz), stone, 3);
+                }
+                world.setBlockState(new BlockPos(x0 + dx, y0 + 14, z0 + dz), deep, 3);
+                world.setBlockState(new BlockPos(x0 + dx, y0 + 11, z0 + dz),
+                        net.minecraft.block.Blocks.LANTERN.getDefaultState(), 3);
+            }
+        }
+        world.setBlockState(new BlockPos(x0, y0 + 12, z0), polished, 3);
+        world.setBlockState(new BlockPos(x0, y0 + 13, z0), polished, 3);
+        world.setBlockState(new BlockPos(x0, y0 + 14, z0), deep, 3);
+
+        // A continuous interior ladder rises from the entry to the roof lookout.
+        for (int dy = 1; dy <= 10; dy++) {
+            BlockPos ladderPos = new BlockPos(x0, y0 + dy, z0 - 4);
             world.setBlockState(ladderPos, net.minecraft.block.Blocks.LADDER.getDefaultState()
                     .with(net.minecraft.block.LadderBlock.FACING, Direction.SOUTH), 3);
         }
 
-        BlockPos chestPos = new BlockPos(x0 + 1, y0 + 1, z0 + 1);
+        // Interior furnishings and the same lore chest, now tucked against a wall.
+        BlockPos chestPos = new BlockPos(x0 + 2, y0 + 1, z0 + 2);
         world.setBlockState(chestPos, net.minecraft.block.Blocks.CHEST.getDefaultState()
                 .with(ChestBlock.FACING, Direction.NORTH), 3);
         if (world.getBlockEntity(chestPos) instanceof ChestBlockEntity chest) {
             ItemStack logbook = new ItemStack(Items.WRITABLE_BOOK);
             logbook.set(DataComponentTypes.WRITABLE_BOOK_CONTENT, new WritableBookContentComponent(List.of(
-                    RawFilteredPair.of("Field log, entry 4\n\nWe built this tower after the first night. The tracks below it stopped at the tree line, though none of us heard anyone approach."),
+                    RawFilteredPair.of("Field log, entry 4\\n\\nWe built this tower after the first night. The tracks below it stopped at the tree line, though none of us heard anyone approach."),
                     RawFilteredPair.of("It does not hunt like an animal. It watches until you begin to expect it. Then it changes where it stands. Never trust a place just because it was empty a moment ago."),
                     RawFilteredPair.of("We called it the Watcher. We do not know whether it came with this forest or learned to imitate the people who lived here before us. It remembers where we look."),
                     RawFilteredPair.of("If the message says it has joined the game, do not assume it has only just arrived. Keep this tower in mind. We left what we could spare. - M.")
