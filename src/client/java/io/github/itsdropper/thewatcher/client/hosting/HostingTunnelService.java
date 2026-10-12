@@ -264,6 +264,7 @@ public final class HostingTunnelService {
             closed = true;
             ready.completeExceptionally(new IOException("Hosting relay closed the connection (" + statusCode + ")."));
             cleanupChannels();
+            serial.shutdownNow();
             return CompletableFuture.completedFuture(null);
         }
 
@@ -311,6 +312,7 @@ public final class HostingTunnelService {
     private static final class HostEndpoint extends Endpoint {
         private final int localPort;
         private final Map<Integer, Channel> channels = new ConcurrentHashMap<>();
+        private final java.util.Set<Integer> seenChannels = ConcurrentHashMap.newKeySet();
 
         private HostEndpoint(String room, byte[] secret, int localPort) {
             super(room, secret);
@@ -322,7 +324,7 @@ public final class HostingTunnelService {
             if (parsed == null) throw new IOException("Invalid relay frame.");
             if (parsed.type == 1) {
                 if (!verifyControlFrame(frame, secret, "guest-to-host") || channels.size() >= 8
-                        || channels.containsKey(parsed.channel)) throw new IOException("Invalid channel open.");
+                        || !seenChannels.add(parsed.channel)) throw new IOException("Invalid channel open.");
                 Socket local = new Socket();
                 local.connect(new java.net.InetSocketAddress("127.0.0.1", localPort), 5000);
                 local.setTcpNoDelay(true);
@@ -337,8 +339,7 @@ public final class HostingTunnelService {
             Channel channel = channels.get(parsed.channel);
             if (channel == null) throw new IOException("Unknown channel.");
             if (parsed.type == 2) {
-                if (!"guest-to-host".equals(parsed.direction)
-                        || parsed.sequence != channel.incomingSequence.getAndIncrement()) {
+                if (parsed.sequence != channel.incomingSequence.getAndIncrement()) {
                     throw new IOException("Invalid data sequence.");
                 }
                 byte[] plaintext = decrypt(frame, secret, "guest-to-host");
@@ -457,7 +458,7 @@ public final class HostingTunnelService {
         }
     }
 
-    private record Frame(byte type, int channel, long sequence, String direction) {}
+    private record Frame(byte type, int channel, long sequence) {}
 
     private static Frame parseFrame(byte[] frame) {
         if (frame.length < 5 || frame.length > 64 * 1024) return null;
@@ -469,7 +470,7 @@ public final class HostingTunnelService {
         if (type == 2 && frame.length < 29) return null;
         long sequence = type == 2 ? header.getLong() : -1;
         if (type == 2 && sequence < 0) return null;
-        return new Frame(type, channel, sequence, "");
+        return new Frame(type, channel, sequence);
     }
 
     private static byte[] controlFrame(byte type, int channel, byte[] secret, String direction) {
