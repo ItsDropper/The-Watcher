@@ -251,14 +251,14 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
       return;
     }
     if (wss.clients.size >= MAX_ACTIVE_SOCKETS) {
-      socket.write("HTTP/1.1 503 Service Unavailable\\r\\nConnection: close\\r\\n\\r\\n");
+      socket.write("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
     // Native Java clients do not need a browser Origin. Reject browser-originated
     // cross-site WebSocket attempts so a malicious website cannot probe room IDs.
     if (request.headers.origin) {
-      socket.write("HTTP/1.1 403 Forbidden\\r\\nConnection: close\\r\\n\\r\\n");
+      socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
