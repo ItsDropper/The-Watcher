@@ -218,9 +218,9 @@ public final class HostingTunnelService {
                 if (last) {
                     String message = textParts.toString(StandardCharsets.UTF_8);
                     textParts.reset();
-                    if (message.contains("\\"type\\":\\"ready\\"")) {
+                    if (message.contains("\"type\":\"ready\"")) {
                         String expectedRole = this instanceof HostEndpoint ? "host" : "guest";
-                        if (!message.contains("\\"role\\":\\"" + expectedRole + "\\"")) {
+                        if (!message.contains("\"role\":\"" + expectedRole + "\"")) {
                             ready.completeExceptionally(new IOException("Relay returned an invalid role."));
                             socket.abort();
                             close();
