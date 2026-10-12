@@ -28,6 +28,11 @@ public final class WatcherTowerGenerator {
     private WatcherTowerGenerator() {
     }
 
+    public static void resetForRun() {
+        BUILT_REGIONS.clear();
+        towersBuilt = 0;
+    }
+
     public static boolean tryGenerate(ServerWorld world, ServerPlayerEntity player) {
         if (towersBuilt >= MAX_TOWERS_PER_SESSION) {
             return false;
