@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher.entity;
 
 import io.github.itsdropper.thewatcher.TheWatcher;
+import io.github.itsdropper.thewatcher.SurveillanceCameraBlock;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.SwimGoal;
@@ -113,6 +114,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
+        if (night) SurveillanceCameraBlock.trySabotageNearby(world, this);
 
         if (!debugPhaseLocked && !debugSimulation && !night) {
             // Natural encounters go dormant during the day, but the persistent entity
