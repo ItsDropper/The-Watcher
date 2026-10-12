@@ -388,7 +388,7 @@ public final class HostingTunnelService {
                 channel.socket.getOutputStream().write(plaintext);
                 channel.socket.getOutputStream().flush();
             } else if (parsed.type == 3) {
-                if (!verifyControlFrame(frame, secret, "guest-to-host")) throw new IOException("Invalid close frame.");
+                if (!TunnelCrypto.verifyControlFrame(frame, secret, "guest-to-host")) throw new IOException("Invalid close frame.");
                 closeChannel(channel, false);
             }
         }
