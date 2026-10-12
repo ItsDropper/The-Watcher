@@ -344,7 +344,7 @@ if (import.meta.url === new URL(process.argv[1] ?? "", "file:").href) {
   });
   const port = Number(process.env.PORT ?? 9443);
   relay.listen(port).then(address => {
-    console.log(`The Watcher relay listening with TLS on ${address.address}:${address.port}`);
+    console.log(`The Watcher relay listening on ${address.address}:${address.port}${trustProxyTls && !certPath ? " (TLS terminated by hosting platform)" : " (TLS enabled)"}`);
   }).catch(error => {
     console.error("Failed to start relay:", error);
     process.exit(1);
