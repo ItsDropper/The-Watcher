@@ -1,7 +1,6 @@
 package io.github.itsdropper.thewatcher.entity;
 
 import io.github.itsdropper.thewatcher.TheWatcher;
-import io.github.itsdropper.thewatcher.SurveillanceCameraBlock;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlockEntity;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
