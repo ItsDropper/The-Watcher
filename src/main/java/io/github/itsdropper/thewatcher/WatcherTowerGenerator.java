@@ -22,7 +22,7 @@ import java.util.Set;
 /** Builds a small, old watchtower in explored, already-loaded terrain. */
 public final class WatcherTowerGenerator {
     private static final Set<Long> BUILT_REGIONS = new HashSet<>();
-    private static final int MAX_TOWERS_PER_SESSION = 5;
+    private static final int MAX_STRUCTURES_PER_SESSION = 5;
     private static int towersBuilt;
 
     private WatcherTowerGenerator() {
@@ -109,7 +109,7 @@ public final class WatcherTowerGenerator {
     }
 
     public static boolean tryGenerate(ServerWorld world, ServerPlayerEntity player) {
-        if (towersBuilt >= MAX_TOWERS_PER_SESSION) {
+        if (towersBuilt >= MAX_STRUCTURES_PER_SESSION) {
             return false;
         }
 
@@ -140,7 +140,13 @@ public final class WatcherTowerGenerator {
                 continue;
             }
 
-            buildTower(world, new BlockPos(x, baseY, z));
+            BlockPos base = new BlockPos(x, baseY, z);
+            // The first structure is always the guaranteed tower; later discoveries vary.
+            switch (world.random.nextInt(3)) {
+                case 0 -> buildAbandonedCabin(world, base);
+                case 1 -> buildRitualShrine(world, base);
+                default -> buildRuinedCamp(world, base);
+            }
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
             return true;
@@ -308,4 +314,133 @@ public final class WatcherTowerGenerator {
             chest.markDirty();
         }
     }
+
+    private static void buildAbandonedCabin(ServerWorld world, BlockPos base) {
+        int x = base.getX(), y = base.getY(), z = base.getZ();
+        BlockState floor = net.minecraft.block.Blocks.SPRUCE_PLANKS.getDefaultState();
+        BlockState wall = net.minecraft.block.Blocks.SPRUCE_LOG.getDefaultState();
+        BlockState roof = net.minecraft.block.Blocks.DARK_OAK_PLANKS.getDefaultState();
+        BlockState air = net.minecraft.block.Blocks.AIR.getDefaultState();
+
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                world.setBlockState(new BlockPos(x + dx, y, z + dz), floor, 3);
+                for (int dy = 1; dy <= 4; dy++) {
+                    boolean edge = Math.abs(dx) == 4 || Math.abs(dz) == 4;
+                    if (!edge) continue;
+                    boolean doorway = dz == -4 && dx == 0 && dy <= 2;
+                    boolean window = dy == 2 && ((dz == -4 && Math.abs(dx) == 2)
+                            || (dx == 4 && dz == 0) || (dx == -4 && dz == 0));
+                    world.setBlockState(new BlockPos(x + dx, y + dy, z + dz),
+                            doorway || window ? air : wall, 3);
+                }
+            }
+        }
+        for (int layer = 0; layer < 4; layer++) {
+            int radius = 4 - layer;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) == radius || Math.abs(dz) == radius) {
+                        world.setBlockState(new BlockPos(x + dx, y + 5 + layer, z + dz), roof, 3);
+                    }
+                }
+            }
+        }
+        world.setBlockState(new BlockPos(x - 2, y + 1, z - 2),
+                net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 1, z + 2),
+                net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        placeLoreChest(world, new BlockPos(x + 2, y + 1, z + 2), Direction.NORTH, List.of(
+                "The cabin was empty when I found it. The fire was cold, but there were fresh footprints around the bed. They stopped at the wall.",
+                "I watched the tree line until sunrise. It never moved while I looked directly at it. When I checked the window again, the glass was on the floor and the door was open.",
+                "I have started counting the footsteps outside. There are always two more than the number I hear.",
+                "If you found this, do not sleep here. It knows this place better than you do. - E."
+        ));
+    }
+
+    private static void buildRitualShrine(ServerWorld world, BlockPos base) {
+        int x = base.getX(), y = base.getY(), z = base.getZ();
+        BlockState mossy = net.minecraft.block.Blocks.MOSSY_COBBLESTONE.getDefaultState();
+        BlockState stone = net.minecraft.block.Blocks.COBBLESTONE.getDefaultState();
+        BlockState deepslate = net.minecraft.block.Blocks.COBBLED_DEEPSLATE.getDefaultState();
+
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                if (Math.abs(dx) + Math.abs(dz) <= 5) {
+                    world.setBlockState(new BlockPos(x + dx, y, z + dz), mossy, 3);
+                }
+            }
+        }
+        for (int dx : new int[]{-3, 3}) {
+            for (int dz : new int[]{-3, 3}) {
+                for (int dy = 1; dy <= 3; dy++) {
+                    world.setBlockState(new BlockPos(x + dx, y + dy, z + dz), stone, 3);
+                }
+                world.setBlockState(new BlockPos(x + dx, y + 4, z + dz), deepslate, 3);
+                world.setBlockState(new BlockPos(x + dx, y + 3, z + dz),
+                        net.minecraft.block.Blocks.CHAIN.getDefaultState(), 3);
+            }
+        }
+        world.setBlockState(new BlockPos(x, y + 1, z), deepslate, 3);
+        world.setBlockState(new BlockPos(x, y + 2, z), net.minecraft.block.Blocks.BLACK_CANDLE.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 1, y + 1, z), mossy, 3);
+        world.setBlockState(new BlockPos(x + 1, y + 1, z), mossy, 3);
+        placeLoreChest(world, new BlockPos(x, y + 1, z + 2), Direction.SOUTH, List.of(
+                "Fragment 1: We thought it was a spirit. We built a place for it and left offerings so it would stay away from our homes.",
+                "Fragment 2: The offerings were untouched. The next night, every candle was burning, though no one had lit them.",
+                "Fragment 3: It does not want food. It wants witnesses. Each person who sees it makes the silence around it feel more complete.",
+                "Fragment 4: We are dismantling the shrine. If the Watcher appears between the pillars, do not count them. There are never the same number twice."
+        ));
+    }
+
+    private static void buildRuinedCamp(ServerWorld world, BlockPos base) {
+        int x = base.getX(), y = base.getY(), z = base.getZ();
+        BlockState planks = net.minecraft.block.Blocks.OAK_PLANKS.getDefaultState();
+        BlockState fence = net.minecraft.block.Blocks.OAK_FENCE.getDefaultState();
+        BlockState gravel = net.minecraft.block.Blocks.GRAVEL.getDefaultState();
+        BlockState cobble = net.minecraft.block.Blocks.MOSSY_COBBLESTONE.getDefaultState();
+
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                if (Math.abs(dx) == 4 || Math.abs(dz) == 4) {
+                    world.setBlockState(new BlockPos(x + dx, y, z + dz), gravel, 3);
+                }
+            }
+        }
+        for (int dx : new int[]{-3, 3}) {
+            world.setBlockState(new BlockPos(x + dx, y + 1, z - 2), fence, 3);
+            world.setBlockState(new BlockPos(x + dx, y + 1, z + 2), fence, 3);
+            world.setBlockState(new BlockPos(x + dx, y + 2, z), planks, 3);
+        }
+        world.setBlockState(new BlockPos(x, y + 1, z), net.minecraft.block.Blocks.CAMPFIRE.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 3, y + 1, z + 3), cobble, 3);
+        world.setBlockState(new BlockPos(x - 3, y + 2, z + 3), net.minecraft.block.Blocks.OAK_SIGN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 1, z + 3), cobble, 3);
+        placeLoreChest(world, new BlockPos(x + 2, y + 1, z - 2), Direction.WEST, List.of(
+                "Expedition log, day 4: There are three of us. Every morning we find four sets of footprints around the camp.",
+                "Day 6: Mara says she saw someone standing where the river bends. I told her it was a spruce trunk. There are no spruce trees on that bank.",
+                "Day 8: We took turns staying awake. All three of us remember hearing the fourth person speaking, but none of us remembers the words.",
+                "Last entry: I can hear my friend outside the tent. He is asleep beside me. I am not opening the flap."
+        ));
+    }
+
+    private static void placeLoreChest(ServerWorld world, BlockPos pos, Direction facing, List<String> pages) {
+        world.setBlockState(pos, net.minecraft.block.Blocks.CHEST.getDefaultState()
+                .with(ChestBlock.FACING, facing), 3);
+        if (!(world.getBlockEntity(pos) instanceof ChestBlockEntity chest)) return;
+
+        ItemStack book = new ItemStack(Items.WRITABLE_BOOK);
+        book.set(DataComponentTypes.WRITABLE_BOOK_CONTENT, new WritableBookContentComponent(
+                pages.stream().map(RawFilteredPair::of).toList()));
+        chest.setStack(0, book);
+
+        Item[] supplies = {Items.BREAD, Items.TORCH, Items.STRING, Items.IRON_NUGGET,
+                Items.PAPER, Items.COAL, Items.ARROW, Items.BONE};
+        for (int slot = 1; slot <= 4; slot++) {
+            Item item = supplies[world.random.nextInt(supplies.length)];
+            chest.setStack(slot, new ItemStack(item, 1 + world.random.nextInt(3)));
+        }
+        chest.markDirty();
+    }
+
 }
