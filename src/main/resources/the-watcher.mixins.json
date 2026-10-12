@@ -8,7 +8,8 @@
     "client.ScreenAccessor",
     "client.CreateWorldScreenMixin",
     "client.CameraZoomMixin",
-    "client.NightLightmapMixin"
+    "client.NightLightmapMixin",
+    "client.EndingMusicPriorityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
