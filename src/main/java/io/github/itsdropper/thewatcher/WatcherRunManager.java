@@ -352,7 +352,7 @@ public final class WatcherRunManager {
         }
         watcher.setInvulnerable(true);
         ENDINGS.put(world, new EndingState(target.getUuid(), watcher.getUuid(), world.getTime()));
-        CameraNetwork.sendEndingMusic(target, true);
+        broadcastEndingMusic(world, true);
         for (ServerPlayerEntity player : world.getPlayers()) {
             player.sendMessage(Text.literal("You hear something far beyond the trees. It has already found you."), false);
         }
@@ -362,12 +362,12 @@ public final class WatcherRunManager {
         ServerPlayerEntity target = world.getServer().getPlayerManager().getPlayer(ending.target());
         net.minecraft.entity.Entity entity = world.getEntity(ending.watcher());
         if (target == null || !target.isAlive()) {
-            if (target != null) CameraNetwork.sendEndingMusic(target, false);
+            broadcastEndingMusic(world, false);
             ENDINGS.remove(world);
             return;
         }
         if (!(entity instanceof WatcherEntity watcher) || watcher.isRemoved()) {
-            CameraNetwork.sendEndingMusic(target, false);
+            broadcastEndingMusic(world, false);
             ENDINGS.remove(world);
             return;
         }
@@ -407,7 +407,7 @@ public final class WatcherRunManager {
         if (remaining <= 0 || actualDistance < 2.8D) {
             target.sendMessage(Text.literal("It was never a distance away. It was waiting."), false);
             target.damage(world.getDamageSources().generic(), Float.MAX_VALUE);
-            CameraNetwork.sendEndingMusic(target, false);
+            broadcastEndingMusic(world, false);
             ENDINGS.remove(world);
             watcher.discard();
             return;
@@ -428,6 +428,12 @@ public final class WatcherRunManager {
                     watcher.getLookControl().lookAt(target, 30.0F, 30.0F);
                 }
             }
+        }
+    }
+
+    private static void broadcastEndingMusic(ServerWorld world, boolean playing) {
+        for (ServerPlayerEntity player : world.getPlayers()) {
+            CameraNetwork.sendEndingMusic(player, playing);
         }
     }
 
