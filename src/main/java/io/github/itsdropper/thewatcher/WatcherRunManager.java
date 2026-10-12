@@ -311,16 +311,123 @@ public final class WatcherRunManager {
     private static void endRun(ServerWorld world, RunState run) {
         run.ended = true;
         saveRun(world, run);
-        if (run.naturalWatcherUuid != null) {
-            net.minecraft.entity.Entity entity = world.getEntity(run.naturalWatcherUuid);
-            if (entity != null) {
-                entity.discard();
-            }
+        startEnding(world, null);
+    }
+
+    public static void startDebugEnding(ServerWorld world, ServerPlayerEntity target) {
+        ENDINGS.remove(world);
+        startEnding(world, target);
+    }
+
+    private static void startEnding(ServerWorld world, ServerPlayerEntity requestedTarget) {
+        RunState run = RUNS.get(world);
+        ServerPlayerEntity target = requestedTarget;
+        if (target == null && run != null) target = choosePlayer(world, run);
+        if (target == null || !target.isAlive()) return;
+
+        WatcherEntity watcher = null;
+        for (ServerPlayerEntity participant : world.getPlayers()) {
+            List<WatcherEntity> found = world.getEntitiesByClass(WatcherEntity.class,
+                    participant.getBoundingBox().expand(2048.0D), WatcherEntity::isNaturalRunEntity);
+            if (!found.isEmpty()) { watcher = found.get(0); break; }
         }
+        if (watcher == null) {
+            watcher = TheWatcher.WATCHER.create(world);
+            if (watcher == null) return;
+            double angle = Math.toRadians(target.getYaw() + 180.0F);
+            int x = (int) Math.floor(target.getX() + Math.sin(angle) * 28.0D);
+            int z = (int) Math.floor(target.getZ() - Math.cos(angle) * 28.0D);
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                x = (int) target.getX() + 8;
+                z = (int) target.getZ() + 8;
+            }
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+            watcher.refreshPositionAndAngles(x + 0.5D, y, z + 0.5D, target.getYaw(), 0.0F);
+            watcher.setNaturalRunEntity(true);
+            world.spawnEntity(watcher);
+        }
+        watcher.setInvulnerable(true);
+        ENDINGS.put(world, new EndingState(target.getUuid(), watcher.getUuid(), world.getTime()));
+        CameraNetwork.sendEndingMusic(target, true);
         for (ServerPlayerEntity player : world.getPlayers()) {
-            player.sendMessage(Text.literal("The Watcher has gone quiet. This run is over."), false);
+            player.sendMessage(Text.literal("You hear something far beyond the trees. It has already found you."), false);
         }
     }
+
+    private static void tickEnding(ServerWorld world, EndingState ending) {
+        ServerPlayerEntity target = world.getServer().getPlayerManager().getPlayer(ending.target());
+        net.minecraft.entity.Entity entity = world.getEntity(ending.watcher());
+        if (target == null || !target.isAlive()) {
+            if (target != null) CameraNetwork.sendEndingMusic(target, false);
+            ENDINGS.remove(world);
+            return;
+        }
+        if (!(entity instanceof WatcherEntity watcher) || watcher.isRemoved()) {
+            CameraNetwork.sendEndingMusic(target, false);
+            ENDINGS.remove(world);
+            return;
+        }
+
+        long elapsed = Math.max(0L, world.getTime() - ending.startedAt());
+        int remaining = Math.max(0, 1000 - (int) (elapsed / 20L) * 10);
+        double actualDistance = target.distanceTo(watcher);
+        if (world.getTime() % 20L == 0L) {
+            target.sendMessage(Text.literal("THE WATCHER IS " + remaining + " BLOCKS AWAY"), true);
+            if (remaining == 900 || remaining == 800 || remaining == 700 || remaining == 600
+                    || remaining == 500 || remaining == 400 || remaining == 300 || remaining == 200) {
+                String warning = switch (remaining) {
+                    case 900 -> "You hear footsteps where there should be none.";
+                    case 800 -> "The forest goes silent. Even the wind stops.";
+                    case 700 -> "Something moved behind you. Do not turn around.";
+                    case 600 -> "Your footsteps have a second set following them.";
+                    case 500 -> "It is closer than the counter says.";
+                    case 400 -> "You hear breathing. It stops when you stop.";
+                    case 300 -> "The dark between the trees is moving.";
+                    default -> "RUN.";
+                };
+                target.sendMessage(Text.literal(warning), false);
+            }
+            target.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                    net.minecraft.entity.effect.StatusEffects.DARKNESS, 35, 0, false, false, true));
+            if (remaining <= 300 && world.random.nextFloat() < 0.28F) {
+                target.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(
+                        net.minecraft.entity.effect.StatusEffects.NAUSEA, 50, 0, false, false, true));
+            }
+            if (remaining <= 500 && world.random.nextFloat() < 0.35F) {
+                world.playSound(null, target.getBlockPos(), net.minecraft.sound.SoundEvents.AMBIENT_CAVE,
+                        net.minecraft.sound.SoundCategory.HOSTILE, 0.8F,
+                        0.55F + world.random.nextFloat() * 0.25F);
+            }
+        }
+
+        if (remaining <= 0 || actualDistance < 2.8D) {
+            target.sendMessage(Text.literal("It was never a distance away. It was waiting."), false);
+            target.damage(world.getDamageSources().generic(), Float.MAX_VALUE);
+            CameraNetwork.sendEndingMusic(target, false);
+            ENDINGS.remove(world);
+            watcher.discard();
+            return;
+        }
+
+        if (world.getTime() % 20L == 0L) {
+            double angle = world.random.nextDouble() * Math.PI * 2.0D;
+            double radius = Math.min(90.0D, Math.max(10.0D, remaining * 0.085D));
+            int x = (int) Math.floor(target.getX() + Math.cos(angle) * radius);
+            int z = (int) Math.floor(target.getZ() + Math.sin(angle) * radius);
+            if (world.isChunkLoaded(x >> 4, z >> 4)) {
+                int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+                BlockPos feet = new BlockPos(x, y, z);
+                if (world.getBlockState(feet.down()).isSolidBlock(world, feet.down())
+                        && world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                        && world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
+                    watcher.teleport(x + 0.5D, y, z + 0.5D);
+                    watcher.getLookControl().lookAt(target, 30.0F, 30.0F);
+                }
+            }
+        }
+    }
+
+    private record EndingState(UUID target, UUID watcher, long startedAt) { }
 
     private static Path runFile(ServerWorld world) {
         return world.getServer().getSavePath(WorldSavePath.ROOT).resolve("the-watcher-run.properties");
