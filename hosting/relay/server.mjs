@@ -1,3 +1,4 @@
+import http from "node:http";
 import https from "node:https";
 import fs from "node:fs";
 import crypto from "node:crypto";
@@ -73,14 +74,16 @@ function safeSend(socket, data) {
   socket.send(data, { binary: Buffer.isBuffer(data) });
 }
 
-export function createRelayServer({ cert, key, logger = console } = {}) {
-  if (!cert || !key) {
-    throw new Error("TLS certificate and private key are required; refusing to start an insecure hosting relay.");
+export function createRelayServer({ cert, key, trustProxyTls = false, logger = console } = {}) {
+  const hasCert = Boolean(cert);
+  const hasKey = Boolean(key);
+  if (hasCert !== hasKey || (!hasCert && !trustProxyTls)) {
+    throw new Error("TLS certificate and private key are required unless WATCHER_TRUST_PROXY_TLS=true is explicitly enabled behind a TLS-terminating platform.");
   }
 
   const rooms = new Map();
   const allowHandshake = createRateLimiter();
-  const server = https.createServer({ cert, key }, (request, response) => {
+  const handleHttp = (request, response) => {
     if (request.method === "GET" && request.url === "/health") {
       response.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
       response.end("ok\n");
@@ -88,7 +91,13 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
     }
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
     response.end("not found\n");
-  });
+  };
+  // Managed hosts terminate public TLS at their edge and forward WebSocket
+  // traffic to this process. Plain HTTP is allowed only with explicit opt-in;
+  // self-managed deployments must provide their own TLS certificate.
+  const server = hasCert
+    ? https.createServer({ cert, key }, handleHttp)
+    : http.createServer(handleHttp);
 
   const wss = new WebSocketServer({
     noServer: true,
@@ -323,13 +332,15 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
 if (import.meta.url === new URL(process.argv[1] ?? "", "file:").href) {
   const certPath = process.env.TLS_CERT_FILE;
   const keyPath = process.env.TLS_KEY_FILE;
-  if (!certPath || !keyPath) {
-    console.error("TLS_CERT_FILE and TLS_KEY_FILE are required. No plaintext fallback is provided.");
+  const trustProxyTls = process.env.WATCHER_TRUST_PROXY_TLS === "true";
+  if (Boolean(certPath) !== Boolean(keyPath) || ((!certPath || !keyPath) && !trustProxyTls)) {
+    console.error("TLS_CERT_FILE and TLS_KEY_FILE are required unless WATCHER_TRUST_PROXY_TLS=true is explicitly set behind a TLS-terminating platform.");
     process.exit(1);
   }
   const relay = createRelayServer({
-    cert: fs.readFileSync(certPath),
-    key: fs.readFileSync(keyPath)
+    cert: certPath && keyPath ? fs.readFileSync(certPath) : undefined,
+    key: certPath && keyPath ? fs.readFileSync(keyPath) : undefined,
+    trustProxyTls
   });
   const port = Number(process.env.PORT ?? 9443);
   relay.listen(port).then(address => {
