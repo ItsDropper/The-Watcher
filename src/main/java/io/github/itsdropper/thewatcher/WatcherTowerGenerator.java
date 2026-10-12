@@ -409,7 +409,9 @@ public final class WatcherTowerGenerator {
                     RawFilteredPair.of("The four sites each held a record: tower, cabin, shrine, camp. Keep every evidence page. The Watcher cannot be hurt while the story is incomplete. When all four records are together, it can bleed. Do not mistake that for mercy.")
             )));
             chest.setStack(0, logbook);
-            ItemStack evidence = new ItemStack(Items.PAPER);\n            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));\n            chest.setStack(9, evidence);
+            ItemStack evidence = new ItemStack(Items.PAPER);
+            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));
+            chest.setStack(9, evidence);
 
             Item[] supplies = {Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
                     Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.COMPASS, Items.SPYGLASS,
