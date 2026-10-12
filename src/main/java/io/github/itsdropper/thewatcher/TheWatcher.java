@@ -6,6 +6,13 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
+import net.minecraft.block.AbstractBlock;
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -40,9 +47,26 @@ public class TheWatcher implements ModInitializer {
                     .build()
     );
 
+    public static final Block SURVEILLANCE_CAMERA = Registry.register(
+            Registries.BLOCK, id("surveillance_camera"),
+            new SurveillanceCameraBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)
+                    .strength(1.8F).nonOpaque())
+    );
+
+    public static final BlockEntityType<SurveillanceCameraBlockEntity> CAMERA_BLOCK_ENTITY = Registry.register(
+            Registries.BLOCK_ENTITY_TYPE, id("surveillance_camera"),
+            FabricBlockEntityTypeBuilder.create(SurveillanceCameraBlockEntity::new, SURVEILLANCE_CAMERA).build()
+    );
+
+    public static final Item SURVEILLANCE_CAMERA_ITEM = Registry.register(
+            Registries.ITEM, id("surveillance_camera"),
+            new BlockItem(SURVEILLANCE_CAMERA, new Item.Settings())
+    );
+
     @Override
     public void onInitialize() {
         WatcherOllamaConfig.load();
+        LOGGER.info("Surveillance camera block and item registered.");
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         WatcherCommands.register();
         ServerTickEvents.END_WORLD_TICK.register(TheWatcher::applyNightDarkness);
