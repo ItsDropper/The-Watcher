@@ -1,0 +1,33 @@
+name: hosting-relay
+on:
+  push:
+    paths:
+      - "hosting/relay/**"
+      - ".github/workflows/hosting-relay.yml"
+  pull_request:
+    paths:
+      - "hosting/relay/**"
+      - ".github/workflows/hosting-relay.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hosting/relay/package.json
+      - name: Install dependencies
+        working-directory: hosting/relay
+        run: npm install --ignore-scripts
+      - name: Test relay protocol
+        working-directory: hosting/relay
+        run: npm test
+      - name: Audit production dependencies
+        working-directory: hosting/relay
+        run: npm audit --omit=dev
