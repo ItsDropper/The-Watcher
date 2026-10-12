@@ -5,6 +5,7 @@
   "mixins": [],
   "client": [
     "client.GameMenuScreenMixin",
+    "client.MultiplayerScreenMixin",
     "client.ScreenAccessor",
     "client.CreateWorldScreenMixin",
     "client.CameraZoomMixin",
