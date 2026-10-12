@@ -1,8 +1,10 @@
 package io.github.itsdropper.thewatcher.client;
 
+import io.github.itsdropper.thewatcher.CameraNetwork;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlock;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -11,17 +13,23 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.World;
+import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.util.InputUtil;
 
 public final class CameraFeedScreen extends Screen {
     private final BlockPos cameraPos;
     private final Screen networkScreen;
     private final Entity previousCameraEntity;
     private final Entity viewEntity;
-    private final ClientWorld cameraWorld;
+    private final World cameraWorld;
     private boolean restored;
+    private double lastMouseX = Double.NaN;
+    private double lastMouseY = Double.NaN;
 
     private CameraFeedScreen(BlockPos cameraPos, Screen networkScreen,
-                             Entity previousCameraEntity, Entity viewEntity, ClientWorld cameraWorld) {
+                             Entity previousCameraEntity, Entity viewEntity, World cameraWorld) {
         super(Text.literal("Camera Feed"));
         this.cameraPos = cameraPos.toImmutable();
         this.networkScreen = networkScreen;
@@ -37,7 +45,6 @@ public final class CameraFeedScreen extends Screen {
         var view = EntityType.ARMOR_STAND.create(client.world);
         if (view == null) return null;
 
-        // Armor-stand eye height places the virtual viewpoint at the camera's lens.
         view.setPosition(pos.getX() + 0.5D, pos.getY() - 0.7D, pos.getZ() + 0.5D);
         view.setNoGravity(true);
         view.setInvisible(true);
@@ -48,10 +55,9 @@ public final class CameraFeedScreen extends Screen {
         view.setPitch(0.0F);
 
         Entity previous = client.getCameraEntity();
-        // Register a real client-world entity so the renderer has a stable camera target.
-        // A detached Entity can make the renderer repeatedly reset its camera/chunk origin.
         view.setId(-2_147_000_001);
         client.world.addEntity(view);
+        ClientPlayNetworking.send(CameraNetwork.OPEN_FEED, PacketByteBufs.create().writeBlockPos(pos));
         CameraFeedScreen screen = new CameraFeedScreen(pos, networkScreen, previous, view, client.world);
         client.setCameraEntity(view);
         return screen;
@@ -64,39 +70,61 @@ public final class CameraFeedScreen extends Screen {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        if (client == null || client.getWindow() == null) return;
+        long window = client.getWindow().getHandle();
+        float yaw = viewEntity.getYaw();
+        float pitch = viewEntity.getPitch();
+        float turn = 2.4F;
+        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_A)) yaw -= turn;
+        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_D)) yaw += turn;
+        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_W)) pitch -= 1.8F;
+        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_S)) pitch += 1.8F;
+        viewEntity.setYaw(yaw);
+        viewEntity.setPitch(MathHelper.clamp(pitch, -89.0F, 89.0F));
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        viewEntity.setYaw(viewEntity.getYaw() - (float) deltaX * 0.45F);
+        viewEntity.setPitch(MathHelper.clamp(
+                viewEntity.getPitch() - (float) deltaY * 0.45F, -89.0F, 89.0F));
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        return true;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            close();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // The 3D world is rendered by Minecraft from the virtual camera entity behind this
-        // overlay. renderBackground() is disabled below to keep the feed sharp.
         context.fill(0, 0, width, 42, 0xFF0A0D12);
         context.fill(0, height - 40, width, height, 0xFF0A0D12);
         context.drawText(textRenderer, "LIVE FEED  /  CAM " + cameraPos.getX() + " "
                 + cameraPos.getY() + " " + cameraPos.getZ(), 12, 10, 0xFFFF5555, false);
-        context.drawText(textRenderer, "W/S: tilt   A/D: pan   ESC: return to network",
+        context.drawText(textRenderer, "Hold W/S: tilt   Hold A/D: rotate   Drag mouse: look 360°   ESC: return",
                 12, 25, 0xFFE4EAF2, false);
         super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Do not apply vanilla menu blur to the live camera view.
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        float yaw = viewEntity.getYaw();
-        float pitch = viewEntity.getPitch();
-        switch (keyCode) {
-            case 87 -> pitch = Math.max(-85.0F, pitch - 6.0F); // W
-            case 83 -> pitch = Math.min(85.0F, pitch + 6.0F); // S
-            case 65 -> yaw -= 8.0F; // A
-            case 68 -> yaw += 8.0F; // D
-            default -> {
-                return super.keyPressed(keyCode, scanCode, modifiers);
-            }
-        }
-        viewEntity.setYaw(yaw);
-        viewEntity.setPitch(pitch);
-        return true;
+        // Keep the camera image sharp: no vanilla menu blur.
     }
 
     @Override
@@ -119,6 +147,7 @@ public final class CameraFeedScreen extends Screen {
     private void restorePlayerView() {
         if (restored) return;
         restored = true;
+        ClientPlayNetworking.send(CameraNetwork.CLOSE_FEED, PacketByteBufs.create());
         if (client != null && previousCameraEntity != null) {
             client.setCameraEntity(previousCameraEntity);
         }
