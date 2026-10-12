@@ -318,6 +318,13 @@ public final class WatcherRunManager {
         startEnding(world, null);
     }
 
+    /** Keeps late joiners in sync with an ending already running in their dimension. */
+    public static void syncEndingMusic(ServerPlayerEntity player) {
+        if (ENDINGS.containsKey(player.getServerWorld())) {
+            CameraNetwork.sendEndingMusic(player, true);
+        }
+    }
+
     public static void startDebugEnding(ServerWorld world, ServerPlayerEntity target) {
         ENDINGS.remove(world);
         startEnding(world, target);
