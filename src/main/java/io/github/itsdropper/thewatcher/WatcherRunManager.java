@@ -160,20 +160,23 @@ public final class WatcherRunManager {
     }
 
     private static boolean spawnFirstReveal(ServerWorld world, ServerPlayerEntity player, RunState run) {
-        for (int attempt = 0; attempt < 48; attempt++) {
+        double bestScore = -Double.MAX_VALUE;
+        int bestX = 0;
+        int bestY = 0;
+        int bestZ = 0;
+        boolean found = false;
+
+        for (int attempt = 0; attempt < 64; attempt++) {
             double angle = world.random.nextDouble() * Math.PI * 2.0D;
             double radius = 32.0D + world.random.nextDouble() * 24.0D;
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
-            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
-                continue;
-            }
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
 
             int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
             BlockPos feet = new BlockPos(x, y, z);
             BlockPos ground = feet.down();
-            BlockState groundState = world.getBlockState(ground);
-            if (!groundState.isSolidBlock(world, ground)
+            if (!world.getBlockState(ground).isSolidBlock(world, ground)
                     || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
                     || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
                     || !world.getBlockState(feet.up(2)).getCollisionShape(world, feet.up(2)).isEmpty()
@@ -183,19 +186,40 @@ public final class WatcherRunManager {
                 continue;
             }
 
-            WatcherEntity watcher = TheWatcher.WATCHER.create(world);
-            if (watcher == null) {
-                return false;
+            int heightSum = 0;
+            int samples = 0;
+            int[][] offsets = {{8, 0}, {-8, 0}, {0, 8}, {0, -8}};
+            for (int[] offset : offsets) {
+                int sx = x + offset[0];
+                int sz = z + offset[1];
+                if (world.isChunkLoaded(sx >> 4, sz >> 4)) {
+                    heightSum += world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, sx, sz);
+                    samples++;
+                }
             }
-            watcher.refreshPositionAndAngles(x + 0.5D, y, z + 0.5D,
-                    world.random.nextFloat() * 360.0F, 0.0F);
-            watcher.setNaturalRunEntity(true);
-            if (world.spawnEntity(watcher)) {
-                run.naturalWatcherUuid = watcher.getUuid();
-                return true;
+            double prominence = samples == 0 ? 0.0D : y - heightSum / (double) samples;
+            double elevation = Math.max(-16.0D, Math.min(24.0D, y - player.getY()));
+            double score = elevation * 0.9D + prominence * 1.5D + world.random.nextDouble() * 5.0D;
+            if (score > bestScore) {
+                bestScore = score;
+                bestX = x;
+                bestY = y;
+                bestZ = z;
+                found = true;
             }
-            watcher.discard();
         }
+
+        if (!found) return false;
+        WatcherEntity watcher = TheWatcher.WATCHER.create(world);
+        if (watcher == null) return false;
+        watcher.refreshPositionAndAngles(bestX + 0.5D, bestY, bestZ + 0.5D,
+                world.random.nextFloat() * 360.0F, 0.0F);
+        watcher.setNaturalRunEntity(true);
+        if (world.spawnEntity(watcher)) {
+            run.naturalWatcherUuid = watcher.getUuid();
+            return true;
+        }
+        watcher.discard();
         return false;
     }
 
