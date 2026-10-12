@@ -35,12 +35,19 @@ public final class WatcherRunManager {
     private static final Map<ServerWorld, RunState> RUNS = new WeakHashMap<>();
     private static final Set<ServerWorld> CHECKED_WORLDS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final long TICKS_PER_HOUR = 72_000L;
+    private static final Map<ServerWorld, EndingState> ENDINGS = new WeakHashMap<>();
 
     private WatcherRunManager() {
     }
 
     public static void tick(ServerWorld world) {
         if (world.getRegistryKey() != World.OVERWORLD) {
+            return;
+        }
+
+        EndingState ending = ENDINGS.get(world);
+        if (ending != null) {
+            tickEnding(world, ending);
             return;
         }
 
