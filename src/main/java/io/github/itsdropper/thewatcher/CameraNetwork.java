@@ -26,8 +26,22 @@ public final class CameraNetwork {
     public static void registerPayloads() {
         PayloadTypeRegistry.playC2S().register(CameraListRequestPayload.ID, CameraListRequestPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(CameraListPayload.ID, CameraListPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(EndingMusicPayload.ID, EndingMusicPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CameraFeedOpenPayload.ID, CameraFeedOpenPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(CameraFeedClosePayload.ID, CameraFeedClosePayload.CODEC);
+    }
+
+    public static void sendEndingMusic(ServerPlayerEntity player, boolean playing) {
+        ServerPlayNetworking.send(player, new EndingMusicPayload(playing));
+    }
+
+    public record EndingMusicPayload(boolean playing) implements net.minecraft.network.packet.CustomPayload {
+        public static final net.minecraft.network.packet.CustomPayload.Id<EndingMusicPayload> ID =
+                new net.minecraft.network.packet.CustomPayload.Id<>(TheWatcher.id("ending_music"));
+        public static final net.minecraft.network.codec.PacketCodec<net.minecraft.network.RegistryByteBuf, EndingMusicPayload> CODEC =
+                net.minecraft.network.codec.PacketCodec.of((payload, buf) -> buf.writeBoolean(payload.playing()),
+                        buf -> new EndingMusicPayload(buf.readBoolean()));
+        @Override public net.minecraft.network.packet.CustomPayload.Id<? extends net.minecraft.network.packet.CustomPayload> getId() { return ID; }
     }
 
     public static void registerServer() {
