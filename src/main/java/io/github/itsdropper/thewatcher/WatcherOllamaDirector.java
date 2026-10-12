@@ -109,11 +109,10 @@ public final class WatcherOllamaDirector {
 
     private static void apply(ServerWorld world, Directive directive) {
         if (world.getPlayers().isEmpty()) return;
-        ServerPlayerEntity player = world.getPlayers().stream()
-                .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
-                .skip(world.random.nextInt((int) Math.max(1L, world.getPlayers().stream()
-                        .filter(candidate -> candidate.isAlive() && !candidate.isSpectator()).count())))
-                .findFirst().orElse(null);
+        java.util.List<ServerPlayerEntity> participants = world.getPlayers().stream()
+                .filter(candidate -> candidate.isAlive() && !candidate.isSpectator()).toList();
+        ServerPlayerEntity player = participants.isEmpty() ? null
+                : participants.get(world.random.nextInt(participants.size()));
         if (player == null) return;
 
         switch (directive.event) {
