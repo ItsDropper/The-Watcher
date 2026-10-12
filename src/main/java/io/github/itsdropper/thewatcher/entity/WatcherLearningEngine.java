@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher.entity;
 
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.entity.player.PlayerEntity;
 
 /**
  * A small, deterministic, offline learning model for the Watcher.
@@ -22,6 +23,11 @@ public final class WatcherLearningEngine {
     private long observedTicks;
     private boolean hasPreviousState;
     private boolean previousWatched;
+    private double averageHorizontalSpeed = 0.08D;
+    private double averageStationaryTicks;
+    private double averageSprintRatio = 0.25D;
+    private double averagePlayerHeight = 64.0D;
+    private int currentStationaryTicks;
 
     public void observe(boolean watched, double distance) {
         if (observedTicks < Long.MAX_VALUE) {
@@ -71,18 +77,55 @@ public final class WatcherLearningEngine {
     }
 
     /**
-     * Learn from personal-space violations during observing/stalking. This is an
-     * intentionally slow signal: one close pass should not permanently change behavior.
+     * Record repeatable habits rather than only gaze timing: whether the player
+     * camps, sprints, and tends to build/live at higher elevations.
+     */
+    public void observePlayerBehavior(PlayerEntity player) {
+        double vx = player.getVelocity().x;
+        double vz = player.getVelocity().z;
+        double horizontalSpeed = Math.sqrt(vx * vx + vz * vz);
+        averageHorizontalSpeed = blend(averageHorizontalSpeed, clamp(horizontalSpeed, 0.0D, 1.5D));
+        averageSprintRatio = blend(averageSprintRatio, player.isSprinting() ? 1.0D : 0.0D);
+        averagePlayerHeight = blend(averagePlayerHeight, clamp(player.getY(), -64.0D, 320.0D));
+
+        if (horizontalSpeed < 0.025D) {
+            currentStationaryTicks = Math.min(1200, currentStationaryTicks + 1);
+        } else {
+            currentStationaryTicks = Math.max(0, currentStationaryTicks - 3);
+        }
+        averageStationaryTicks = blend(averageStationaryTicks, currentStationaryTicks);
+    }
+
+    /**
+     * Repeated close sightings make the Watcher bolder. Campers and slow-moving
+     * players also teach it that it can approach without being chased away.
      */
     public void observeStalkingDistance(double distance, int configuredChunks) {
-        double baseline = WatcherStalkingDirector.minimumStalkingDistance(configuredChunks)
-                + getLearnedSafetyDistanceBonus(configuredChunks);
+        double baseline = WatcherStalkingDirector.minimumStalkingDistance(configuredChunks) + 8.0D;
         if (distance < baseline) {
-            proximityPressure += (1.0D - proximityPressure) * 0.0025D;
+            proximityPressure += (1.0D - proximityPressure) * 0.004D;
         } else {
-            proximityPressure *= 0.999D;
+            proximityPressure *= 0.9995D;
         }
         proximityPressure = clamp(proximityPressure, 0.0D, 1.0D);
+    }
+
+    public double getLearnedApproachBonus() {
+        double campingBonus = clamp((averageStationaryTicks - 20.0D) * 0.025D, 0.0D, 6.0D);
+        double cautiousBonus = clamp((0.35D - averageSprintRatio) * 8.0D, 0.0D, 2.8D);
+        return clamp(proximityPressure * 18.0D + campingBonus + cautiousBonus, 0.0D, 24.0D);
+    }
+
+    public double getAveragePlayerHeight() {
+        return averagePlayerHeight;
+    }
+
+    public double getAverageHorizontalSpeed() {
+        return averageHorizontalSpeed;
+    }
+
+    public double getAverageSprintRatio() {
+        return averageSprintRatio;
     }
 
     /**
@@ -116,6 +159,11 @@ public final class WatcherLearningEngine {
         nbt.putLong("WatcherLearningObservedTicks", observedTicks);
         nbt.putBoolean("WatcherLearningHasPreviousState", hasPreviousState);
         nbt.putBoolean("WatcherLearningPreviousWatched", previousWatched);
+        nbt.putDouble("WatcherLearningAverageHorizontalSpeed", averageHorizontalSpeed);
+        nbt.putDouble("WatcherLearningAverageStationaryTicks", averageStationaryTicks);
+        nbt.putDouble("WatcherLearningAverageSprintRatio", averageSprintRatio);
+        nbt.putDouble("WatcherLearningAveragePlayerHeight", averagePlayerHeight);
+        nbt.putInt("WatcherLearningCurrentStationaryTicks", currentStationaryTicks);
     }
 
     public void readFromNbt(NbtCompound nbt) {
@@ -135,6 +183,19 @@ public final class WatcherLearningEngine {
         observedTicks = Math.max(0L, nbt.getLong("WatcherLearningObservedTicks"));
         hasPreviousState = nbt.getBoolean("WatcherLearningHasPreviousState");
         previousWatched = nbt.getBoolean("WatcherLearningPreviousWatched");
+        if (nbt.contains("WatcherLearningAverageHorizontalSpeed")) {
+            averageHorizontalSpeed = clamp(nbt.getDouble("WatcherLearningAverageHorizontalSpeed"), 0.0D, 1.5D);
+        }
+        if (nbt.contains("WatcherLearningAverageStationaryTicks")) {
+            averageStationaryTicks = clamp(nbt.getDouble("WatcherLearningAverageStationaryTicks"), 0.0D, 1200.0D);
+        }
+        if (nbt.contains("WatcherLearningAverageSprintRatio")) {
+            averageSprintRatio = clamp(nbt.getDouble("WatcherLearningAverageSprintRatio"), 0.0D, 1.0D);
+        }
+        if (nbt.contains("WatcherLearningAveragePlayerHeight")) {
+            averagePlayerHeight = clamp(nbt.getDouble("WatcherLearningAveragePlayerHeight"), -64.0D, 320.0D);
+        }
+        currentStationaryTicks = (int) clamp(nbt.getInt("WatcherLearningCurrentStationaryTicks"), 0.0D, 1200.0D);
     }
 
     private static double blend(double current, double sample) {
