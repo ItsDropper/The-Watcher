@@ -173,7 +173,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     && !isWithinPlayerView(player)
                     && tryHiddenTeleport(world, player, false);
             if (proximityRelocated) {
-                hiddenMoveCooldown = 100 + random.nextInt(101);
+                hiddenMoveCooldown = 240 + random.nextInt(241);
                 proximityCorrectionCooldown = 80 + random.nextInt(61);
                 getNavigation().stop();
                 resetNavigationRecovery();
@@ -222,7 +222,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                         && unseenTicks >= learningEngine.getHiddenTeleportDelayTicks() && relocationRoll) {
                     boolean teleported = tryHiddenTeleport(world, player, false);
                     // Failed candidate searches retry quickly; successful relocations get a longer quiet period.
-                    hiddenMoveCooldown = teleported ? 100 + random.nextInt(101) : 12 + random.nextInt(17);
+                    // Natural sightings should be rare enough to feel discovered, not constantly refreshed.
+                    hiddenMoveCooldown = teleported ? 240 + random.nextInt(361) : 20 + random.nextInt(31);
                     if (teleported) {
                         // No teleport sound: the player should discover the new position, not hear the move.
                         getNavigation().stop();
@@ -270,9 +271,14 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
                 int duration = RETREAT_TICKS;
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
+                    boolean finishingDebugAutoAdvance = debugPhaseAutoAdvance;
                     setPhase(Phase.OBSERVING);
-                    debugPhaseAutoAdvance = false;
-                    debugPhaseLocked = true;
+                    if (finishingDebugAutoAdvance) {
+                        // Only the explicit debug auto-test should lock after one full cycle.
+                        // Natural encounters must remain free to progress into stalking again.
+                        debugPhaseAutoAdvance = false;
+                        debugPhaseLocked = true;
+                    }
                 }
             }
         }
