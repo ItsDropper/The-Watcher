@@ -9,8 +9,8 @@ public record CameraFeedOpenPayload(BlockPos pos) implements CustomPayload {
     public static final Id<CameraFeedOpenPayload> ID =
             new Id<>(TheWatcher.id("camera_feed_open"));
     public static final PacketCodec<RegistryByteBuf, CameraFeedOpenPayload> CODEC = PacketCodec.of(
-            (buf, payload) -> buf.writeBlockPos(payload.pos()),
-            buf -> new CameraFeedOpenPayload(buf.readBlockPos().toImmutable()));
+            (RegistryByteBuf buf, CameraFeedOpenPayload payload) -> buf.writeLong(payload.pos().asLong()),
+            (RegistryByteBuf buf) -> new CameraFeedOpenPayload(BlockPos.fromLong(buf.readLong())));
 
     @Override
     public Id<? extends CustomPayload> getId() {
