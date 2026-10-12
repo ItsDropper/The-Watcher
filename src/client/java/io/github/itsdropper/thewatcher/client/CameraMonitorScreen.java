@@ -47,7 +47,7 @@ public final class CameraMonitorScreen extends Screen {
         refreshCameras();
         int centerX = width / 2;
         addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), button -> {
-            ClientPlayNetworking.send(CameraNetwork.REQUEST, PacketByteBufs.create());
+            ClientPlayNetworking.send(new CameraListRequestPayload());
         }).dimensions(centerX - 104, height - 32, 100, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), button -> close())
                 .dimensions(centerX + 4, height - 32, 100, 20).build());
