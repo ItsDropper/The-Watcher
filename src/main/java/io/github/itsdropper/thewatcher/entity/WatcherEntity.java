@@ -97,7 +97,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             return;
         }
 
-        if (naturalRunEntity && io.github.itsdropper.thewatcher.WatcherRunManager.shouldDiscardNaturalEntity(world)) {
+        if (naturalRunEntity && io.github.itsdropper.thewatcher.WatcherRunManager.shouldDiscardNaturalEntity(world, getUuid())) {
             discard();
             return;
         }
