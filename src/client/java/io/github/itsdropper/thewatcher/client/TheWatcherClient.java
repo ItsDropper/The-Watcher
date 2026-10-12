@@ -10,6 +10,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.sound.SoundCategory;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
@@ -28,7 +30,17 @@ public class TheWatcherClient implements ClientModInitializer {
                 context.client().execute(() -> {
                     if (payload.playing()) {
                         if (endingMusic != null && context.client().getSoundManager().isPlaying(endingMusic)) return;
-                        endingMusic = PositionedSoundInstance.music(TheWatcher.ENDING_THEME);
+                        endingMusic = new PositionedSoundInstance(
+                                TheWatcher.id("ending_theme"),
+                                SoundCategory.MUSIC,
+                                1.0F,
+                                1.0F,
+                                SoundInstance.createRandom(),
+                                true,
+                                0,
+                                SoundInstance.AttenuationType.NONE,
+                                0.0D, 0.0D, 0.0D,
+                                true);
                         context.client().getSoundManager().play(endingMusic);
                     } else {
                         if (endingMusic != null) {
