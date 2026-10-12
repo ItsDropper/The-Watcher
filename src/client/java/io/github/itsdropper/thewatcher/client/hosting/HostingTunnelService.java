@@ -3,7 +3,6 @@ package io.github.itsdropper.thewatcher.client.hosting;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -26,7 +25,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import net.minecraft.client.MinecraftClient;
 
 public final class HostingTunnelService {
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -265,6 +263,7 @@ public final class HostingTunnelService {
             ready.completeExceptionally(new IOException("Hosting relay closed the connection (" + statusCode + ")."));
             cleanupChannels();
             serial.shutdownNow();
+            java.util.Arrays.fill(secret, (byte) 0);
             return CompletableFuture.completedFuture(null);
         }
 
@@ -326,8 +325,14 @@ public final class HostingTunnelService {
                 if (!verifyControlFrame(frame, secret, "guest-to-host") || channels.size() >= 8
                         || !seenChannels.add(parsed.channel)) throw new IOException("Invalid channel open.");
                 Socket local = new Socket();
-                local.connect(new java.net.InetSocketAddress("127.0.0.1", localPort), 5000);
-                local.setTcpNoDelay(true);
+                try {
+                    local.connect(new java.net.InetSocketAddress("127.0.0.1", localPort), 5000);
+                    local.setTcpNoDelay(true);
+                } catch (IOException connectionError) {
+                    closeSocket(local);
+                    sendControlFrame((byte) 3, parsed.channel, "host-to-guest");
+                    return;
+                }
                 Channel channel = new Channel(parsed.channel, local);
                 if (channels.putIfAbsent(parsed.channel, channel) != null) {
                     local.close();
