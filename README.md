@@ -27,6 +27,7 @@ Place the **Surveillance Camera** block from the Redstone creative tab, or use `
 
 - Cameras check all directions within 48 blocks; a clear line of sight to The Watcher triggers a top-right camera-network alert without revealing the entity's coordinates.
 - A small chance of signal interference replaces the motion warning with **SIGNAL LOST**.
+- Cameras can be crafted with 4 iron ingots, 2 redstone dust, and 1 spyglass. They can also appear as loot in the chests of the custom watchtower, abandoned cabin, ritual shrine, and ruined camp.
 - The Watcher can destroy a camera if it gets within roughly three blocks, so a camera network provides information, not protection.
 - The current implementation detects live sightings. A browsable recording history and dedicated monitor screen are not implemented yet.
 
