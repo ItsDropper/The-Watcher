@@ -59,7 +59,8 @@ public final class CameraMonitorScreen extends Screen {
             CameraStatus camera = cameras.get(i);
             ButtonWidget view = ButtonWidget.builder(Text.literal("VIEW"), button -> openFeed(camera.pos()))
                     .dimensions(left + panelWidth - 66, 82 + i * 29, 52, 20).build();
-            view.active = camera.loaded();
+            // A listed offline camera is still a valid remote-feed target.
+            view.active = true;
             addDrawableChild(view);
         }
     }
