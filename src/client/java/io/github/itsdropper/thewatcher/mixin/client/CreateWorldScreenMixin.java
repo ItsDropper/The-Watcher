@@ -63,6 +63,24 @@ public abstract class CreateWorldScreenMixin {
                 .build());
     }
 
+    @Inject(method = "createLevel", at = @At("HEAD"))
+    private void theWatcher$enforceLargeBiomes(CallbackInfo ci) {
+        if (!WatcherWorldOptions.WATCHER_MODE_ENABLED) {
+            return;
+        }
+        CreateWorldScreen screen = (CreateWorldScreen) (Object) this;
+        WorldCreator creator = screen.getWorldCreator();
+        WorldCreator.WorldType largeBiomes = java.util.stream.Stream.concat(
+                        creator.getNormalWorldTypes().stream(), creator.getExtendedWorldTypes().stream())
+                .filter(type -> type.preset() != null)
+                .filter(type -> type.preset().getKey()
+                        .map(WorldPresets.LARGE_BIOMES::equals).orElse(false))
+                .findFirst().orElse(null);
+        if (largeBiomes != null && creator.getWorldType() != largeBiomes) {
+            creator.setWorldType(largeBiomes);
+        }
+    }
+
     private static Text watcherModeLabel() {
         return Text.literal("Difficulty: Watcher ("
                 + (WatcherWorldOptions.WATCHER_MODE_ENABLED ? "ON" : "OFF") + ")");
