@@ -2,6 +2,7 @@ package io.github.itsdropper.thewatcher.client;
 
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlock;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -16,15 +17,17 @@ public final class CameraFeedScreen extends Screen {
     private final Screen networkScreen;
     private final Entity previousCameraEntity;
     private final Entity viewEntity;
+    private final ClientWorld cameraWorld;
     private boolean restored;
 
     private CameraFeedScreen(BlockPos cameraPos, Screen networkScreen,
-                             Entity previousCameraEntity, Entity viewEntity) {
+                             Entity previousCameraEntity, Entity viewEntity, ClientWorld cameraWorld) {
         super(Text.literal("Camera Feed"));
         this.cameraPos = cameraPos.toImmutable();
         this.networkScreen = networkScreen;
         this.previousCameraEntity = previousCameraEntity;
         this.viewEntity = viewEntity;
+        this.cameraWorld = cameraWorld;
     }
 
     public static CameraFeedScreen open(BlockPos pos, Screen networkScreen) {
@@ -45,7 +48,11 @@ public final class CameraFeedScreen extends Screen {
         view.setPitch(0.0F);
 
         Entity previous = client.getCameraEntity();
-        CameraFeedScreen screen = new CameraFeedScreen(pos, networkScreen, previous, view);
+        // Register a real client-world entity so the renderer has a stable camera target.
+        // A detached Entity can make the renderer repeatedly reset its camera/chunk origin.
+        view.setId(-2_147_000_001);
+        client.world.addEntity(view.getId(), view);
+        CameraFeedScreen screen = new CameraFeedScreen(pos, networkScreen, previous, view, client.world);
         client.setCameraEntity(view);
         return screen;
     }
@@ -60,8 +67,8 @@ public final class CameraFeedScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         // The 3D world is rendered by Minecraft from the virtual camera entity behind this
         // overlay. Avoid renderBackground(), which blurs the live view in vanilla screens.
-        context.fill(0, 0, width, 42, 0xD90A0D12);
-        context.fill(0, height - 40, width, height, 0xD90A0D12);
+        context.fill(0, 0, width, 42, 0xFF0A0D12);
+        context.fill(0, height - 40, width, height, 0xFF0A0D12);
         context.drawText(textRenderer, "LIVE FEED  /  CAM " + cameraPos.getX() + " "
                 + cameraPos.getY() + " " + cameraPos.getZ(), 12, 10, 0xFFFF5555, false);
         context.drawText(textRenderer, "W/S: tilt   A/D: pan   ESC: return to network",
@@ -109,6 +116,9 @@ public final class CameraFeedScreen extends Screen {
         restored = true;
         if (client != null && previousCameraEntity != null) {
             client.setCameraEntity(previousCameraEntity);
+        }
+        if (cameraWorld != null && cameraWorld.getEntityById(viewEntity.getId()) == viewEntity) {
+            cameraWorld.removeEntity(viewEntity.getId(), Entity.RemovalReason.DISCARDED);
         }
     }
 }
