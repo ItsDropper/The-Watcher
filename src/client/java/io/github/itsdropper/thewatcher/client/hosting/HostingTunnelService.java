@@ -218,13 +218,19 @@ public final class HostingTunnelService {
                 if (last) {
                     String message = textParts.toString(StandardCharsets.UTF_8);
                     textParts.reset();
-                    if (message.contains("\"type\":\"ready\"")) {
+                    if (message.contains("\\"type\\":\\"ready\\"")) {
+                        String expectedRole = this instanceof HostEndpoint ? "host" : "guest";
+                        if (!message.contains("\\"role\\":\\"" + expectedRole + "\\"")) {
+                            ready.completeExceptionally(new IOException("Relay returned an invalid role."));
+                            socket.abort();
+                            close();
+                            return CompletableFuture.completedFuture(null);
+                        }
                         ready.complete(null);
                         onReadyMessage(message);
                     } else {
                         onControlMessage(message);
-                    }
-                }
+                    }                }
             }
             socket.request(1);
             return CompletableFuture.completedFuture(null);
@@ -323,7 +329,7 @@ public final class HostingTunnelService {
             if (parsed == null) throw new IOException("Invalid relay frame.");
             if (parsed.type == 1) {
                 if (!verifyControlFrame(frame, secret, "guest-to-host") || channels.size() >= 8
-                        || !seenChannels.add(parsed.channel)) throw new IOException("Invalid channel open.");
+                        || seenChannels.size() >= 4096 || !seenChannels.add(parsed.channel)) throw new IOException("Invalid channel open.");
                 Socket local = new Socket();
                 try {
                     local.connect(new java.net.InetSocketAddress("127.0.0.1", localPort), 5000);
