@@ -215,12 +215,21 @@ public final class WatcherRunManager {
         watcher.refreshPositionAndAngles(bestX + 0.5D, bestY, bestZ + 0.5D,
                 world.random.nextFloat() * 360.0F, 0.0F);
         watcher.setNaturalRunEntity(true);
+        watcher.readLearningFromProperties(run.learningProperties, "");
         if (world.spawnEntity(watcher)) {
             run.naturalWatcherUuid = watcher.getUuid();
             return true;
         }
         watcher.discard();
         return false;
+    }
+
+    public static void captureLearning(ServerWorld world, WatcherEntity watcher) {
+        RunState run = RUNS.get(world);
+        if (run != null && run.revealed && !run.ended
+                && watcher.getUuid().equals(run.naturalWatcherUuid)) {
+            watcher.writeLearningToProperties(run.learningProperties, "");
+        }
     }
 
     public static boolean shouldDiscardNaturalEntity(ServerWorld world) {
@@ -357,6 +366,12 @@ public final class WatcherRunManager {
                 }
             }
             WatcherTowerGenerator.restoreGuaranteedPositions(guaranteedPositions);
+            for (String key : properties.stringPropertyNames()) {
+                if (key.startsWith("learning.")) {
+                    run.learningProperties.setProperty(key.substring("learning.".length()),
+                            properties.getProperty(key));
+                }
+            }
             return run;
         } catch (IOException | IllegalArgumentException exception) {
             TheWatcher.LOGGER.warn("Could not load Watcher run state from {}", file, exception);
@@ -383,6 +398,15 @@ public final class WatcherRunManager {
                         .map(entry -> entry.getKey() + ":" + entry.getValue().getX() + ","
                                 + entry.getValue().getY() + "," + entry.getValue().getZ())
                         .collect(java.util.stream.Collectors.joining(";")));
+        if (run.naturalWatcherUuid != null) {
+            net.minecraft.entity.Entity tracked = world.getEntity(run.naturalWatcherUuid);
+            if (tracked instanceof WatcherEntity watcher) {
+                watcher.writeLearningToProperties(run.learningProperties, "");
+            }
+        }
+        for (String key : run.learningProperties.stringPropertyNames()) {
+            properties.setProperty("learning." + key, run.learningProperties.getProperty(key));
+        }
         properties.setProperty("towerRegions", WatcherTowerGenerator.snapshotBuiltRegions().stream()
                 .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
 
@@ -412,6 +436,7 @@ public final class WatcherRunManager {
         private boolean revealed;
         private boolean ended;
         private long missingWatcherSince = -1L;
+        private final Properties learningProperties = new Properties();
 
         private RunState(long startedAt, int runLengthHours, long revealDelayTicks) {
             this.startedAt = startedAt;
