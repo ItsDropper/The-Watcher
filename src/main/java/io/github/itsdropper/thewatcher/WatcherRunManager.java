@@ -337,6 +337,25 @@ public final class WatcherRunManager {
             WatcherTowerGenerator.restoreBuiltRegions(regions);
             WatcherTowerGenerator.restoreGuaranteedStructuresMask(
                     Integer.parseInt(properties.getProperty("guaranteedStructures", "0")));
+            Map<Integer, BlockPos> guaranteedPositions = new java.util.HashMap<>();
+            String positionList = properties.getProperty("guaranteedStructurePositions", "");
+            if (!positionList.isBlank()) {
+                for (String entry : positionList.split(";")) {
+                    try {
+                        String[] pair = entry.split(":", 2);
+                        String[] coordinates = pair[1].split(",");
+                        if (pair.length == 2 && coordinates.length == 3) {
+                            guaranteedPositions.put(Integer.parseInt(pair[0]),
+                                    new BlockPos(Integer.parseInt(coordinates[0]),
+                                            Integer.parseInt(coordinates[1]),
+                                            Integer.parseInt(coordinates[2])));
+                        }
+                    } catch (IllegalArgumentException ignored) {
+                        // Ignore one malformed location rather than invalidating the run save.
+                    }
+                }
+            }
+            WatcherTowerGenerator.restoreGuaranteedPositions(guaranteedPositions);
             return run;
         } catch (IOException | IllegalArgumentException exception) {
             TheWatcher.LOGGER.warn("Could not load Watcher run state from {}", file, exception);
@@ -357,6 +376,12 @@ public final class WatcherRunManager {
                 run.naturalWatcherUuid == null ? "" : run.naturalWatcherUuid.toString());
         properties.setProperty("guaranteedStructures",
                 Integer.toString(WatcherTowerGenerator.snapshotGuaranteedStructuresMask()));
+        properties.setProperty("guaranteedStructurePositions",
+                WatcherTowerGenerator.snapshotGuaranteedPositions().entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(entry -> entry.getKey() + ":" + entry.getValue().getX() + ","
+                                + entry.getValue().getY() + "," + entry.getValue().getZ())
+                        .collect(java.util.stream.Collectors.joining(";")));
         properties.setProperty("towerRegions", WatcherTowerGenerator.snapshotBuiltRegions().stream()
                 .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
 
