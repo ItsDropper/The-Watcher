@@ -63,7 +63,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
-    private int daylightTicks;
     private int navigationCheckCooldown;
     private int navigationStuckChecks;
     private Vec3d lastNavigationCheckPosition;
@@ -98,16 +97,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
 
         if (!debugPhaseLocked && !debugSimulation && !night) {
+            // Natural encounters go dormant during the day, but the persistent entity
+            // is retained so it can resume stalking after nightfall.
             resetToIdle();
-            // End a natural encounter deliberately after dawn instead of leaving
-            // persistent Watchers scattered around the world forever.
-            daylightTicks++;
-            if (daylightTicks >= 600) {
-                discard();
-            }
             return;
         }
-        daylightTicks = 0;
 
         PlayerEntity player = null;
         if ((debugPhaseLocked || debugSimulation) && getTarget() instanceof PlayerEntity current
