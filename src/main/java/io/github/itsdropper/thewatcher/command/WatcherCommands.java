@@ -69,7 +69,19 @@ public final class WatcherCommands {
                                 .then(literal("auto").executes(context -> resumeAutomatic(context.getSource()))))
                         .then(literal("darkness")
                                 .then(literal("on").executes(context -> setDarkness(context.getSource(), true)))
-                                .then(literal("off").executes(context -> setDarkness(context.getSource(), false))))));
+                                .then(literal("off").executes(context -> setDarkness(context.getSource(), false)))
+                        )
+                        .then(literal("attack")
+                                .executes(context -> {
+                                    context.getSource().sendFeedback(() -> Text.literal(
+                                            "Attack tests: melee | rush | ambush | jumpscare | blackout"), false);
+                                    return 1;
+                                })
+                                .then(literal("melee").executes(context -> testAttack(context.getSource(), "melee")))
+                                .then(literal("rush").executes(context -> testAttack(context.getSource(), "rush")))
+                                .then(literal("ambush").executes(context -> testAttack(context.getSource(), "ambush")))
+                                .then(literal("jumpscare").executes(context -> testAttack(context.getSource(), "jumpscare")))
+                                .then(literal("blackout").executes(context -> testAttack(context.getSource(), "blackout")))));
     }
 
     private static int startMode(ServerCommandSource source) {
@@ -333,6 +345,36 @@ public final class WatcherCommands {
 
         watcher.stopDebugSimulation();
         source.sendFeedback(() -> Text.literal("Stopped the simulated encounter."), false);
+        return 1;
+    }
+
+    private static int testAttack(ServerCommandSource source, String attack)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        WatcherEntity watcher = findNearestWatcher(player);
+        if (watcher == null) {
+            watcher = TheWatcher.WATCHER.create(source.getWorld());
+            if (watcher == null) {
+                source.sendError(Text.literal("Could not create The Watcher for attack testing."));
+                return 0;
+            }
+            Vec3d position = findDistantSimulationPosition(source.getWorld(), player);
+            if (position == null) {
+                watcher.discard();
+                source.sendError(Text.literal("No safe spawn position found. Move to open ground and retry."));
+                return 0;
+            }
+            watcher.refreshPositionAndAngles(position.x, position.y, position.z,
+                    player.getYaw() + 180.0F, 0.0F);
+            source.getWorld().spawnEntity(watcher);
+        }
+
+        if (!watcher.debugAttack(attack, player)) {
+            source.sendError(Text.literal("Attack test failed: no safe position was available for " + attack + "."));
+            return 0;
+        }
+        source.sendFeedback(() -> Text.literal("Triggered Watcher attack test: " + attack
+                + ". Use /watcher debug status to inspect its state."), false);
         return 1;
     }
 
