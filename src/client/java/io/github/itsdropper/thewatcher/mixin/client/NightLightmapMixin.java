@@ -46,12 +46,12 @@ public abstract class NightLightmapMixin {
             }
 
             for (int skyLight = 0; skyLight < 16; skyLight++) {
-                int argb = image.getColorArgb(blockLight, skyLight);
+                int argb = image.getColor(blockLight, skyLight);
                 int alpha = (argb >>> 24) & 0xFF;
                 int red = (int) (((argb >>> 16) & 0xFF) * multiplier);
                 int green = (int) (((argb >>> 8) & 0xFF) * multiplier);
                 int blue = (int) ((argb & 0xFF) * multiplier);
-                image.setColorArgb(blockLight, skyLight,
+                image.setColor(blockLight, skyLight,
                         (alpha << 24) | (red << 16) | (green << 8) | blue);
             }
         }
