@@ -325,6 +325,21 @@ public final class WatcherRunManager {
         }
     }
 
+    /** Requests a new run from a dedicated server command. The next world tick initializes and saves it. */
+    public static boolean requestStartRun(ServerWorld world) {
+        if (world.getRegistryKey() != World.OVERWORLD || RUNS.containsKey(world)
+                || Files.exists(runFile(world))) {
+            return false;
+        }
+        WatcherWorldOptions.WATCHER_MODE_ENABLED = true;
+        return true;
+    }
+
+    /** Cancels a pending start request; an already-running world is left untouched. */
+    public static void cancelPendingRun() {
+        WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
+    }
+
     public static void startDebugEnding(ServerWorld world, ServerPlayerEntity target) {
         ENDINGS.remove(world);
         startEnding(world, target);
