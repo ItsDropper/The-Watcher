@@ -102,10 +102,23 @@ public final class WatcherOllamaDirector {
         long day = Math.max(1L, world.getTimeOfDay() / 24_000L + 1L);
         long time = Math.floorMod(world.getTimeOfDay(), 24_000L);
         String period = time >= 13_000L && time < 23_000L ? "night" : "day";
-        long alive = world.getPlayers().stream().filter(player -> player.isAlive() && !player.isSpectator()).count();
+        java.util.List<ServerPlayerEntity> participants = world.getPlayers().stream()
+                .filter(player -> player.isAlive() && !player.isSpectator()).toList();
+        String watcherState = "no visible run entity nearby";
+        if (!participants.isEmpty()) {
+            ServerPlayerEntity reference = participants.get(0);
+            WatcherEntity nearest = world.getEntitiesByClass(WatcherEntity.class,
+                            reference.getBoundingBox().expand(256.0D), WatcherEntity::isNaturalRunEntity).stream()
+                    .min(java.util.Comparator.comparingDouble(reference::squaredDistanceTo)).orElse(null);
+            if (nearest != null) {
+                watcherState = "nearest Watcher phase=" + nearest.getPhase()
+                        + ", distance=" + Math.round(reference.distanceTo(nearest)) + " blocks";
+            }
+        }
         return "Game: Minecraft Overworld. In-game day: " + day + ". Time: " + period
-                + ". Living participants: " + alive + ". Choose one restrained horror event. "
-                + "Use none often; do not imply the players are in real danger.";
+                + ". Living participants: " + participants.size() + ". Watcher state: " + watcherState
+                + ". Choose one restrained horror event suited to this state. Use none often; "
+                + "do not imply the players are in real danger.";
     }
 
     private static void apply(ServerWorld world, Directive directive) {
