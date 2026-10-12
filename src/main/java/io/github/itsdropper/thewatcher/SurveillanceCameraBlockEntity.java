@@ -25,6 +25,7 @@ public class SurveillanceCameraBlockEntity extends BlockEntity {
             return;
         }
         camera.lastScanTick = serverWorld.getTime();
+        CameraRegistry.register(serverWorld, pos);
 
         Vec3d origin = Vec3d.ofCenter(pos).add(0.0D, 0.51D, 0.0D);
         Box scanBox = new Box(pos).expand(DETECTION_RANGE);
