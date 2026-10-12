@@ -24,12 +24,15 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TheWatcher implements ModInitializer {
     public static final String MOD_ID = "the-watcher";
+    public static final SoundEvent ENDING_THEME = Registry.register(Registries.SOUND_EVENT, id("ending_theme"), SoundEvent.of(id("ending_theme")));
+
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     public static volatile boolean NIGHT_DARKNESS_ENABLED = true;
