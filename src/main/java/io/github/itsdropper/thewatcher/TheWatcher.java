@@ -3,6 +3,7 @@ package io.github.itsdropper.thewatcher;
 import io.github.itsdropper.thewatcher.command.WatcherCommands;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
@@ -12,6 +13,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroups;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
@@ -66,6 +68,7 @@ public class TheWatcher implements ModInitializer {
     @Override
     public void onInitialize() {
         WatcherOllamaConfig.load();
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.REDSTONE).register(entries -> entries.add(SURVEILLANCE_CAMERA_ITEM));
         LOGGER.info("Surveillance camera block and item registered.");
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         WatcherCommands.register();
