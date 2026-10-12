@@ -35,7 +35,8 @@ public final class CameraFeedScreen extends Screen {
     private boolean draggingLook;
     private final int originalFov = MinecraftClient.getInstance().options.getFov().getValue();
     private int zoomFov = 30;
-    private boolean zoomTransitionActive;
+    private float currentZoomFov = originalFov;
+    private static CameraFeedScreen activeFeed;
 
     private CameraFeedScreen(BlockPos cameraPos, Screen networkScreen,
                              Entity previousCameraEntity, Entity viewEntity, World cameraWorld) {
@@ -45,6 +46,18 @@ public final class CameraFeedScreen extends Screen {
         this.previousCameraEntity = previousCameraEntity;
         this.viewEntity = viewEntity;
         this.cameraWorld = cameraWorld;
+        activeFeed = this;
+    }
+
+    /**
+     * Applies zoom only to the camera projection while this surveillance feed is active.
+     * The player's actual FOV option is never modified.
+     */
+    public static double getActiveZoomMultiplier() {
+        CameraFeedScreen feed = activeFeed;
+        return feed == null || feed.originalFov <= 0
+                ? 1.0D
+                : (double) feed.currentZoomFov / feed.originalFov;
     }
 
     public static CameraFeedScreen open(BlockPos pos, Screen networkScreen) {
@@ -84,18 +97,10 @@ public final class CameraFeedScreen extends Screen {
         if (client == null || client.getWindow() == null) return;
         long window = client.getWindow().getHandle();
         boolean holdingZoom = InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_C);
-        if (holdingZoom) zoomTransitionActive = true;
-        if (zoomTransitionActive) {
-            int targetFov = holdingZoom ? zoomFov : originalFov;
-            int currentFov = client.options.getFov().getValue();
-            int nextFov = Math.round(currentFov + (targetFov - currentFov) * 0.30F);
-            // FOV is stored as an integer option, so guarantee progress on small final steps.
-            if (nextFov == currentFov && currentFov != targetFov) {
-                nextFov += Integer.compare(targetFov, currentFov);
-            }
-            client.options.getFov().setValue(nextFov);
-            if (!holdingZoom && nextFov == originalFov) zoomTransitionActive = false;
-        }
+        float targetFov = holdingZoom ? zoomFov : originalFov;
+        // Smooth a dedicated camera FOV value; do not write into Minecraft's FOV option.
+        currentZoomFov = MathHelper.lerp(0.35F, currentZoomFov, targetFov);
+        if (Math.abs(currentZoomFov - targetFov) < 0.1F) currentZoomFov = targetFov;
         if (!cameraOrientationSet && client.world != null) {
             var chunk = client.world.getChunkManager().getWorldChunk(
                     cameraPos.getX() >> 4, cameraPos.getZ() >> 4, false);
@@ -161,7 +166,6 @@ public final class CameraFeedScreen extends Screen {
         if (client != null && client.getWindow() != null
                 && InputUtil.isKeyPressed(client.getWindow().getHandle(), GLFW.GLFW_KEY_C)) {
             zoomFov = MathHelper.clamp(zoomFov - (int) Math.signum(verticalAmount) * 4, 10, 30);
-            zoomTransitionActive = true;
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -247,8 +251,7 @@ public final class CameraFeedScreen extends Screen {
     private void restorePlayerView() {
         if (restored) return;
         restored = true;
-        if (client != null) client.options.getFov().setValue(originalFov);
-        zoomTransitionActive = false;
+        if (activeFeed == this) activeFeed = null;
         ClientPlayNetworking.send(new CameraFeedClosePayload());
         if (client != null && previousCameraEntity != null) {
             client.setCameraEntity(previousCameraEntity);
