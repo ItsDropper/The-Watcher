@@ -151,4 +151,15 @@ test("TLS relay routes channel frames only between the host and owning guest", a
   const hostClose = waitForMessage(host, (data, binary) => binary && data[0] === 3);
   guest.send(close);
   assert.deepEqual((await hostClose).data, close);
+
+  const secondOpen = controlFrame(1, 88);
+  const hostSecondOpen = waitForMessage(host, (data, binary) => binary && data[0] === 1 && data.readUInt32BE(1) === 88);
+  guest.send(secondOpen);
+  assert.deepEqual((await hostSecondOpen).data, secondOpen);
+
+  const disconnectNotice = waitForMessage(host, (data, binary) =>
+    !binary && data.toString("utf8").includes('"type":"channel-closed"'));
+  guest.close();
+  const notice = await disconnectNotice;
+  assert.match(notice.data.toString("utf8"), /"channelId":88/);
 });
