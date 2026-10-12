@@ -26,6 +26,10 @@ public final class CameraFeedScreen extends Screen {
     private final World cameraWorld;
     private boolean restored;
     private boolean cameraOrientationSet;
+    private boolean rotateLeft;
+    private boolean rotateRight;
+    private boolean tiltUp;
+    private boolean tiltDown;
     private double lastMouseX = Double.NaN;
     private double lastMouseY = Double.NaN;
 
@@ -89,10 +93,10 @@ public final class CameraFeedScreen extends Screen {
         float yaw = viewEntity.getYaw();
         float pitch = viewEntity.getPitch();
         float turn = 2.4F;
-        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_A)) yaw -= turn;
-        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_D)) yaw += turn;
-        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_W)) pitch -= 1.8F;
-        if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_S)) pitch += 1.8F;
+        if (rotateLeft || InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_A)) yaw -= turn;
+        if (rotateRight || InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_D)) yaw += turn;
+        if (tiltUp || InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_W)) pitch -= 1.8F;
+        if (tiltDown || InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_S)) pitch += 1.8F;
         setViewRotation(yaw, pitch);
     }
 
@@ -100,9 +104,12 @@ public final class CameraFeedScreen extends Screen {
         float clampedPitch = MathHelper.clamp(pitch, -89.0F, 89.0F);
         viewEntity.setYaw(yaw);
         viewEntity.setPitch(clampedPitch);
-        // Keep interpolation history in sync so the rendered camera responds immediately.
+        viewEntity.setBodyYaw(yaw);
+        viewEntity.setHeadYaw(yaw);
         viewEntity.prevYaw = yaw;
         viewEntity.prevPitch = clampedPitch;
+        viewEntity.prevBodyYaw = yaw;
+        viewEntity.prevHeadYaw = yaw;
     }
 
     @Override
@@ -142,7 +149,20 @@ public final class CameraFeedScreen extends Screen {
             close();
             return true;
         }
+        if (keyCode == GLFW.GLFW_KEY_A) { rotateLeft = true; return true; }
+        if (keyCode == GLFW.GLFW_KEY_D) { rotateRight = true; return true; }
+        if (keyCode == GLFW.GLFW_KEY_W) { tiltUp = true; return true; }
+        if (keyCode == GLFW.GLFW_KEY_S) { tiltDown = true; return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_A) { rotateLeft = false; return true; }
+        if (keyCode == GLFW.GLFW_KEY_D) { rotateRight = false; return true; }
+        if (keyCode == GLFW.GLFW_KEY_W) { tiltUp = false; return true; }
+        if (keyCode == GLFW.GLFW_KEY_S) { tiltDown = false; return true; }
+        return super.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override
