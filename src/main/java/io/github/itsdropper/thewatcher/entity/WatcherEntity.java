@@ -63,6 +63,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
+    private boolean naturalRunEntity;
     private int navigationCheckCooldown;
     private int navigationStuckChecks;
     private Vec3d lastNavigationCheckPosition;
@@ -72,6 +73,14 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         // The stalking ring intentionally exceeds vanilla's usual despawn distance.
         // Keep the entity alive until this mod explicitly ends its encounter.
         setPersistent();
+    }
+
+    public void setNaturalRunEntity(boolean naturalRunEntity) {
+        this.naturalRunEntity = naturalRunEntity;
+    }
+
+    public boolean isNaturalRunEntity() {
+        return naturalRunEntity;
     }
 
     @Override
