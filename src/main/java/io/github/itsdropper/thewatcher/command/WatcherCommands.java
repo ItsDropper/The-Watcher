@@ -81,7 +81,7 @@ public final class WatcherCommands {
                                 .then(literal("rush").executes(context -> testAttack(context.getSource(), "rush")))
                                 .then(literal("ambush").executes(context -> testAttack(context.getSource(), "ambush")))
                                 .then(literal("jumpscare").executes(context -> testAttack(context.getSource(), "jumpscare")))
-                                .then(literal("blackout").executes(context -> testAttack(context.getSource(), "blackout")))));
+                                .then(literal("blackout").executes(context -> testAttack(context.getSource(), "blackout"))))));
     }
 
     private static int startMode(ServerCommandSource source) {
