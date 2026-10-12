@@ -22,7 +22,8 @@ import java.util.Set;
 /** Builds a small, old watchtower in explored, already-loaded terrain. */
 public final class WatcherTowerGenerator {
     private static final Set<Long> BUILT_REGIONS = new HashSet<>();
-    private static final int MAX_STRUCTURES_PER_SESSION = 5;
+    private static final int MAX_STRUCTURES_PER_SESSION = 10;
+    private static int guaranteedStructuresMask;
     private static int towersBuilt;
 
     private WatcherTowerGenerator() {
@@ -31,6 +32,7 @@ public final class WatcherTowerGenerator {
     public static void resetForRun() {
         BUILT_REGIONS.clear();
         towersBuilt = 0;
+        guaranteedStructuresMask = 0;
     }
 
     public static Set<Long> snapshotBuiltRegions() {
@@ -43,21 +45,101 @@ public final class WatcherTowerGenerator {
         towersBuilt = BUILT_REGIONS.size();
     }
 
+    public static int snapshotGuaranteedStructuresMask() {
+        return guaranteedStructuresMask;
+    }
+
+    public static void restoreGuaranteedStructuresMask(int mask) {
+        guaranteedStructuresMask = mask & 15;
+    }
+
+    /**
+     * Prepares a nearby set of story locations on first run instead of relying on
+     * a lucky random attempt in an already-loaded, perfectly flat chunk.
+     */
+    public static boolean generateGuaranteedStructures(ServerWorld world) {
+        int before = guaranteedStructuresMask;
+        generateGuaranteedSpawnTower(world);
+        generateGuaranteedSite(world, 2, new int[][]{{11, 2}, {12, 5}, {10, 7}, {13, -2}},
+                WatcherTowerGenerator::buildAbandonedCabin);
+        generateGuaranteedSite(world, 4, new int[][]{{-11, 3}, {-12, -4}, {-10, 7}, {-13, 0}},
+                WatcherTowerGenerator::buildRitualShrine);
+        generateGuaranteedSite(world, 8, new int[][]{{3, -11}, {-4, -12}, {7, -10}, {0, -13}},
+                WatcherTowerGenerator::buildRuinedCamp);
+        return before != guaranteedStructuresMask;
+    }
+
+    private static void generateGuaranteedSite(ServerWorld world, int bit, int[][] offsets,
+                                               java.util.function.BiConsumer<ServerWorld, BlockPos> builder) {
+        if ((guaranteedStructuresMask & bit) != 0) {
+            return;
+        }
+
+        BlockPos spawn = world.getSpawnPos();
+        for (int[] offset : offsets) {
+            int chunkX = (spawn.getX() >> 4) + offset[0];
+            int chunkZ = (spawn.getZ() >> 4) + offset[1];
+            if ((long) chunkX * chunkX + (long) chunkZ * chunkZ < 100L) {
+                continue;
+            }
+
+            int x = (chunkX << 4) + 8;
+            int z = (chunkZ << 4) + 8;
+            int regionX = Math.floorDiv(x, 128);
+            int regionZ = Math.floorDiv(z, 128);
+            long regionKey = ((long) regionX << 32) ^ (regionZ & 0xffffffffL);
+            if (BUILT_REGIONS.contains(regionKey)) {
+                continue;
+            }
+
+            // Generate only the few chunks covered by the site footprint.
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dz = -5; dz <= 5; dz++) {
+                    world.getChunk((x + dx) >> 4, (z + dz) >> 4);
+                }
+            }
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            if (y <= world.getBottomY() + 2 || y + 15 >= world.getTopY()) {
+                continue;
+            }
+
+            // Clear and level a compact site footprint, matching the guaranteed tower policy.
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dz = -5; dz <= 5; dz++) {
+                    for (int dy = 0; dy <= 14; dy++) {
+                        world.setBlockState(new BlockPos(x + dx, y + dy, z + dz),
+                                net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+                    }
+                    world.setBlockState(new BlockPos(x + dx, y - 1, z + dz),
+                            net.minecraft.block.Blocks.STONE_BRICKS.getDefaultState(), 3);
+                }
+            }
+
+            builder.accept(world, new BlockPos(x, y, z));
+            BUILT_REGIONS.add(regionKey);
+            towersBuilt++;
+            guaranteedStructuresMask |= bit;
+            TheWatcher.LOGGER.info("Generated guaranteed Watcher story site {} at {}", bit, new BlockPos(x, y, z));
+            return;
+        }
+        TheWatcher.LOGGER.warn("Could not place Watcher story site bit {}; it will be retried.", bit);
+    }
+
     /**
      * Creates a guaranteed starting tower before the player needs to search for one.
      * A candidate chunk is generated on demand, then a small level platform is prepared
      * so mountains, forests, and uneven terrain cannot make the starting tower fail.
      */
     public static boolean generateGuaranteedSpawnTower(ServerWorld world) {
-        if (towersBuilt > 0) {
+        if ((guaranteedStructuresMask & 1) != 0) {
             return true;
         }
 
         BlockPos spawn = world.getSpawnPos();
         for (int attempt = 0; attempt < 48; attempt++) {
             // A 22-chunk square keeps even diagonal candidates within 32 chunks of spawn.
-            int chunkOffsetX = world.random.nextInt(45) - 22;
-            int chunkOffsetZ = world.random.nextInt(45) - 22;
+            int chunkOffsetX = world.random.nextInt(33) - 16;
+            int chunkOffsetZ = world.random.nextInt(33) - 16;
             if (chunkOffsetX == 0 && chunkOffsetZ == 0) {
                 chunkOffsetX = 1;
             }
@@ -100,6 +182,7 @@ public final class WatcherTowerGenerator {
             buildTower(world, base);
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
+            guaranteedStructuresMask |= 1;
             TheWatcher.LOGGER.info("Generated guaranteed Watcher tower near world spawn at {}", base);
             return true;
         }
