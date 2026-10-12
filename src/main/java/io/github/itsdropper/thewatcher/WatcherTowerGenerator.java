@@ -4,7 +4,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WritableBookContent;
+import net.minecraft.component.type.WritableBookContentComponent;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -150,7 +150,7 @@ public final class WatcherTowerGenerator {
                 .with(ChestBlock.FACING, Direction.NORTH), 3);
         if (world.getBlockEntity(chestPos) instanceof ChestBlockEntity chest) {
             ItemStack logbook = new ItemStack(Items.WRITABLE_BOOK);
-            logbook.set(DataComponentTypes.WRITABLE_BOOK_CONTENT, new WritableBookContent(List.of(
+            logbook.set(DataComponentTypes.WRITABLE_BOOK_CONTENT, new WritableBookContentComponent(List.of(
                     RawFilteredPair.of("Field log, entry 4\n\nWe built this tower after the first night. The tracks below it stopped at the tree line, though none of us heard anyone approach."),
                     RawFilteredPair.of("It does not hunt like an animal. It watches until you begin to expect it. Then it changes where it stands. Never trust a place just because it was empty a moment ago."),
                     RawFilteredPair.of("We called it the Watcher. We do not know whether it came with this forest or learned to imitate the people who lived here before us. It remembers where we look."),
