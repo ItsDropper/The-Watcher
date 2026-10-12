@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: the-watcher-relay
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: hosting/relay
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: WATCHER_TRUST_PROXY_TLS
+        value: "true"
