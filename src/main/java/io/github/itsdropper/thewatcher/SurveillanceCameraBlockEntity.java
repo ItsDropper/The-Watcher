@@ -4,9 +4,7 @@ import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -14,7 +12,6 @@ import net.minecraft.world.RaycastContext;
 
 public class SurveillanceCameraBlockEntity extends BlockEntity {
     private static final double DETECTION_RANGE = 48.0D;
-    private static final double ALERT_RANGE = 96.0D;
     private boolean watcherVisible;
     private long lastScanTick;
 
@@ -36,13 +33,6 @@ public class SurveillanceCameraBlockEntity extends BlockEntity {
                 .filter(watcher -> watcher.squaredDistanceTo(origin) <= DETECTION_RANGE * DETECTION_RANGE)
                 .anyMatch(watcher -> hasClearView(serverWorld, origin, watcher));
 
-        if (detected && !camera.watcherVisible) {
-            for (PlayerEntity player : serverWorld.getPlayers()) {
-                if (player.squaredDistanceTo(origin) <= ALERT_RANGE * ALERT_RANGE) {
-                    player.sendMessage(Text.literal("CAMERA FEED // MOVEMENT DETECTED"), true);
-                }
-            }
-        }
         camera.watcherVisible = detected;
     }
 
