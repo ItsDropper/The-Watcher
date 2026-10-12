@@ -63,7 +63,7 @@ public final class WatcherOllamaDirector {
         String systemPrompt = WatcherOllamaConfig.SYSTEM_PROMPT;
         String body = "{\"model\":\"" + jsonEscape(model) + "\",\"stream\":false,\"format\":\"json\","
                 + "\"messages\":[{\"role\":\"system\",\"content\":\"" + jsonEscape(systemPrompt)
-                + "\\nReturn exactly JSON with keys event and message. Allowed event values: whisper, darkness, footsteps, none.\"},"
+                + "\\nReturn exactly JSON with keys event and message. Allowed event values: whisper, darkness, footsteps, observe, stalk, retreat, none.\"},"
                 + "{\"role\":\"user\",\"content\":\"" + jsonEscape(context) + "\"}]}";
 
         try {
