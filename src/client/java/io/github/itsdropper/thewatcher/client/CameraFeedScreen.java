@@ -32,6 +32,7 @@ public final class CameraFeedScreen extends Screen {
     private boolean tiltDown;
     private double lastMouseX = Double.NaN;
     private double lastMouseY = Double.NaN;
+    private boolean draggingLook;
 
     private CameraFeedScreen(BlockPos cameraPos, Screen networkScreen,
                              Entity previousCameraEntity, Entity viewEntity, World cameraWorld) {
@@ -112,7 +113,7 @@ public final class CameraFeedScreen extends Screen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        if (!Double.isNaN(lastMouseX) && !Double.isNaN(lastMouseY)) {
+        if (draggingLook && !Double.isNaN(lastMouseX) && !Double.isNaN(lastMouseY)) {
             double deltaX = mouseX - lastMouseX;
             double deltaY = mouseY - lastMouseY;
             setViewRotation(
@@ -126,19 +127,37 @@ public final class CameraFeedScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        setViewRotation(
-                viewEntity.getYaw() - (float) deltaX * 0.45F,
-                viewEntity.getPitch() - (float) deltaY * 0.45F);
-        lastMouseX = mouseX;
-        lastMouseY = mouseY;
-        return true;
+        if (draggingLook && button == GLFW.GLFW_MOUSE_BUTTON_1) {
+            setViewRotation(
+                    viewEntity.getYaw() - (float) deltaX * 0.45F,
+                    viewEntity.getPitch() - (float) deltaY * 0.45F);
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        lastMouseX = mouseX;
-        lastMouseY = mouseY;
+        if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
+            draggingLook = true;
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+            return true;
+        }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_1) {
+            draggingLook = false;
+            lastMouseX = Double.NaN;
+            lastMouseY = Double.NaN;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
