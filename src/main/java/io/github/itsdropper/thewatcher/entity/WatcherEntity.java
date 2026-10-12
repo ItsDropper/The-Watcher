@@ -631,6 +631,18 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return learningEngine.getLearnedSafetyDistanceBonus(renderChunks);
     }
 
+    public double getLearnedApproachBonus() {
+        return learningEngine.getLearnedApproachBonus();
+    }
+
+    public double getAverageHorizontalSpeed() {
+        return learningEngine.getAverageHorizontalSpeed();
+    }
+
+    public double getAverageSprintRatio() {
+        return learningEngine.getAverageSprintRatio();
+    }
+
     public double getProximityPressure() {
         return learningEngine.getProximityPressure();
     }
