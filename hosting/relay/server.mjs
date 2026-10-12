@@ -157,7 +157,8 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
               lastActivity: Date.now()
             };
             rooms.set(hostRoom.id, hostRoom);
-            attachSocket(socket, "host", hostRoom);
+            socket.role = "host";
+            socket.room = hostRoom;
             socket.readyForFrames = true;
             safeSend(socket, JSON.stringify({ type: "ready", role: "host", maxGuests: MAX_GUESTS_PER_ROOM }));
             return;
@@ -172,9 +173,10 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
               socket.close(1013, "Room is full");
               return;
             }
-            attachSocket(socket, "guest", target);
-            target.guests.add(socket);
+            socket.role = "guest";
+            socket.room = target;
             socket.readyForFrames = true;
+            target.guests.add(socket);
             target.lastActivity = Date.now();
             safeSend(socket, JSON.stringify({ type: "ready", role: "guest" }));
             safeSend(target.host, JSON.stringify({ type: "guest-count", count: target.guests.size }));
