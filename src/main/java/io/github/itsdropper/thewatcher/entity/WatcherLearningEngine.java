@@ -114,7 +114,8 @@ public final class WatcherLearningEngine {
     public double getLearnedApproachBonus() {
         double campingBonus = clamp((averageStationaryTicks - 20.0D) * 0.025D, 0.0D, 6.0D);
         double cautiousBonus = clamp((0.35D - averageSprintRatio) * 8.0D, 0.0D, 2.8D);
-        return clamp(proximityPressure * 18.0D + campingBonus + cautiousBonus, 0.0D, 24.0D);
+        double movementBonus = clamp(averageHorizontalSpeed * 8.0D, 0.0D, 5.0D);
+        return clamp(proximityPressure * 18.0D + campingBonus + cautiousBonus + movementBonus, 0.0D, 24.0D);
     }
 
     public double getAveragePlayerHeight() {
