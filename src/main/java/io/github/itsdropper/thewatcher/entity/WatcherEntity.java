@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher.entity;
 
 import io.github.itsdropper.thewatcher.TheWatcher;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -62,6 +63,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
     private int daylightTicks;
+    private int navigationCheckCooldown;
+    private int navigationStuckChecks;
+    private Vec3d lastNavigationCheckPosition;
 
     public WatcherEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
@@ -211,8 +215,13 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                                 SoundCategory.HOSTILE, 0.8F, 0.45F + random.nextFloat() * 0.25F);
                     }
                 }
-                if (!teleported) moveAwayFrom(player, 2.2D);
-                else getNavigation().stop();
+                if (!teleported) {
+                    moveAwayFrom(player, 2.2D);
+                    recoverStuckRetreat(world, player);
+                } else {
+                    getNavigation().stop();
+                    resetNavigationRecovery();
+                }
 
                 int duration = RETREAT_TICKS;
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
@@ -261,8 +270,20 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             BlockPos ground = feet.down();
 
             if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                    || isUnsafeGround(world.getBlockState(ground))
                     || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
-                    || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
+                    || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
+                    || !world.getBlockState(feet).getFluidState().isEmpty()
+                    || !world.getBlockState(feet.up()).getFluidState().isEmpty()) {
+                continue;
+            }
+
+            // Validate the entity's complete collision box at the destination, not only
+            // the two blocks at its feet. This rejects overhangs and narrow spaces.
+            double offsetX = x + 0.5D - getX();
+            double offsetY = y - getY();
+            double offsetZ = z + 0.5D - getZ();
+            if (!world.isSpaceEmpty(this, getBoundingBox().offset(offsetX, offsetY, offsetZ))) {
                 continue;
             }
 
@@ -285,6 +306,18 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         }
 
         return false;
+    }
+
+    private boolean isUnsafeGround(net.minecraft.block.BlockState state) {
+        return state.isOf(Blocks.MAGMA_BLOCK)
+                || state.isOf(Blocks.CAMPFIRE)
+                || state.isOf(Blocks.SOUL_CAMPFIRE)
+                || state.isOf(Blocks.FIRE)
+                || state.isOf(Blocks.SOUL_FIRE)
+                || state.isOf(Blocks.CACTUS)
+                || state.isOf(Blocks.WITHER_ROSE)
+                || state.isOf(Blocks.SWEET_BERRY_BUSH)
+                || state.isOf(Blocks.POWDER_SNOW);
     }
 
     private boolean isPlayerWatching(PlayerEntity player) {
@@ -382,15 +415,91 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         getNavigation().startMovingTo(destinationX, getY(), destinationZ, speed);
     }
 
+    private void recoverStuckRetreat(ServerWorld world, PlayerEntity player) {
+        if (navigationCheckCooldown > 0) {
+            navigationCheckCooldown--;
+            return;
+        }
+        navigationCheckCooldown = 20;
+
+        Vec3d current = getPos();
+        if (lastNavigationCheckPosition != null
+                && current.squaredDistanceTo(lastNavigationCheckPosition) < 0.75D * 0.75D) {
+            navigationStuckChecks++;
+        } else {
+            navigationStuckChecks = 0;
+        }
+        lastNavigationCheckPosition = current;
+
+        if (navigationStuckChecks < 3) {
+            return;
+        }
+
+        getNavigation().stop();
+        boolean recovered = TheWatcher.TELEPORTS_ENABLED
+                && !isWithinPlayerView(player)
+                && tryHiddenTeleport(world, player, true);
+        if (recovered) {
+            hiddenMoveCooldown = 100;
+        } else {
+            // A new direction avoids repeatedly requesting the same blocked route.
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            double distance = 12.0D + random.nextDouble() * 12.0D;
+            getNavigation().startMovingTo(
+                    getX() + Math.cos(angle) * distance,
+                    getY(),
+                    getZ() + Math.sin(angle) * distance,
+                    2.2D);
+        }
+        navigationStuckChecks = 0;
+        lastNavigationCheckPosition = getPos();
+        navigationCheckCooldown = 20;
+    }
+
+    private void resetNavigationRecovery() {
+        navigationCheckCooldown = 0;
+        navigationStuckChecks = 0;
+        lastNavigationCheckPosition = null;
+    }
+
     @Override
     public void writeCustomDataToNbt(NbtCompound nbt) {
         super.writeCustomDataToNbt(nbt);
+        nbt.putString("WatcherPhase", phase.name());
+        nbt.putInt("WatcherPhaseTicks", phaseTicks);
+        nbt.putInt("WatcherHiddenMoveCooldown", hiddenMoveCooldown);
+        nbt.putInt("WatcherDreadEffectCooldown", dreadEffectCooldown);
+        nbt.putInt("WatcherAttentionTicks", attentionTicks);
+        nbt.putInt("WatcherUnseenTicks", unseenTicks);
+        nbt.putInt("WatcherDaylightTicks", daylightTicks);
+        nbt.putBoolean("WatcherAttemptedEscalationAttack", attemptedEscalationAttack);
         learningEngine.writeToNbt(nbt);
     }
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
         super.readCustomDataFromNbt(nbt);
+        if (nbt.contains("WatcherPhase")) {
+            try {
+                phase = Phase.valueOf(nbt.getString("WatcherPhase"));
+            } catch (IllegalArgumentException ignored) {
+                phase = Phase.IDLE;
+            }
+        } else {
+            phase = Phase.IDLE;
+        }
+        phaseTicks = Math.max(0, nbt.getInt("WatcherPhaseTicks"));
+        hiddenMoveCooldown = Math.max(0, nbt.getInt("WatcherHiddenMoveCooldown"));
+        dreadEffectCooldown = Math.max(0, nbt.getInt("WatcherDreadEffectCooldown"));
+        attentionTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherAttentionTicks")));
+        unseenTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherUnseenTicks")));
+        daylightTicks = Math.max(0, Math.min(600, nbt.getInt("WatcherDaylightTicks")));
+        attemptedEscalationAttack = nbt.getBoolean("WatcherAttemptedEscalationAttack");
+        // Debug controls are session-only; never reload an entity stuck in a forced test phase.
+        debugPhaseLocked = false;
+        debugSimulation = false;
+        debugPhaseAutoAdvance = false;
+        resetNavigationRecovery();
         learningEngine.readFromNbt(nbt);
     }
 
