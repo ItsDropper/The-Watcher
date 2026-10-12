@@ -51,6 +51,8 @@ public final class WatcherRunManager {
                         world.random.nextInt(6_001) + 3_600L);
                 run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
                 WatcherTowerGenerator.resetForRun();
+                // Prepare the guaranteed tower during run initialization, before exploration.
+                WatcherTowerGenerator.generateGuaranteedSpawnTower(world);
                 RUNS.put(world, run);
                 CHECKED_WORLDS.add(world);
                 WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
