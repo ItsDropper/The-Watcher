@@ -255,6 +255,13 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
       socket.destroy();
       return;
     }
+    // Native Java clients do not need a browser Origin. Reject browser-originated
+    // cross-site WebSocket attempts so a malicious website cannot probe room IDs.
+    if (request.headers.origin) {
+      socket.write("HTTP/1.1 403 Forbidden\\r\\nConnection: close\\r\\n\\r\\n");
+      socket.destroy();
+      return;
+    }
     if (request.url !== "/tunnel") {
       socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
       socket.destroy();
