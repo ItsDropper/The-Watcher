@@ -16,6 +16,8 @@ public final class WatcherLearningEngine {
     private double averageWatchedTicks = 100.0D;
     private double averageUnwatchedTicks = 36.0D;
     private double averagePlayerDistance = 48.0D;
+    // Rises after repeated close encounters and slowly fades when the Watcher maintains distance.
+    private double proximityPressure;
     private int currentRunTicks;
     private long observedTicks;
     private boolean hasPreviousState;
@@ -69,6 +71,33 @@ public final class WatcherLearningEngine {
     }
 
     /**
+     * Learn from personal-space violations during observing/stalking. This is an
+     * intentionally slow signal: one close pass should not permanently change behavior.
+     */
+    public void observeStalkingDistance(double distance, int configuredChunks) {
+        double baseline = WatcherStalkingDirector.minimumStalkingDistance(configuredChunks);
+        if (distance < baseline) {
+            proximityPressure += (1.0D - proximityPressure) * 0.0025D;
+        } else {
+            proximityPressure *= 0.999D;
+        }
+        proximityPressure = clamp(proximityPressure, 0.0D, 1.0D);
+    }
+
+    /**
+     * Add a bounded offset to the normal stalking ring after repeated close encounters.
+     * The director caps this offset to the available render-distance band.
+     */
+    public double getLearnedSafetyDistanceBonus(int configuredChunks) {
+        double desiredBonus = proximityPressure * 12.0D;
+        return WatcherStalkingDirector.clampLearnedOffset(configuredChunks, desiredBonus);
+    }
+
+    public double getProximityPressure() {
+        return proximityPressure;
+    }
+
+    /**
      * Slightly changes the stalking phase length based on how close the player
      * tends to remain. It stays within a narrow range to avoid erratic pacing.
      */
@@ -81,6 +110,7 @@ public final class WatcherLearningEngine {
         nbt.putDouble("WatcherLearningAverageWatched", averageWatchedTicks);
         nbt.putDouble("WatcherLearningAverageUnwatched", averageUnwatchedTicks);
         nbt.putDouble("WatcherLearningAverageDistance", averagePlayerDistance);
+        nbt.putDouble("WatcherLearningProximityPressure", proximityPressure);
         nbt.putInt("WatcherLearningCurrentRun", currentRunTicks);
         nbt.putLong("WatcherLearningObservedTicks", observedTicks);
         nbt.putBoolean("WatcherLearningHasPreviousState", hasPreviousState);
@@ -96,6 +126,9 @@ public final class WatcherLearningEngine {
         }
         if (nbt.contains("WatcherLearningAverageDistance")) {
             averagePlayerDistance = clamp(nbt.getDouble("WatcherLearningAverageDistance"), 0.0D, 512.0D);
+        }
+        if (nbt.contains("WatcherLearningProximityPressure")) {
+            proximityPressure = clamp(nbt.getDouble("WatcherLearningProximityPressure"), 0.0D, 1.0D);
         }
         currentRunTicks = (int) clamp(nbt.getInt("WatcherLearningCurrentRun"), 0.0D, MAX_RUN_TICKS);
         observedTicks = Math.max(0L, nbt.getLong("WatcherLearningObservedTicks"));
