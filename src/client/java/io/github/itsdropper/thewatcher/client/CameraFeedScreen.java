@@ -51,7 +51,7 @@ public final class CameraFeedScreen extends Screen {
         // Register a real client-world entity so the renderer has a stable camera target.
         // A detached Entity can make the renderer repeatedly reset its camera/chunk origin.
         view.setId(-2_147_000_001);
-        client.world.addEntity(view.getId(), view);
+        client.world.addEntity(view);
         CameraFeedScreen screen = new CameraFeedScreen(pos, networkScreen, previous, view, client.world);
         client.setCameraEntity(view);
         return screen;
