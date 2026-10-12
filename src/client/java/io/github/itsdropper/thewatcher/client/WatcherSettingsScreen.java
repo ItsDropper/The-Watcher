@@ -81,13 +81,19 @@ public final class WatcherSettingsScreen extends Screen {
         promptField.setPlaceholder(Text.literal("System prompt for the horror director"));
         addDrawableChild(promptField);
 
+        addDrawableChild(ButtonWidget.builder(promptPresetText(), button -> {
+            WatcherOllamaConfig.cyclePromptPreset();
+            promptField.setText(WatcherOllamaConfig.SYSTEM_PROMPT);
+            button.setMessage(promptPresetText());
+        }).dimensions(centerX - 110, top + 196, 220, 20).build());
+
         addDrawableChild(ButtonWidget.builder(Text.literal("Save AI settings"), button -> saveAiSettings())
-                .dimensions(centerX - 110, top + 196, 220, 20).build());
+                .dimensions(centerX - 110, top + 220, 220, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> {
             saveAiSettings();
             this.client.setScreen(parent);
-        }).dimensions(centerX - 100, top + 222, 200, 20).build());
+        }).dimensions(centerX - 100, top + 244, 200, 20).build());
     }
 
     private void saveAiSettings() {
@@ -107,6 +113,10 @@ public final class WatcherSettingsScreen extends Screen {
             }
         }
         return RENDER_DISTANCE_OPTIONS[0];
+    }
+
+    private static Text promptPresetText() {
+        return Text.literal("System prompt preset: " + (WatcherOllamaConfig.getPromptPresetIndex() + 1) + "/3");
     }
 
     private static Text renderDistanceText(int chunks) {
