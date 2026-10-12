@@ -859,6 +859,95 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return learningEngine.getProximityPressure();
     }
 
+    /**
+     * Runs a specific attack on demand for operator testing.
+     * Returns false only when the requested attack name is not recognized.
+     */
+    public boolean debugAttack(String attack, PlayerEntity player) {
+        if (player == null || !(getWorld() instanceof ServerWorld world)) return false;
+        debugSimulation = false;
+        debugPhaseLocked = true;
+        debugPhaseAutoAdvance = false;
+        setTarget(player);
+
+        switch (attack) {
+            case "melee" -> {
+                // Put the entity within melee range so the command tests the actual attack, not pathfinding.
+                refreshPositionAndAngles(player.getX() + 1.4D, player.getY(), player.getZ(),
+                        player.getYaw() + 180.0F, 0.0F);
+                lookAtPlayer(player);
+                boolean hit = tryAttack(player);
+                world.playSound(null, player.getBlockPos(),
+                        hit ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG : SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                        SoundCategory.HOSTILE, 1.0F, hit ? 0.7F : 0.8F);
+                return true;
+            }
+            case "rush" -> {
+                phase = Phase.ESCALATING;
+                phaseTicks = 0;
+                attemptedEscalationAttack = false;
+                getNavigation().stop();
+                getNavigation().startMovingTo(player, 2.8D);
+                world.playSound(null, getBlockPos(), SoundEvents.ENTITY_WARDEN_ROAR,
+                        SoundCategory.HOSTILE, 1.0F, 0.7F);
+                return true;
+            }
+            case "ambush" -> {
+                Vec3d look = player.getRotationVec(1.0F).normalize();
+                int x = (int) Math.floor(player.getX() - look.x * 3.0D - look.z * 0.7D);
+                int z = (int) Math.floor(player.getZ() - look.z * 3.0D + look.x * 0.7D);
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) return false;
+                int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+                BlockPos feet = new BlockPos(x, y, z);
+                BlockPos ground = feet.down();
+                if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                        || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                        || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
+                    return false;
+                }
+                requestTeleport(x + 0.5D, y, z + 0.5D);
+                phase = Phase.ESCALATING;
+                phaseTicks = 0;
+                attemptedEscalationAttack = false;
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.DARKNESS, 50, 0, false, false, true));
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.SLOWNESS, 35, 0, false, false, true));
+                world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_ENDERMAN_SCREAM,
+                        SoundCategory.HOSTILE, 1.0F, 0.65F);
+                world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                        SoundCategory.HOSTILE, 0.9F, 0.65F);
+                world.spawnParticles(ParticleTypes.ASH, player.getX(), player.getEyeY(), player.getZ(),
+                        32, 0.7D, 0.55D, 0.7D, 0.03D);
+                return true;
+            }
+            case "jumpscare" -> {
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.DARKNESS, 55, 0, false, false, true));
+                world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_ENDERMAN_SCREAM,
+                        SoundCategory.HOSTILE, 1.0F, 0.55F);
+                world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                        SoundCategory.HOSTILE, 1.0F, 0.6F);
+                world.spawnParticles(ParticleTypes.ASH, player.getX(), player.getEyeY(), player.getZ(),
+                        40, 0.8D, 0.6D, 0.8D, 0.035D);
+                return true;
+            }
+            case "blackout" -> {
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.DARKNESS, 80, 0, false, false, true));
+                world.playSound(null, player.getBlockPos(),
+                        random.nextBoolean() ? SoundEvents.ENTITY_GHAST_WARN : SoundEvents.ENTITY_ENDERMAN_STARE,
+                        SoundCategory.HOSTILE, 1.0F, 0.5F);
+                world.spawnParticles(ParticleTypes.SMOKE, player.getX(), player.getEyeY(), player.getZ(),
+                        24, 0.55D, 0.5D, 0.55D, 0.015D);
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
     public void forceDebugPhase(Phase newPhase, PlayerEntity player) {
         if (newPhase == null || player == null) {
             return;
