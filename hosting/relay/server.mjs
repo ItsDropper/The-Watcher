@@ -4,12 +4,15 @@ import crypto from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
 
 const MAX_GUESTS_PER_ROOM = 8;
+const MAX_ACTIVE_ROOMS = 2048;
+const MAX_ACTIVE_SOCKETS = 8192;
+const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 const MAX_MESSAGE_BYTES = 64 * 1024;
 const MAX_BYTES_PER_SECOND = 4 * 1024 * 1024;
 const BURST_BYTES = 16 * 1024 * 1024;
 const MAX_HANDSHAKES_PER_MINUTE = 30;
 const HEARTBEAT_INTERVAL_MS = 30_000;
-const ROOM_IDLE_TTL_MS = 10 * 60_000;
+const ROOM_IDLE_TTL_MS = 60 * 60_000;
 const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 
 export function validRoomId(value) {
@@ -62,7 +65,12 @@ function createByteBudget() {
 }
 
 function safeSend(socket, data) {
-  if (socket.readyState === WebSocket.OPEN) socket.send(data, { binary: Buffer.isBuffer(data) });
+  if (socket.readyState !== WebSocket.OPEN) return;
+  if (socket.bufferedAmount > MAX_BUFFERED_BYTES) {
+    socket.close(1013, "Slow peer");
+    return;
+  }
+  socket.send(data, { binary: Buffer.isBuffer(data) });
 }
 
 export function createRelayServer({ cert, key, logger = console } = {}) {
@@ -121,7 +129,7 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
 
     socket.on("message", (data, isBinary) => {
       if (!socket.readyForFrames) {
-        if (isBinary || !Buffer.isBuffer(data)) {
+        if (isBinary || !Buffer.isBuffer(data) || data.length > 1024) {
           socket.close(1008, "Handshake required");
           return;
         }
@@ -132,6 +140,10 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
         }
         if (role === "pending") {
           if (message?.type === "host" && validRoomId(message.room)) {
+            if (rooms.size >= MAX_ACTIVE_ROOMS) {
+              socket.close(1013, "Relay is at capacity");
+              return;
+            }
             if (rooms.has(message.room)) {
               socket.close(1008, "Room ID already exists");
               return;
@@ -238,12 +250,19 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
       socket.destroy();
       return;
     }
+    if (wss.clients.size >= MAX_ACTIVE_SOCKETS) {
+      socket.write("HTTP/1.1 503 Service Unavailable\\r\\nConnection: close\\r\\n\\r\\n");
+      socket.destroy();
+      return;
+    }
     if (request.url !== "/tunnel") {
       socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
     wss.handleUpgrade(request, socket, head, ws => {
+      wss.clients.add(ws);
+      ws.once("close", () => wss.clients.delete(ws));
       attachSocket(ws, "pending", null);
       const handshakeTimer = setTimeout(() => {
         if (!ws.readyForFrames) ws.close(1008, "Handshake timeout");
