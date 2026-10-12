@@ -20,8 +20,6 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: hosting/relay/package.json
       - name: Install dependencies
         working-directory: hosting/relay
         run: npm install --ignore-scripts
