@@ -398,7 +398,7 @@ public final class WatcherRunManager {
                         net.minecraft.entity.effect.StatusEffects.NAUSEA, 50, 0, false, false, true));
             }
             if (remaining <= 500 && world.random.nextFloat() < 0.35F) {
-                world.playSound(null, target.getBlockPos(), net.minecraft.sound.SoundEvents.AMBIENT_CAVE,
+                world.playSound(null, target.getBlockPos(), net.minecraft.sound.SoundEvents.AMBIENT_CAVE.value(),
                         net.minecraft.sound.SoundCategory.HOSTILE, 0.8F,
                         0.55F + world.random.nextFloat() * 0.25F);
             }
