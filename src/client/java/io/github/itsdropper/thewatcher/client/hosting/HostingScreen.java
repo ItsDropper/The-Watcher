@@ -186,7 +186,7 @@ public final class HostingScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
+        renderBackground(context, mouseX, mouseY, delta);
         int center = width / 2;
         int top = Math.max(16, height / 4 - 18);
         super.render(context, mouseX, mouseY, delta);
