@@ -254,6 +254,10 @@ public final class WatcherRunManager {
     }
 
     public static boolean shouldDiscardNaturalEntity(ServerWorld world, UUID entityUuid) {
+        EndingState ending = ENDINGS.get(world);
+        if (ending != null && ending.watcher().equals(entityUuid)) {
+            return false;
+        }
         RunState run = RUNS.get(world);
         if (run == null) {
             return false;
