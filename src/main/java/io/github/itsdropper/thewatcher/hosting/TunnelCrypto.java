@@ -15,7 +15,7 @@ import javax.crypto.spec.SecretKeySpec;
  * type/channel routing header; DATA payloads and their authentication tags
  * remain encrypted between the host and guest.
  */
-final class TunnelCrypto {
+public final class TunnelCrypto {
     static final int CONTROL_FRAME_BYTES = 37;
     static final int DATA_HEADER_BYTES = 13;
     private static final int TAG_BITS = 128;
@@ -24,7 +24,7 @@ final class TunnelCrypto {
     private TunnelCrypto() {
     }
 
-    static byte[] controlFrame(byte type, int channel, byte[] secret, String direction) {
+    public static byte[] controlFrame(byte type, int channel, byte[] secret, String direction) {
         validateSecret(secret);
         validateDirection(direction);
         if ((type != 1 && type != 3) || channel == 0) {
@@ -35,7 +35,7 @@ final class TunnelCrypto {
         return concat(header, mac);
     }
 
-    static boolean verifyControlFrame(byte[] frame, byte[] secret, String direction) {
+    public static boolean verifyControlFrame(byte[] frame, byte[] secret, String direction) {
         if (frame == null || frame.length != CONTROL_FRAME_BYTES || secret == null || secret.length != 32) {
             return false;
         }
@@ -49,7 +49,7 @@ final class TunnelCrypto {
         }
     }
 
-    static byte[] encrypt(byte[] plaintext, byte[] secret, String direction, int channel, long sequence)
+    public static byte[] encrypt(byte[] plaintext, byte[] secret, String direction, int channel, long sequence)
             throws GeneralSecurityException {
         validateSecret(secret);
         validateDirection(direction);
@@ -66,7 +66,7 @@ final class TunnelCrypto {
         return concat(header, cipher.doFinal(plaintext));
     }
 
-    static byte[] decrypt(byte[] frame, byte[] secret, String direction) throws GeneralSecurityException {
+    public static byte[] decrypt(byte[] frame, byte[] secret, String direction) throws GeneralSecurityException {
         validateSecret(secret);
         validateDirection(direction);
         if (frame == null || frame.length < DATA_HEADER_BYTES + 16 || frame.length > MAX_FRAME_BYTES) {
