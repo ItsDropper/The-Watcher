@@ -8,7 +8,7 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
 - When the player directly watches it, The Watcher freezes completely. It has no look-around goal and always uses its idle animation.
-- During stalking, The Watcher compares safe relocation candidates and prefers elevated terrain, ridgelines, and positions above the player's usual height. At 12 chunks it normally stalks about 73–97 blocks away, and repeated close encounters can teach it to approach more boldly. It relocates only when outside your view or hidden by solid cover. Stalking teleports are silent; the goal is a silhouette you can actually spot, not an entity permanently at the render edge.
+- During observing, The Watcher wanders around nearby surveillance cameras instead of standing still. It walks away if it gets too close; it can teleport only during stalking, and only while outside your view or hidden by solid cover. The first reveal now starts farther away, scaled to render distance. Stalking teleports are silent; the goal is a silhouette you can actually spot, not an entity permanently at the render edge.
 - Render distance is sampled continuously, so changing Minecraft's video setting takes effect without reopening The Watcher Settings. `/watcher debug status` reports the current stalking distance band.
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
 - Retreating is deliberately abrupt: while unseen, it can jump to a covered position; while visible, it sprints away instead of teleporting.
@@ -29,8 +29,8 @@ Place the **Surveillance Camera** block from the Redstone creative tab, or use `
 - A small chance of signal interference replaces the motion warning with **SIGNAL LOST**.
 - Cameras can be crafted with 4 iron ingots, 2 redstone dust, and 1 spyglass. They can also appear as loot in the chests of the custom watchtower, abandoned cabin, ritual shrine, and ruined camp.
 - The Watcher can destroy a camera if it gets within roughly three blocks, so a camera network provides information, not protection.
-- Press **V** (rebindable in Options → Controls) to open the **Camera Network** menu. It lists cameras in currently loaded chunks near you, their coordinates, and whether each has a clear view of The Watcher; use Refresh to rescan.
-- The monitor currently lists nearby loaded cameras only; it does not yet stream a remote camera's rendered viewpoint or save recording history.
+- Press **V** (rebindable in Options → Controls) to open the **Camera Network** menu. The sharp, non-pausing overlay lists cameras in currently loaded chunks near you, their coordinates, and detection status.
+- Select **VIEW** beside a camera to open its live rendered viewpoint. Use **W/S** to tilt and **A/D** to pan; **Esc** returns to the network. The feed uses already-loaded world chunks, so cameras outside loaded areas are not remotely streamed. Recording history is not implemented.
 
 ## Debug commands
 
