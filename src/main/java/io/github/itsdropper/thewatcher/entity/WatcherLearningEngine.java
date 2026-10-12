@@ -75,7 +75,8 @@ public final class WatcherLearningEngine {
      * intentionally slow signal: one close pass should not permanently change behavior.
      */
     public void observeStalkingDistance(double distance, int configuredChunks) {
-        double baseline = WatcherStalkingDirector.minimumStalkingDistance(configuredChunks);
+        double baseline = WatcherStalkingDirector.minimumStalkingDistance(configuredChunks)
+                + getLearnedSafetyDistanceBonus(configuredChunks);
         if (distance < baseline) {
             proximityPressure += (1.0D - proximityPressure) * 0.0025D;
         } else {
