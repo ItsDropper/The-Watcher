@@ -116,7 +116,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
-        if (night) SurveillanceCameraBlock.trySabotageNearby(world, this);
+        // Surveillance cameras are persistent player infrastructure; The Watcher must not
+        // destroy them when their chunks unload or during normal stalking.
 
         if (!debugPhaseLocked && !debugSimulation && !night) {
             // Natural encounters go dormant during the day, but the persistent entity
