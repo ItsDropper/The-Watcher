@@ -343,8 +343,9 @@ public final class WatcherRunManager {
                 for (String entry : positionList.split(";")) {
                     try {
                         String[] pair = entry.split(":", 2);
+                        if (pair.length != 2) continue;
                         String[] coordinates = pair[1].split(",");
-                        if (pair.length == 2 && coordinates.length == 3) {
+                        if (coordinates.length == 3) {
                             guaranteedPositions.put(Integer.parseInt(pair[0]),
                                     new BlockPos(Integer.parseInt(coordinates[0]),
                                             Integer.parseInt(coordinates[1]),
