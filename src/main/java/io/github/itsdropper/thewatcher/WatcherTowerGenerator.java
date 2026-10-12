@@ -43,6 +43,66 @@ public final class WatcherTowerGenerator {
         towersBuilt = BUILT_REGIONS.size();
     }
 
+    /**
+     * Creates a guaranteed starting tower before the player needs to search for one.
+     * A candidate chunk is generated on demand, then a small level platform is prepared
+     * so mountains, forests, and uneven terrain cannot make the starting tower fail.
+     */
+    public static boolean generateGuaranteedSpawnTower(ServerWorld world) {
+        if (towersBuilt > 0) {
+            return true;
+        }
+
+        BlockPos spawn = world.getSpawnPos();
+        for (int attempt = 0; attempt < 48; attempt++) {
+            int chunkOffsetX = world.random.nextInt(57) - 28;
+            int chunkOffsetZ = world.random.nextInt(57) - 28;
+            if (chunkOffsetX == 0 && chunkOffsetZ == 0) {
+                chunkOffsetX = 1;
+            }
+            int chunkX = (spawn.getX() >> 4) + chunkOffsetX;
+            int chunkZ = (spawn.getZ() >> 4) + chunkOffsetZ;
+            int x = (chunkX << 4) + 8;
+            int z = (chunkZ << 4) + 8;
+
+            // Deliberately generate this candidate chunk now rather than waiting for exploration.
+            world.getChunk(chunkX, chunkZ);
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            if (y <= world.getBottomY() + 2 || y + 12 >= world.getTopY()) {
+                continue;
+            }
+
+            int regionX = Math.floorDiv(x, 128);
+            int regionZ = Math.floorDiv(z, 128);
+            long regionKey = ((long) regionX << 32) ^ (regionZ & 0xffffffffL);
+            if (BUILT_REGIONS.contains(regionKey)) {
+                continue;
+            }
+
+            // Prepare a compact, level footprint. The surrounding terrain remains untouched.
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    for (int dy = 0; dy <= 10; dy++) {
+                        world.setBlockState(new BlockPos(x + dx, y + dy, z + dz),
+                                net.minecraft.block.Blocks.AIR.getDefaultState(), 3);
+                    }
+                    world.setBlockState(new BlockPos(x + dx, y - 1, z + dz),
+                            net.minecraft.block.Blocks.STONE_BRICKS.getDefaultState(), 3);
+                }
+            }
+
+            BlockPos base = new BlockPos(x, y, z);
+            buildTower(world, base);
+            BUILT_REGIONS.add(regionKey);
+            towersBuilt++;
+            TheWatcher.LOGGER.info("Generated guaranteed Watcher tower near world spawn at {}", base);
+            return true;
+        }
+
+        TheWatcher.LOGGER.warn("Could not find a valid location for the guaranteed spawn-area Watcher tower.");
+        return false;
+    }
+
     public static boolean tryGenerate(ServerWorld world, ServerPlayerEntity player) {
         if (towersBuilt >= MAX_TOWERS_PER_SESSION) {
             return false;
