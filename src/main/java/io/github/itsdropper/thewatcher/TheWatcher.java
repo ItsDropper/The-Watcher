@@ -45,6 +45,7 @@ public class TheWatcher implements ModInitializer {
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         WatcherCommands.register();
         ServerTickEvents.END_WORLD_TICK.register(TheWatcher::applyNightDarkness);
+        ServerTickEvents.END_WORLD_TICK.register(WatcherRunManager::tick);
         LOGGER.info("The Watcher entity and debug commands registered.");
     }
 
