@@ -1,6 +1,10 @@
 package io.github.itsdropper.thewatcher;
 
 import net.minecraft.block.BlockRenderType;
+import net.minecraft.block.Blocks;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.server.world.ServerWorld;
+import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.HorizontalFacingBlock;
@@ -36,6 +40,29 @@ public class SurveillanceCameraBlock extends BlockWithEntity {
     public SurveillanceCameraBlock(Settings settings) {
         super(settings);
         setDefaultState(getStateManager().getDefaultState().with(FACING, Direction.NORTH));
+    }
+
+    public static void trySabotageNearby(ServerWorld world, WatcherEntity watcher) {
+        if (watcher.age % 40 != 0) {
+            return;
+        }
+        BlockPos origin = watcher.getBlockPos();
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    BlockPos candidate = origin.add(dx, dy, dz);
+                    if (candidate.getSquaredDistance(watcher.getPos()) > 9.0D
+                            || !world.getBlockState(candidate).isOf(TheWatcher.SURVEILLANCE_CAMERA)) {
+                        continue;
+                    }
+                    if (watcher.getRandom().nextInt(4) == 0
+                            && world.breakBlock(candidate, true, watcher)) {
+                        watcher.playSound(SoundEvents.BLOCK_IRON_BREAK, 0.8F, 0.55F);
+                    }
+                    return;
+                }
+            }
+        }
     }
 
     @Override
