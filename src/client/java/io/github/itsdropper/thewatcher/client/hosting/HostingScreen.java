@@ -58,8 +58,9 @@ public final class HostingScreen extends Screen {
                 .dimensions(center + 6, top + 108, 168, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Stop hosting / tunnel"), button -> {
             HostingTunnelService.closeActiveSession();
+            if (inviteField != null) inviteField.setText("");
             busy = false;
-            status = "Hosting tunnel closed.";
+            status = "Hosting tunnel closed. The displayed invite was cleared.";
         }).dimensions(center - 174, top + 136, 348, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Copy invite"), button -> {
             if (!inviteField.getText().isBlank()) client.keyboard.setClipboard(inviteField.getText());
