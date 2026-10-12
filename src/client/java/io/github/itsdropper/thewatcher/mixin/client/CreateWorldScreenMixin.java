@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher.mixin.client;
 
 import io.github.itsdropper.thewatcher.WatcherWorldOptions;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
@@ -14,24 +15,27 @@ public abstract class CreateWorldScreenMixin {
     @Inject(method = "init", at = @At("TAIL"))
     private void theWatcher$addWorldOptions(CallbackInfo ci) {
         CreateWorldScreen screen = (CreateWorldScreen) (Object) this;
-        int rowY = screen.height - 56;
+        ScreenAccessor accessor = (ScreenAccessor) (Object) screen;
+        MinecraftClient client = MinecraftClient.getInstance();
+        int width = client.getWindow().getScaledWidth();
+        int rowY = client.getWindow().getScaledHeight() - 56;
 
-        screen.addDrawableChild(ButtonWidget.builder(
+        accessor.theWatcher$addDrawableChild(ButtonWidget.builder(
                 watcherModeLabel(),
                 button -> {
                     WatcherWorldOptions.WATCHER_MODE_ENABLED = !WatcherWorldOptions.WATCHER_MODE_ENABLED;
                     button.setMessage(watcherModeLabel());
                 })
-                .dimensions(screen.width / 2 - 204, rowY, 200, 20)
+                .dimensions(width / 2 - 204, rowY, 200, 20)
                 .build());
 
-        screen.addDrawableChild(ButtonWidget.builder(
+        accessor.theWatcher$addDrawableChild(ButtonWidget.builder(
                 runLengthLabel(),
                 button -> {
                     WatcherWorldOptions.cycleRunLength();
                     button.setMessage(runLengthLabel());
                 })
-                .dimensions(screen.width / 2 + 4, rowY, 200, 20)
+                .dimensions(width / 2 + 4, rowY, 200, 20)
                 .build());
     }
 
