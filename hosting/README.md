@@ -44,6 +44,7 @@ For a container, mount the certificate and key read-only at the paths supplied t
 3. The relay replies with a `ready` message. A guest can open one tunnel channel with a 5-byte binary frame: type byte `1`, then a nonzero unsigned 32-bit channel ID.
 4. DATA frames use type byte `2`, channel ID, 64-bit sequence number, and authenticated-encrypted payload. The encrypted payload must include the GCM tag. The relay forwards DATA only between the channel owner and host.
 5. CLOSE frames use type byte `3` and channel ID. A guest can only operate on its own channel.
+6. If a guest disconnects without sending CLOSE, the relay sends the host a `channel-closed` text notification containing only that channel ID. The host treats it only as a channel teardown signal, never as authenticated game data.
 
 The relay never interprets DATA payloads. It does inspect the type and channel ID needed for routing. The client must reject invalid tags, duplicate or out-of-order sequence numbers, and unexpected frames, and must close the tunnel on authentication failure.
 
