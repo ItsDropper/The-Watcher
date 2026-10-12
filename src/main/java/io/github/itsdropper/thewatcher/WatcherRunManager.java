@@ -424,7 +424,7 @@ public final class WatcherRunManager {
                 if (world.getBlockState(feet.down()).isSolidBlock(world, feet.down())
                         && world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
                         && world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()) {
-                    watcher.teleport(x + 0.5D, y, z + 0.5D);
+                    watcher.teleport(x + 0.5D, y, z + 0.5D, false);
                     watcher.getLookControl().lookAt(target, 30.0F, 30.0F);
                 }
             }
