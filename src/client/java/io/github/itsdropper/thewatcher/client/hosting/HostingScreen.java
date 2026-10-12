@@ -112,7 +112,6 @@ public final class HostingScreen extends Screen {
                         return;
                     }
                     inviteField.setText(session.inviteCode());
-                    inviteField.setCursorToStart(false);
                     status = "Hosting is active. Copy the invite and share it privately.";
                 }));
     }
