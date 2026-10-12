@@ -12,7 +12,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.PathAwareEntity;
+import net.minecraft.entity.mob.PathAwareEntity;\nimport net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -64,6 +64,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private int attentionTicks;
     private int unseenTicks;
     private boolean attemptedEscalationAttack;
+    private int ambushCooldown;
+    private int closeJumpscareCooldown;
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
@@ -87,7 +89,18 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
      */
     @Override
     public boolean damage(DamageSource source, float amount) {
-        return false;
+        if (!(source.getAttacker() instanceof PlayerEntity player) || !hasAllEvidence(player)) {
+            return false;
+        }
+
+        // The evidence makes the Watcher vulnerable; before this point, ordinary attacks do nothing.
+        setInvulnerable(false);
+        boolean damaged = super.damage(source, amount);
+        if (damaged && !isAlive() && getWorld() instanceof ServerWorld world
+                && player instanceof net.minecraft.server.network.ServerPlayerEntity serverPlayer) {
+            io.github.itsdropper.thewatcher.WatcherRunManager.onWatcherDefeated(world, serverPlayer);
+        }
+        return damaged;
     }
 
     public void setNaturalRunEntity(boolean naturalRunEntity) {
@@ -124,6 +137,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         hiddenMoveCooldown = Math.max(0, hiddenMoveCooldown - tickScale);
         proximityCorrectionCooldown = Math.max(0, proximityCorrectionCooldown - tickScale);
         dreadEffectCooldown = Math.max(0, dreadEffectCooldown - tickScale);
+        ambushCooldown = Math.max(0, ambushCooldown - tickScale);
+        closeJumpscareCooldown = Math.max(0, closeJumpscareCooldown - tickScale);
 
         long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
         boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
@@ -246,6 +261,40 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 }
             }
             case STALKING -> {
+                // Rare close ambush: it only happens after the player has lost sight of the Watcher.
+                // A safe position behind the player creates a deliberate jump scare instead of a random teleport.
+                if (ambushCooldown <= 0 && unseenTicks >= 80 && distance >= 7.0D && distance <= 22.0D
+                        && random.nextInt(100) < 2 && tryAmbushLunge(world, player)) {
+                    ambushCooldown = 1_200 + random.nextInt(1_201);
+                    closeJumpscareCooldown = Math.max(closeJumpscareCooldown, 100);
+                    phase = Phase.ESCALATING;
+                    phaseTicks = 0;
+                    attemptedEscalationAttack = false;
+                    player.addStatusEffect(new StatusEffectInstance(
+                            StatusEffects.DARKNESS, 45, 0, false, false, true));
+                    player.addStatusEffect(new StatusEffectInstance(
+                            StatusEffects.SLOWNESS, 35, 0, false, false, true));
+                    world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_ENDERMAN_SCREAM,
+                            SoundCategory.HOSTILE, 0.95F, 0.65F + random.nextFloat() * 0.25F);
+                    world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                            SoundCategory.HOSTILE, 0.75F, 0.7F);
+                    return;
+                }
+
+                // A second scare style: a brief, close-range blackout and an abrupt sound cue.
+                if (closeJumpscareCooldown <= 0 && unseenTicks >= 40 && distance < 11.0D
+                        && random.nextInt(100) < 3) {
+                    closeJumpscareCooldown = 900 + random.nextInt(901);
+                    player.addStatusEffect(new StatusEffectInstance(
+                            StatusEffects.DARKNESS, 25 + random.nextInt(25), 0, false, false, true));
+                    world.playSound(null, player.getBlockPos(),
+                            random.nextBoolean() ? SoundEvents.ENTITY_ENDERMAN_STARE : SoundEvents.ENTITY_GHAST_WARN,
+                            SoundCategory.HOSTILE, 0.8F, 0.55F + random.nextFloat() * 0.35F);
+                    if (distance < 5.0D) {
+                        player.damage(world.getDamageSources().mobAttack(this), 2.0F);
+                    }
+                }
+
                 // Stillness is part of the scare, but the Watcher keeps its distance first.
                 if (!tooCloseForPhase || proximityRelocated) {
                     getNavigation().stop();
@@ -431,6 +480,55 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         requestTeleport(bestX + 0.5D, bestY, bestZ + 0.5D);
         getNavigation().stop();
         return true;
+    }
+
+    /**
+     * Moves the Watcher behind an unwary player for a rare ambush.
+     * The destination must be loaded, safe, and outside the player's current view cone.
+     */
+    private boolean tryAmbushLunge(ServerWorld world, PlayerEntity player) {
+        if (isWithinPlayerView(player)) return false;
+        Vec3d look = player.getRotationVec(1.0F).normalize();
+        double side = random.nextBoolean() ? 0.65D : -0.65D;
+        int x = (int) Math.floor(player.getX() - look.x * (3.2D + random.nextDouble() * 1.4D)
+                - look.z * side);
+        int z = (int) Math.floor(player.getZ() - look.z * (3.2D + random.nextDouble() * 1.4D)
+                + look.x * side);
+        if (!world.isChunkLoaded(x >> 4, z >> 4)) return false;
+        int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+        BlockPos feet = new BlockPos(x, y, z);
+        BlockPos ground = feet.down();
+        if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                || isUnsafeGround(world.getBlockState(ground))
+                || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
+                || !world.getBlockState(feet).getFluidState().isEmpty()
+                || !world.getBlockState(feet.up()).getFluidState().isEmpty()) {
+            return false;
+        }
+        Vec3d eyes = new Vec3d(x + 0.5D, y + 1.4D, z + 0.5D);
+        Vec3d direction = eyes.subtract(player.getEyePos()).normalize();
+        if (player.getRotationVec(1.0F).normalize().dotProduct(direction) > 0.0D) return false;
+        if (!world.isSpaceEmpty(this, getBoundingBox().offset(
+                x + 0.5D - getX(), y - getY(), z + 0.5D - getZ()))) return false;
+        requestTeleport(x + 0.5D, y, z + 0.5D);
+        getNavigation().stop();
+        lookAtPlayer(player);
+        return true;
+    }
+
+    private boolean hasAllEvidence(PlayerEntity player) {
+        boolean tower = false, cabin = false, shrine = false, expedition = false;
+        for (int slot = 0; slot < player.getInventory().size(); slot++) {
+            ItemStack stack = player.getInventory().getStack(slot);
+            if (stack.isEmpty() || !stack.isOf(net.minecraft.item.Items.PAPER)) continue;
+            String name = stack.getName().getString();
+            tower |= name.equals("Evidence: Tower");
+            cabin |= name.equals("Evidence: Cabin");
+            shrine |= name.equals("Evidence: Shrine");
+            expedition |= name.equals("Evidence: Expedition");
+        }
+        return tower && cabin && shrine && expedition;
     }
 
     private boolean isUnsafeGround(net.minecraft.block.BlockState state) {
