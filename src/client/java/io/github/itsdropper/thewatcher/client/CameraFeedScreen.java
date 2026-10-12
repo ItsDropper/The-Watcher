@@ -108,8 +108,6 @@ public final class CameraFeedScreen extends Screen {
         viewEntity.setHeadYaw(yaw);
         viewEntity.prevYaw = yaw;
         viewEntity.prevPitch = clampedPitch;
-        viewEntity.prevBodyYaw = yaw;
-        viewEntity.prevHeadYaw = yaw;
     }
 
     @Override
