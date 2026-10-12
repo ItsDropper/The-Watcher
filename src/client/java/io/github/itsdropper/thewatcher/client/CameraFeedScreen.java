@@ -103,12 +103,15 @@ public final class CameraFeedScreen extends Screen {
 
     private void setViewRotation(float yaw, float pitch) {
         float clampedPitch = MathHelper.clamp(pitch, -89.0F, 89.0F);
-        viewEntity.setYaw(yaw);
-        viewEntity.setPitch(clampedPitch);
+        // Set the entity's rotation as one operation and synchronize interpolation values.
+        // Updating only yaw/pitch can be overwritten by camera interpolation on some mappings.
+        viewEntity.setRotation(yaw, clampedPitch);
         viewEntity.setBodyYaw(yaw);
         viewEntity.setHeadYaw(yaw);
         viewEntity.prevYaw = yaw;
         viewEntity.prevPitch = clampedPitch;
+        viewEntity.prevBodyYaw = yaw;
+        viewEntity.prevHeadYaw = yaw;
     }
 
     @Override
