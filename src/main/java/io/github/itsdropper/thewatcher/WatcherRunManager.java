@@ -312,6 +312,31 @@ public final class WatcherRunManager {
         }
     }
 
+    /**
+     * The Watcher can only be killed after the player has collected evidence from all four sites.
+     * This ends the run as a victory instead of triggering the timed failure ending.
+     */
+    public static void onWatcherDefeated(ServerWorld world, ServerPlayerEntity player) {
+        RunState run = RUNS.get(world);
+        if (run == null || run.ended) return;
+
+        run.ended = true;
+        run.revealed = false;
+        run.naturalWatcherUuid = null;
+        saveRun(world, run);
+        ENDINGS.remove(world);
+        broadcastEndingMusic(world, false);
+        for (ServerPlayerEntity participant : world.getPlayers()) {
+            participant.sendMessage(Text.literal(
+                    participant.getUuid().equals(player.getUuid())
+                            ? "THE WATCHER IS DEAD. The evidence was real. You survived."
+                            : player.getName().getString() + " destroyed The Watcher. This run is over."),
+                    false);
+        }
+        TheWatcher.LOGGER.info("The Watcher was defeated by {} after the evidence objective was completed.",
+                player.getName().getString());
+    }
+
     private static void endRun(ServerWorld world, RunState run) {
         run.ended = true;
         saveRun(world, run);
