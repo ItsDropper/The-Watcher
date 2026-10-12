@@ -166,9 +166,15 @@ public final class WatcherRunManager {
         int bestZ = 0;
         boolean found = false;
 
-        for (int attempt = 0; attempt < 64; attempt++) {
+        int renderChunks = io.github.itsdropper.thewatcher.entity.WatcherStalkingDirector
+                .renderDistanceChunks(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
+        double maxRevealRadius = Math.min(112.0D, Math.max(48.0D, renderChunks * 16.0D - 16.0D));
+        double minRevealRadius = Math.min(64.0D, maxRevealRadius);
+
+        for (int attempt = 0; attempt < 96; attempt++) {
             double angle = world.random.nextDouble() * Math.PI * 2.0D;
-            double radius = 32.0D + world.random.nextDouble() * 24.0D;
+            double radius = minRevealRadius
+                    + world.random.nextDouble() * (maxRevealRadius - minRevealRadius);
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
             if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
