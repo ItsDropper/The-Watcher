@@ -11,7 +11,7 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - During observing, The Watcher wanders around nearby surveillance cameras instead of standing still. It walks away if it gets too close; it can teleport only during stalking, and only while outside your view or hidden by solid cover. The first reveal now starts farther away, scaled to render distance. Stalking teleports are silent; the goal is a silhouette you can actually spot, not an entity permanently at the render edge.
 - Render distance is sampled continuously, so changing Minecraft's video setting takes effect without reopening The Watcher Settings. `/watcher debug status` reports the current stalking distance band.
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
-- Retreating is deliberately abrupt: while unseen, it can jump to a covered position; while visible, it sprints away instead of teleporting.
+- Retreating is physical movement: it runs away instead of teleporting. Teleport relocation is exclusive to stalking.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
 - Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
 - Close encounters can trigger randomized cave ambience, an Enderman-like stare cue, and short Darkness bursts instead of constant predictable effects.
