@@ -16,6 +16,7 @@ public final class CameraAlertHud {
     private static int alertTicks;
     private static int scanCooldown;
     private static boolean detectedLastScan;
+    private static boolean signalLost;
 
     private CameraAlertHud() {
     }
@@ -33,6 +34,9 @@ public final class CameraAlertHud {
                 scanCooldown = 10;
                 boolean detected = cameraSeesWatcher(client);
                 if (detected && !detectedLastScan) {
+                    signalLost = client.world.random.nextInt(5) == 0;
+                }
+                if (detected || detectedLastScan) {
                     alertTicks = 70;
                 }
                 detectedLastScan = detected;
@@ -49,7 +53,8 @@ public final class CameraAlertHud {
             drawContext.fill(x, y + 2, x + 1, y + 39, 0xFFFF3535);
             drawContext.drawText(client.textRenderer, Text.literal("CAMERA NETWORK"),
                     x + 8, y + 7, 0xFFB9C7D8, false);
-            drawContext.drawText(client.textRenderer, Text.literal("MOVEMENT DETECTED"),
+            drawContext.drawText(client.textRenderer,
+                    Text.literal(signalLost ? "SIGNAL LOST" : "MOVEMENT DETECTED"),
                     x + 8, y + 21, 0xFFFF5555, true);
         });
     }
