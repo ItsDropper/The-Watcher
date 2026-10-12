@@ -8,12 +8,20 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.WorldSavePath;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
@@ -35,16 +43,22 @@ public final class WatcherRunManager {
 
         RunState run = RUNS.get(world);
         if (run == null) {
-            // The world-creation toggle applies to the next Overworld that starts ticking.
-            if (!WatcherWorldOptions.WATCHER_MODE_ENABLED) {
-                return;
+            if (WatcherWorldOptions.WATCHER_MODE_ENABLED) {
+                // The world-creation toggle applies to the next Overworld that starts ticking.
+                run = new RunState(world.getTime(), WatcherWorldOptions.getRunLengthHours(),
+                        world.random.nextInt(6_001) + 3_600L);
+                run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
+                WatcherTowerGenerator.resetForRun();
+                RUNS.put(world, run);
+                WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
+                saveRun(world, run);
+            } else {
+                run = loadRun(world);
+                if (run == null) {
+                    return;
+                }
+                RUNS.put(world, run);
             }
-            run = new RunState(world.getTime(), WatcherWorldOptions.getRunLengthHours(),
-                    world.random.nextInt(6_001) + 3_600L);
-            run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
-            WatcherTowerGenerator.resetForRun();
-            RUNS.put(world, run);
-            WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
         }
 
         if (run.ended) {
@@ -60,11 +74,15 @@ public final class WatcherRunManager {
         if (world.getTime() % 20L == 0L) {
             samplePlayers(world, run);
         }
+        if (world.getTime() % 1_200L == 0L) {
+            saveRun(world, run);
+        }
 
         if (world.getTime() >= run.nextTowerAt) {
             ServerPlayerEntity explorer = choosePlayer(world, run);
             if (explorer != null && WatcherTowerGenerator.tryGenerate(world, explorer)) {
                 run.nextTowerAt = world.getTime() + world.random.nextInt(18_001) + 18_000L;
+                saveRun(world, run);
             } else {
                 run.nextTowerAt = world.getTime() + 6_000L;
             }
@@ -77,6 +95,7 @@ public final class WatcherRunManager {
                 for (ServerPlayerEntity participant : world.getPlayers()) {
                     participant.sendMessage(Text.literal("Watcher joined the game"), false);
                 }
+                saveRun(world, run);
             }
         }
     }
@@ -165,6 +184,7 @@ public final class WatcherRunManager {
 
     private static void endRun(ServerWorld world, RunState run) {
         run.ended = true;
+        saveRun(world, run);
         if (run.naturalWatcherUuid != null) {
             net.minecraft.entity.Entity entity = world.getEntity(run.naturalWatcherUuid);
             if (entity != null) {
@@ -173,6 +193,75 @@ public final class WatcherRunManager {
         }
         for (ServerPlayerEntity player : world.getPlayers()) {
             player.sendMessage(Text.literal("The Watcher has gone quiet. This run is over."), false);
+        }
+    }
+
+    private static Path runFile(ServerWorld world) {
+        return world.getServer().getSavePath(WorldSavePath.ROOT).resolve("the-watcher-run.properties");
+    }
+
+    private static RunState loadRun(ServerWorld world) {
+        Path file = runFile(world);
+        if (!Files.isRegularFile(file)) {
+            return null;
+        }
+
+        Properties properties = new Properties();
+        try (var reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            properties.load(reader);
+            long startedAt = Long.parseLong(properties.getProperty("startedAt"));
+            int runLengthHours = Integer.parseInt(properties.getProperty("runLengthHours"));
+            long revealDelayTicks = Long.parseLong(properties.getProperty("revealDelayTicks"));
+            RunState run = new RunState(startedAt, runLengthHours, revealDelayTicks);
+            run.nextTowerAt = Long.parseLong(properties.getProperty("nextTowerAt",
+                    Long.toString(world.getTime() + 6_000L)));
+            run.revealed = Boolean.parseBoolean(properties.getProperty("revealed", "false"));
+            run.ended = Boolean.parseBoolean(properties.getProperty("ended", "false"));
+            String watcherUuid = properties.getProperty("naturalWatcherUuid", "");
+            if (!watcherUuid.isBlank()) {
+                run.naturalWatcherUuid = UUID.fromString(watcherUuid);
+            }
+
+            Set<Long> regions = new HashSet<>();
+            String regionList = properties.getProperty("towerRegions", "");
+            if (!regionList.isBlank()) {
+                for (String value : regionList.split(",")) {
+                    try {
+                        regions.add(Long.parseLong(value));
+                    } catch (NumberFormatException ignored) {
+                        // Ignore a single malformed region entry rather than losing the run.
+                    }
+                }
+            }
+            WatcherTowerGenerator.restoreBuiltRegions(regions);
+            return run;
+        } catch (IOException | IllegalArgumentException exception) {
+            TheWatcher.LOGGER.warn("Could not load Watcher run state from {}", file, exception);
+            return null;
+        }
+    }
+
+    private static void saveRun(ServerWorld world, RunState run) {
+        Path file = runFile(world);
+        Properties properties = new Properties();
+        properties.setProperty("startedAt", Long.toString(run.startedAt));
+        properties.setProperty("runLengthHours", Integer.toString(run.runLengthHours));
+        properties.setProperty("revealDelayTicks", Long.toString(run.revealDelayTicks));
+        properties.setProperty("nextTowerAt", Long.toString(run.nextTowerAt));
+        properties.setProperty("revealed", Boolean.toString(run.revealed));
+        properties.setProperty("ended", Boolean.toString(run.ended));
+        properties.setProperty("naturalWatcherUuid",
+                run.naturalWatcherUuid == null ? "" : run.naturalWatcherUuid.toString());
+        properties.setProperty("towerRegions", WatcherTowerGenerator.snapshotBuiltRegions().stream()
+                .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
+
+        try {
+            Files.createDirectories(file.getParent());
+            try (var writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+                properties.store(writer, "The Watcher run state");
+            }
+        } catch (IOException exception) {
+            TheWatcher.LOGGER.warn("Could not save Watcher run state to {}", file, exception);
         }
     }
 
