@@ -123,3 +123,14 @@ A run begins with a randomized hidden-learning period. No natural Watcher entity
 During a run, the mod guarantees a watchtower, abandoned cabin, ritual shrine, and ruined expedition camp near world spawn when safe placement is available. Each site has a distinct book and supplies. Additional structures can appear as players explore; guaranteed placements retry when terrain or region conflicts prevent placement.
 
 This progression is still under active development. The adaptive model now tracks gaze timing, movement speed, sprinting, stationary behavior, typical height, and repeated close encounters. World-generation integration and in-game behavior still need gameplay verification.
+
+
+## Experimental world hosting
+
+The multiplayer screen and pause menu now include **Watcher Host / Host / Join World**. The host opens the single-player world to LAN and creates an invite; guests paste that invite and the mod connects them through a local loopback proxy.
+
+- The optional relay service lives in [`hosting/relay`](hosting/relay) and uses in-memory room state only; it has no database.
+- Relay transport requires TLS/WSS. The invite's 256-bit encryption secret is kept client-side and is not sent to the relay. Tunnel data uses AES-GCM with directional, per-channel keys and authenticated sequence numbers.
+- The relay has bounded message sizes, connection/room limits, rate limits, slow-peer handling, and automated protocol tests.
+- **A public relay has not been deployed by this repository.** To use hosting over the internet, configure the Hosting screen with a trusted WSS relay you operate. See [hosting deployment and security notes](hosting/README.md).
+- This is an early implementation, not yet security-audited or verified in a real two-player session. Do not treat a successful build as proof that internet hosting works on every network. The normal dedicated-server path remains independent of the relay.
