@@ -66,7 +66,7 @@ public final class CameraFeedScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         // The 3D world is rendered by Minecraft from the virtual camera entity behind this
-        // overlay. Avoid renderBackground(), which blurs the live view in vanilla screens.
+        // overlay. renderBackground() is disabled below to keep the feed sharp.
         context.fill(0, 0, width, 42, 0xFF0A0D12);
         context.fill(0, height - 40, width, height, 0xFF0A0D12);
         context.drawText(textRenderer, "LIVE FEED  /  CAM " + cameraPos.getX() + " "
@@ -74,6 +74,11 @@ public final class CameraFeedScreen extends Screen {
         context.drawText(textRenderer, "W/S: tilt   A/D: pan   ESC: return to network",
                 12, 25, 0xFFE4EAF2, false);
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Do not apply vanilla menu blur to the live camera view.
     }
 
     @Override
