@@ -1,0 +1,110 @@
+{
+  "credit": "The Watcher - original surveillance camera model",
+  "ambientocclusion": true,
+  "textures": {
+    "metal": "minecraft:block/iron_block",
+    "dark": "minecraft:block/deepslate_tiles",
+    "mount": "minecraft:block/polished_blackstone",
+    "lens": "minecraft:block/redstone_block",
+    "indicator": "minecraft:block/redstone_lamp",
+    "particle": "minecraft:block/iron_block"
+  },
+  "elements": [
+    {
+      "from": [2, 5, 3],
+      "to": [14, 13, 13],
+      "faces": {
+        "north": { "texture": "#dark" },
+        "east": { "texture": "#metal" },
+        "south": { "texture": "#metal" },
+        "west": { "texture": "#metal" },
+        "up": { "texture": "#metal" },
+        "down": { "texture": "#dark" }
+      }
+    },
+    {
+      "from": [4, 7, 1],
+      "to": [12, 11, 4],
+      "faces": {
+        "north": { "texture": "#dark" },
+        "east": { "texture": "#dark" },
+        "south": { "texture": "#dark" },
+        "west": { "texture": "#dark" },
+        "up": { "texture": "#dark" },
+        "down": { "texture": "#dark" }
+      }
+    },
+    {
+      "from": [6, 7, 0],
+      "to": [10, 11, 2],
+      "faces": {
+        "north": { "texture": "#lens" },
+        "east": { "texture": "#dark" },
+        "south": { "texture": "#dark" },
+        "west": { "texture": "#dark" },
+        "up": { "texture": "#dark" },
+        "down": { "texture": "#dark" }
+      }
+    },
+    {
+      "from": [7, 8, 0],
+      "to": [9, 10, 0.5],
+      "faces": {
+        "north": { "texture": "#indicator" },
+        "east": { "texture": "#lens" },
+        "south": { "texture": "#lens" },
+        "west": { "texture": "#lens" },
+        "up": { "texture": "#lens" },
+        "down": { "texture": "#lens" }
+      }
+    },
+    {
+      "from": [5, 2, 6],
+      "to": [11, 5, 10],
+      "faces": {
+        "north": { "texture": "#mount" },
+        "east": { "texture": "#mount" },
+        "south": { "texture": "#mount" },
+        "west": { "texture": "#mount" },
+        "up": { "texture": "#dark" },
+        "down": { "texture": "#mount" }
+      }
+    },
+    {
+      "from": [6, 0, 7],
+      "to": [10, 2, 9],
+      "faces": {
+        "north": { "texture": "#mount" },
+        "east": { "texture": "#mount" },
+        "south": { "texture": "#mount" },
+        "west": { "texture": "#mount" },
+        "up": { "texture": "#dark" },
+        "down": { "texture": "#mount" }
+      }
+    },
+    {
+      "from": [3, 6, 5],
+      "to": [4, 12, 7],
+      "faces": {
+        "north": { "texture": "#mount" },
+        "east": { "texture": "#indicator" },
+        "south": { "texture": "#mount" },
+        "west": { "texture": "#mount" },
+        "up": { "texture": "#mount" },
+        "down": { "texture": "#mount" }
+      }
+    },
+    {
+      "from": [12, 6, 5],
+      "to": [13, 12, 7],
+      "faces": {
+        "north": { "texture": "#mount" },
+        "east": { "texture": "#mount" },
+        "south": { "texture": "#mount" },
+        "west": { "texture": "#indicator" },
+        "up": { "texture": "#mount" },
+        "down": { "texture": "#mount" }
+      }
+    }
+  ]
+}
