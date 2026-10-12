@@ -25,18 +25,27 @@ public final class CameraMonitorScreen extends Screen {
     private List<CameraStatus> cameras = List.of();
 
     public CameraMonitorScreen() {
-        super(Text.literal("Camera Monitor"));
+        super(Text.literal("Camera Network"));
     }
 
     @Override
     protected void init() {
         refreshCameras();
         int centerX = width / 2;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), button -> {
-            refreshCameras();
-        }).dimensions(centerX - 104, height - 34, 100, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Refresh"), button -> refreshCameras())
+                .dimensions(centerX - 104, height - 32, 100, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("Close"), button -> close())
-                .dimensions(centerX + 4, height - 34, 100, 20).build());
+                .dimensions(centerX + 4, height - 32, 100, 20).build());
+
+        int shown = Math.min(MAX_VISIBLE_CAMERAS, cameras.size());
+        int panelWidth = Math.min(620, width - 20);
+        int left = (width - panelWidth) / 2;
+        for (int i = 0; i < shown; i++) {
+            CameraStatus camera = cameras.get(i);
+            int rowY = 82 + i * 29;
+            addDrawableChild(ButtonWidget.builder(Text.literal("VIEW"), button -> openFeed(camera.pos()))
+                    .dimensions(left + panelWidth - 66, rowY, 52, 20).build());
+        }
     }
 
     private void refreshCameras() {
@@ -67,6 +76,13 @@ public final class CameraMonitorScreen extends Screen {
         cameras = List.copyOf(found);
     }
 
+    private void openFeed(BlockPos pos) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null || client.player == null) return;
+        CameraFeedScreen feed = CameraFeedScreen.open(pos, this);
+        if (feed != null) client.setScreen(feed);
+    }
+
     private static CameraStatus readStatus(MinecraftClient client, SurveillanceCameraBlockEntity camera) {
         BlockPos pos = camera.getPos();
         Vec3d origin = Vec3d.ofCenter(pos).add(0.0D, 0.51D, 0.0D);
@@ -87,48 +103,55 @@ public final class CameraMonitorScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
+        // Keep the game sharp and running behind the overlay. Screen.renderBackground()
+        // invokes Minecraft's blurred menu background in this version, so do not call it.
+        context.fill(0, 0, width, height, 0x50000000);
         int centerX = width / 2;
-        int panelWidth = Math.min(340, width - 20);
+        int panelWidth = Math.min(620, width - 20);
         int left = centerX - panelWidth / 2;
         int top = 22;
-        int bottom = height - 44;
+        int bottom = height - 40;
 
-        context.fill(left, top, left + panelWidth, bottom, 0xE810141B);
+        context.fill(left, top, left + panelWidth, bottom, 0xF010141B);
         context.fill(left, top, left + panelWidth, top + 2, 0xFFFF3535);
         context.drawCenteredTextWithShadow(textRenderer, "CAMERA NETWORK", centerX, top + 12, 0xFFE4EAF2);
         context.drawCenteredTextWithShadow(textRenderer,
-                "Loaded cameras near your current area", centerX, top + 27, 0xFF8795A7);
+                "Nearby loaded cameras • select VIEW for a live feed", centerX, top + 28, 0xFF9BA8B8);
 
         if (cameras.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "NO CAMERAS FOUND", centerX, top + 58, 0xFFFF7777);
+            context.drawCenteredTextWithShadow(textRenderer, "NO CAMERAS FOUND", centerX, top + 60, 0xFFFF7777);
             context.drawCenteredTextWithShadow(textRenderer,
-                    "Place a camera or move closer to one.", centerX, top + 74, 0xFFB6BEC9);
+                    "Place a camera or move closer to one.", centerX, top + 77, 0xFFB6BEC9);
         } else {
             int shown = Math.min(MAX_VISIBLE_CAMERAS, cameras.size());
             for (int i = 0; i < shown; i++) {
                 CameraStatus camera = cameras.get(i);
-                int rowY = top + 46 + i * 23;
-                context.fill(left + 10, rowY - 3, left + panelWidth - 10, rowY + 17, 0xA0262B33);
-                context.drawTextWithShadow(textRenderer, String.format(java.util.Locale.ROOT,
-                        "CAM-%02d", i + 1), left + 17, rowY + 2, 0xFFB9C7D8);
-                context.drawTextWithShadow(textRenderer,
+                int rowY = 82 + i * 29;
+                context.fill(left + 10, rowY - 4, left + panelWidth - 10, rowY + 23, 0xFF222831);
+                context.drawText(textRenderer, String.format(java.util.Locale.ROOT, "CAM-%02d", i + 1),
+                        left + 18, rowY + 3, 0xFFE4EAF2, false);
+                context.drawText(textRenderer,
                         camera.pos().getX() + ", " + camera.pos().getY() + ", " + camera.pos().getZ(),
-                        left + 72, rowY + 2, 0xFF9BA8B8);
-                String status = camera.detected() ? "MOTION DETECTED" : "NO CONTACT";
+                        left + 94, rowY + 3, 0xFF9BA8B8, false);
+                String status = camera.detected() ? "WATCHER IN VIEW" : "NO CONTACT";
                 int color = camera.detected() ? 0xFFFF5555 : 0xFF76D6A0;
-                int statusWidth = textRenderer.getWidth(status);
-                context.drawTextWithShadow(textRenderer, status,
-                        left + panelWidth - 17 - statusWidth, rowY + 2, color);
+                context.drawText(textRenderer, status,
+                        left + panelWidth - 160 - textRenderer.getWidth(status), rowY + 3, color, false);
             }
             if (cameras.size() > MAX_VISIBLE_CAMERAS) {
                 context.drawCenteredTextWithShadow(textRenderer,
-                        "+" + (cameras.size() - MAX_VISIBLE_CAMERAS) + " more loaded cameras; move closer to view them",
+                        "+" + (cameras.size() - MAX_VISIBLE_CAMERAS)
+                                + " more loaded cameras; move closer to view them",
                         centerX, bottom - 17, 0xFF9BA8B8);
             }
         }
 
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean shouldPause() {
+        return false;
     }
 
     @Override
