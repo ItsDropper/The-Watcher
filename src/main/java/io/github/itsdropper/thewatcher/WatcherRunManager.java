@@ -52,7 +52,7 @@ public final class WatcherRunManager {
                 run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
                 WatcherTowerGenerator.resetForRun();
                 // Prepare the guaranteed tower during run initialization, before exploration.
-                WatcherTowerGenerator.generateGuaranteedSpawnTower(world);
+                WatcherTowerGenerator.generateGuaranteedStructures(world);
                 RUNS.put(world, run);
                 CHECKED_WORLDS.add(world);
                 WatcherWorldOptions.WATCHER_MODE_ENABLED = false;
@@ -66,9 +66,9 @@ public final class WatcherRunManager {
                     return;
                 }
                 RUNS.put(world, run);
-                if (!run.ended && WatcherTowerGenerator.snapshotBuiltRegions().isEmpty()) {
-                    // Upgrade older active saves that began before spawn towers existed.
-                    WatcherTowerGenerator.generateGuaranteedSpawnTower(world);
+                if (!run.ended && WatcherTowerGenerator.snapshotGuaranteedStructuresMask() != 15) {
+                    // Older runs and failed placements are upgraded/retried instead of remaining incomplete.
+                    WatcherTowerGenerator.generateGuaranteedStructures(world);
                     saveRun(world, run);
                 }
             }
@@ -84,8 +84,13 @@ public final class WatcherRunManager {
             return;
         }
 
-        if (WatcherTowerGenerator.snapshotBuiltRegions().isEmpty() && world.getTime() % 1_200L == 0L) {
-            if (WatcherTowerGenerator.generateGuaranteedSpawnTower(world)) saveRun(world, run);
+        if (WatcherTowerGenerator.snapshotGuaranteedStructuresMask() != 15
+                && world.getTime() % 1_200L == 0L) {
+            if (WatcherTowerGenerator.generateGuaranteedStructures(world)) saveRun(world, run);
+        }
+
+        if (run.revealed && world.getTime() % 20L == 0L) {
+            ensureWatcherPresent(world, run);
         }
         WatcherOllamaDirector.tick(world, run.revealed);
 
@@ -157,7 +162,7 @@ public final class WatcherRunManager {
     private static boolean spawnFirstReveal(ServerWorld world, ServerPlayerEntity player, RunState run) {
         for (int attempt = 0; attempt < 48; attempt++) {
             double angle = world.random.nextDouble() * Math.PI * 2.0D;
-            double radius = 42.0D + world.random.nextDouble() * 34.0D;
+            double radius = 32.0D + world.random.nextDouble() * 24.0D;
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
@@ -197,6 +202,61 @@ public final class WatcherRunManager {
     public static boolean shouldDiscardNaturalEntity(ServerWorld world) {
         RunState run = RUNS.get(world);
         return run != null && run.ended;
+    }
+
+    public static boolean shouldDiscardNaturalEntity(ServerWorld world, UUID entityUuid) {
+        RunState run = RUNS.get(world);
+        if (run == null) {
+            return false;
+        }
+        return run.ended || (run.revealed && run.naturalWatcherUuid != null
+                && !run.naturalWatcherUuid.equals(entityUuid));
+    }
+
+    /**
+     * Once the first reveal has happened, a missing Watcher gets ten seconds to
+     * reappear naturally. If it is still gone, recreate it near a player without
+     * repeating the initial join announcement.
+     */
+    private static void ensureWatcherPresent(ServerWorld world, RunState run) {
+        if (run.naturalWatcherUuid != null) {
+            net.minecraft.entity.Entity tracked = world.getEntity(run.naturalWatcherUuid);
+            if (tracked instanceof WatcherEntity watcher && !watcher.isRemoved()) {
+                run.missingWatcherSince = -1L;
+                return;
+            }
+        }
+
+        // Adopt an already-loaded natural Watcher before creating another one.
+        for (ServerPlayerEntity participant : world.getPlayers()) {
+            if (!participant.isAlive() || participant.isSpectator()) continue;
+            List<WatcherEntity> nearby = world.getEntitiesByClass(WatcherEntity.class,
+                    participant.getBoundingBox().expand(256.0D), WatcherEntity::isNaturalRunEntity);
+            if (!nearby.isEmpty()) {
+                WatcherEntity existing = nearby.get(0);
+                run.naturalWatcherUuid = existing.getUuid();
+                run.missingWatcherSince = -1L;
+                return;
+            }
+        }
+
+        if (run.missingWatcherSince < 0L) {
+            run.missingWatcherSince = world.getTime();
+            return;
+        }
+        if (world.getTime() - run.missingWatcherSince < 200L) {
+            return;
+        }
+
+        ServerPlayerEntity target = choosePlayer(world, run);
+        if (target != null && spawnFirstReveal(world, target, run)) {
+            run.missingWatcherSince = -1L;
+            saveRun(world, run);
+            TheWatcher.LOGGER.info("Respawned the natural Watcher after it was absent for ten seconds.");
+        } else {
+            // Retry soon if terrain or loaded chunks prevented a safe replacement.
+            run.missingWatcherSince = world.getTime() - 180L;
+        }
     }
 
     private static void endRun(ServerWorld world, RunState run) {
@@ -251,6 +311,8 @@ public final class WatcherRunManager {
                 }
             }
             WatcherTowerGenerator.restoreBuiltRegions(regions);
+            WatcherTowerGenerator.restoreGuaranteedStructuresMask(
+                    Integer.parseInt(properties.getProperty("guaranteedStructures", "0")));
             return run;
         } catch (IOException | IllegalArgumentException exception) {
             TheWatcher.LOGGER.warn("Could not load Watcher run state from {}", file, exception);
@@ -269,6 +331,8 @@ public final class WatcherRunManager {
         properties.setProperty("ended", Boolean.toString(run.ended));
         properties.setProperty("naturalWatcherUuid",
                 run.naturalWatcherUuid == null ? "" : run.naturalWatcherUuid.toString());
+        properties.setProperty("guaranteedStructures",
+                Integer.toString(WatcherTowerGenerator.snapshotGuaranteedStructuresMask()));
         properties.setProperty("towerRegions", WatcherTowerGenerator.snapshotBuiltRegions().stream()
                 .map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
 
@@ -297,6 +361,7 @@ public final class WatcherRunManager {
         private UUID naturalWatcherUuid;
         private boolean revealed;
         private boolean ended;
+        private long missingWatcherSince = -1L;
 
         private RunState(long startedAt, int runLengthHours, long revealDelayTicks) {
             this.startedAt = startedAt;
