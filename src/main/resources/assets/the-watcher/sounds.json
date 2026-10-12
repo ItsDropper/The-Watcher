@@ -1,0 +1,10 @@
+{
+  "ending_theme": {
+    "sounds": [
+      {
+        "name": "the-watcher:ending_theme",
+        "stream": true
+      }
+    ]
+  }
+}
