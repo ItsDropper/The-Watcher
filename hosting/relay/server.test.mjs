@@ -11,6 +11,15 @@ test("relay refuses to start without TLS credentials", () => {
   assert.throws(() => createRelayServer(), /TLS certificate and private key are required/);
 });
 
+test("allows HTTP only when explicitly configured behind a TLS-terminating platform", async t => {
+  const relay = createRelayServer({ trustProxyTls: true, logger: { warn() {} } });
+  const address = await relay.listen(0, "127.0.0.1");
+  t.after(async () => relay.close());
+  const response = await fetch(`http://127.0.0.1:${address.port}/health`);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "ok\\n");
+});
+
 test("accepts only a well-formed authenticated-control envelope", () => {
   const open = Buffer.alloc(37);
   open.writeUInt8(1, 0);
