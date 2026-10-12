@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "the-watcher:block/surveillance_camera" },
+    "facing=east": { "model": "the-watcher:block/surveillance_camera", "y": 90 },
+    "facing=south": { "model": "the-watcher:block/surveillance_camera", "y": 180 },
+    "facing=west": { "model": "the-watcher:block/surveillance_camera", "y": 270 }
+  }
+}
