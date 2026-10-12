@@ -230,7 +230,8 @@ public final class HostingTunnelService {
                         onReadyMessage(message);
                     } else {
                         onControlMessage(message);
-                    }                }
+                    }
+                }
             }
             socket.request(1);
             return CompletableFuture.completedFuture(null);
