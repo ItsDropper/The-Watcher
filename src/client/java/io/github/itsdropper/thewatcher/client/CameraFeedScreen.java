@@ -93,15 +93,37 @@ public final class CameraFeedScreen extends Screen {
         if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_D)) yaw += turn;
         if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_W)) pitch -= 1.8F;
         if (InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_S)) pitch += 1.8F;
+        setViewRotation(yaw, pitch);
+    }
+
+    private void setViewRotation(float yaw, float pitch) {
+        float clampedPitch = MathHelper.clamp(pitch, -89.0F, 89.0F);
         viewEntity.setYaw(yaw);
-        viewEntity.setPitch(MathHelper.clamp(pitch, -89.0F, 89.0F));
+        viewEntity.setPitch(clampedPitch);
+        // Keep interpolation history in sync so the rendered camera responds immediately.
+        viewEntity.prevYaw = yaw;
+        viewEntity.prevPitch = clampedPitch;
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        if (!Double.isNaN(lastMouseX) && !Double.isNaN(lastMouseY)) {
+            double deltaX = mouseX - lastMouseX;
+            double deltaY = mouseY - lastMouseY;
+            setViewRotation(
+                    viewEntity.getYaw() - (float) deltaX * 0.45F,
+                    viewEntity.getPitch() - (float) deltaY * 0.45F);
+        }
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        super.mouseMoved(mouseX, mouseY);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        viewEntity.setYaw(viewEntity.getYaw() - (float) deltaX * 0.45F);
-        viewEntity.setPitch(MathHelper.clamp(
-                viewEntity.getPitch() - (float) deltaY * 0.45F, -89.0F, 89.0F));
+        setViewRotation(
+                viewEntity.getYaw() - (float) deltaX * 0.45F,
+                viewEntity.getPitch() - (float) deltaY * 0.45F);
         lastMouseX = mouseX;
         lastMouseY = mouseY;
         return true;
