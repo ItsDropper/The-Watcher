@@ -72,6 +72,7 @@ public class TheWatcher implements ModInitializer {
         LOGGER.info("Surveillance camera block and item registered.");
         FabricDefaultAttributeRegistry.register(WATCHER, WatcherEntity.createWatcherAttributes());
         WatcherCommands.register();
+        CameraNetwork.registerServer();
         ServerTickEvents.END_WORLD_TICK.register(TheWatcher::applyNightDarkness);
         ServerTickEvents.END_WORLD_TICK.register(WatcherRunManager::tick);
         LOGGER.info("The Watcher entity and debug commands registered.");
