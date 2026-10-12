@@ -151,7 +151,22 @@ public final class WatcherAtmosphereDirector {
             return;
         }
 
-        if (event < 91 && dark && state.events > 1) {
+        if (event < 86) {
+            // A door-like sound comes from an unhelpful direction, never from a tracked entity.
+            Vec3d look = player.getRotationVec(1.0F).normalize();
+            double side = world.random.nextBoolean() ? 1.0D : -1.0D;
+            BlockPos soundPos = BlockPos.ofFloored(
+                    player.getX() - look.x * (6.0D + world.random.nextDouble() * 7.0D)
+                            - look.z * side * 4.0D,
+                    player.getY(),
+                    player.getZ() - look.z * (6.0D + world.random.nextDouble() * 7.0D)
+                            + look.x * side * 4.0D);
+            world.playSound(null, soundPos, SoundEvents.BLOCK_WOODEN_DOOR_CLOSE,
+                    SoundCategory.AMBIENT, 0.18F, 0.72F + world.random.nextFloat() * 0.28F);
+            return;
+        }
+
+        if (event < 94 && dark && state.events > 1) {
             // A very short blackout, only after the run has established its atmosphere.
             player.addStatusEffect(new StatusEffectInstance(
                     StatusEffects.DARKNESS, 14 + world.random.nextInt(10), 0, true, false, false));
