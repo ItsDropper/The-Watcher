@@ -106,22 +106,22 @@ public final class CameraMonitorScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         // Keep the game sharp and running behind the overlay. Screen.renderBackground()
         // invokes Minecraft's blurred menu background in this version, so do not call it.
-        context.fill(0, 0, width, height, 0x50000000);
+        context.fill(0, 0, width, height, 0xB0000000);
         int centerX = width / 2;
         int panelWidth = Math.min(620, width - 20);
         int left = centerX - panelWidth / 2;
         int top = 22;
         int bottom = height - 40;
 
-        context.fill(left, top, left + panelWidth, bottom, 0xF010141B);
+        context.fill(left, top, left + panelWidth, bottom, 0xFF10141B);
         context.fill(left, top, left + panelWidth, top + 2, 0xFFFF3535);
-        context.drawCenteredTextWithShadow(textRenderer, "CAMERA NETWORK", centerX, top + 12, 0xFFE4EAF2);
-        context.drawCenteredTextWithShadow(textRenderer,
+        context.drawCenteredText(textRenderer, "CAMERA NETWORK", centerX, top + 12, 0xFFE4EAF2);
+        context.drawCenteredText(textRenderer,
                 "Nearby loaded cameras • select VIEW for a live feed", centerX, top + 28, 0xFF9BA8B8);
 
         if (cameras.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "NO CAMERAS FOUND", centerX, top + 60, 0xFFFF7777);
-            context.drawCenteredTextWithShadow(textRenderer,
+            context.drawCenteredText(textRenderer, "NO CAMERAS FOUND", centerX, top + 60, 0xFFFF7777);
+            context.drawCenteredText(textRenderer,
                     "Place a camera or move closer to one.", centerX, top + 77, 0xFFB6BEC9);
         } else {
             int shown = Math.min(MAX_VISIBLE_CAMERAS, cameras.size());
@@ -140,7 +140,7 @@ public final class CameraMonitorScreen extends Screen {
                         left + panelWidth - 160 - textRenderer.getWidth(status), rowY + 3, color, false);
             }
             if (cameras.size() > MAX_VISIBLE_CAMERAS) {
-                context.drawCenteredTextWithShadow(textRenderer,
+                context.drawCenteredText(textRenderer,
                         "+" + (cameras.size() - MAX_VISIBLE_CAMERAS)
                                 + " more loaded cameras; move closer to view them",
                         centerX, bottom - 17, 0xFF9BA8B8);
