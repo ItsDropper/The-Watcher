@@ -18,6 +18,7 @@ import java.util.UUID;
 
 public final class CameraNetwork {
     private static final Map<UUID, FeedSession> SESSIONS = new HashMap<>();
+    private static final Map<String, Integer> CHUNK_REFERENCES = new HashMap<>();
     private static final Set<String> FORCED_BY_US = new HashSet<>();
 
     private CameraNetwork() {
@@ -32,7 +33,9 @@ public final class CameraNetwork {
     }
 
     public static void sendEndingMusic(ServerPlayerEntity player, boolean playing) {
-        ServerPlayNetworking.send(player, new EndingMusicPayload(playing));
+        if (ServerPlayNetworking.canSend(player, EndingMusicPayload.ID)) {
+            ServerPlayNetworking.send(player, new EndingMusicPayload(playing));
+        }
     }
 
     public record EndingMusicPayload(boolean playing) implements net.minecraft.network.packet.CustomPayload {
@@ -54,36 +57,32 @@ public final class CameraNetwork {
         ServerPlayNetworking.registerGlobalReceiver(CameraFeedOpenPayload.ID, (payload, context) ->
                 context.server().execute(() -> beginFeed(context.player(), payload.pos())));
         ServerPlayNetworking.registerGlobalReceiver(CameraFeedClosePayload.ID, (payload, context) ->
-                context.server().execute(() -> endFeed(context.player())));
+                context.server().execute(() -> endFeed(context.player(), true)));
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 server.execute(() -> WatcherRunManager.syncEndingMusic(handler.player)));
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                server.execute(() -> endFeed(handler.player)));
+                server.execute(() -> endFeed(handler.player, false)));
     }
 
     private static void beginFeed(ServerPlayerEntity player, BlockPos pos) {
-        endFeed(player);
+        endFeed(player, true);
         ServerWorld world = player.getServerWorld();
         if (!CameraRegistry.getCameras(world).contains(pos)
                 || !world.getBlockState(pos).isOf(TheWatcher.SURVEILLANCE_CAMERA)) return;
 
+        ChunkPos center = new ChunkPos(pos);
         FeedSession session = new FeedSession(world, player.getX(), player.getY(), player.getZ(),
-                player.getYaw(), player.getPitch(), player.getVelocity(), player.isInvulnerable(), player.hasNoGravity());
+                player.getYaw(), player.getPitch(), player.getVelocity(), player.isInvulnerable(),
+                player.hasNoGravity(), center.x, center.z);
         SESSIONS.put(player.getUuid(), session);
         player.setInvulnerable(true);
         player.setNoGravity(true);
 
-        ChunkPos center = new ChunkPos(pos);
         for (int x = center.x - 2; x <= center.x + 2; x++) {
             for (int z = center.z - 2; z <= center.z + 2; z++) {
-                ChunkPos chunk = new ChunkPos(x, z);
-                String key = world.getRegistryKey().getValue() + "|" + chunk.toLong();
-                if (!world.getForcedChunks().contains(chunk.toLong())) {
-                    world.setChunkForced(x, z, true);
-                    FORCED_BY_US.add(key);
-                }
+                acquireChunk(world, x, z);
             }
         }
 
@@ -99,19 +98,52 @@ public final class CameraNetwork {
         player.velocityModified = true;
     }
 
-    private static void endFeed(ServerPlayerEntity player) {
+    private static void acquireChunk(ServerWorld world, int x, int z) {
+        ChunkPos chunk = new ChunkPos(x, z);
+        long packed = chunk.toLong();
+        String key = chunkKey(world, packed);
+        int references = CHUNK_REFERENCES.getOrDefault(key, 0);
+        CHUNK_REFERENCES.put(key, references + 1);
+        if (references == 0 && !world.getForcedChunks().contains(packed)) {
+            world.setChunkForced(x, z, true);
+            FORCED_BY_US.add(key);
+        }
+    }
+
+    private static void releaseChunk(ServerWorld world, int x, int z) {
+        ChunkPos chunk = new ChunkPos(x, z);
+        long packed = chunk.toLong();
+        String key = chunkKey(world, packed);
+        Integer references = CHUNK_REFERENCES.get(key);
+        if (references == null) return;
+        if (references > 1) {
+            CHUNK_REFERENCES.put(key, references - 1);
+            return;
+        }
+
+        CHUNK_REFERENCES.remove(key);
+        if (FORCED_BY_US.remove(key) && world.getForcedChunks().contains(packed)) {
+            world.setChunkForced(x, z, false);
+        }
+    }
+
+    private static String chunkKey(ServerWorld world, long packedChunk) {
+        return world.getRegistryKey().getValue() + "|" + packedChunk;
+    }
+
+    private static void endFeed(ServerPlayerEntity player, boolean restorePlayer) {
         FeedSession session = SESSIONS.remove(player.getUuid());
         if (session == null) return;
 
-        ChunkPos center = new ChunkPos(player.getBlockPos());
-        for (int x = center.x - 2; x <= center.x + 2; x++) {
-            for (int z = center.z - 2; z <= center.z + 2; z++) {
-                ChunkPos chunk = new ChunkPos(x, z);
-                String key = player.getServerWorld().getRegistryKey().getValue() + "|" + chunk.toLong();
-                if (FORCED_BY_US.remove(key)) player.getServerWorld().setChunkForced(x, z, false);
+        ServerWorld cameraWorld = session.world();
+        for (int x = session.cameraChunkX() - 2; x <= session.cameraChunkX() + 2; x++) {
+            for (int z = session.cameraChunkZ() - 2; z <= session.cameraChunkZ() + 2; z++) {
+                releaseChunk(cameraWorld, x, z);
             }
         }
 
+        // A disconnected player must not be teleported or have state mutated after logout.
+        if (!restorePlayer || player.getServer() == null) return;
         player.teleport(session.world(), session.x(), session.y(), session.z(), session.yaw(), session.pitch());
         player.setVelocity(session.velocity());
         player.velocityModified = true;
@@ -120,6 +152,7 @@ public final class CameraNetwork {
     }
 
     private record FeedSession(ServerWorld world, double x, double y, double z, float yaw, float pitch,
-                               Vec3d velocity, boolean wasInvulnerable, boolean hadNoGravity) {
+                               Vec3d velocity, boolean wasInvulnerable, boolean hadNoGravity,
+                               int cameraChunkX, int cameraChunkZ) {
     }
 }
