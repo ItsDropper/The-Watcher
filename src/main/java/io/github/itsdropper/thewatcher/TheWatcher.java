@@ -74,26 +74,8 @@ public class TheWatcher implements ModInitializer {
         WatcherCommands.register();
         CameraNetwork.registerPayloads();
         CameraNetwork.registerServer();
-        ServerTickEvents.END_WORLD_TICK.register(TheWatcher::applyNightDarkness);
         ServerTickEvents.END_WORLD_TICK.register(WatcherRunManager::tick);
         LOGGER.info("The Watcher entity and debug commands registered.");
-    }
-
-    private static void applyNightDarkness(ServerWorld world) {
-        if (!NIGHT_DARKNESS_ENABLED || world.getRegistryKey() != World.OVERWORLD) {
-            return;
-        }
-
-        long timeOfDay = Math.floorMod(world.getTimeOfDay(), 24000L);
-        boolean night = timeOfDay >= 13000L && timeOfDay < 23000L;
-        if (!night || world.getTime() % 240L != 0L) {
-            return;
-        }
-
-        for (var player : world.getPlayers()) {
-            player.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.DARKNESS, 35, 0, true, false, false));
-        }
     }
 
     public static Identifier id(String path) {
