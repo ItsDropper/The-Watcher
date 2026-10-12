@@ -5,7 +5,8 @@
   "mixins": [],
   "client": [
     "client.GameMenuScreenMixin",
-    "client.ScreenAccessor"
+    "client.ScreenAccessor",
+    "client.CreateWorldScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
