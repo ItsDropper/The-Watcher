@@ -39,10 +39,26 @@ public final class WatcherStalkingDirector {
         return distance < minimumStalkingDistance(configuredChunks);
     }
 
+    /**
+     * Limit learned outward movement to the available distance before the render edge.
+     * This keeps the learning model from requesting destinations that are unlikely to be loaded.
+     */
+    public static double clampLearnedOffset(int configuredChunks, double requestedOffset) {
+        double renderBlocks = renderDistanceBlocks(configuredChunks);
+        double baseMaximum = maximumStalkingDistance(configuredChunks);
+        double availableOffset = Math.max(0.0D, renderBlocks - 2.0D - baseMaximum);
+        return Math.max(0.0D, Math.min(Math.min(12.0D, availableOffset), requestedOffset));
+    }
+
     public static double candidateRadius(int configuredChunks, double unitSample) {
+        return candidateRadius(configuredChunks, unitSample, 0.0D);
+    }
+
+    public static double candidateRadius(int configuredChunks, double unitSample, double learnedOffset) {
         double sample = Math.max(0.0D, Math.min(0.999999D, unitSample));
-        double min = minimumStalkingDistance(configuredChunks);
-        double max = maximumStalkingDistance(configuredChunks);
+        double offset = clampLearnedOffset(configuredChunks, learnedOffset);
+        double min = minimumStalkingDistance(configuredChunks) + offset;
+        double max = maximumStalkingDistance(configuredChunks) + offset;
         return min + (max - min) * sample;
     }
 
