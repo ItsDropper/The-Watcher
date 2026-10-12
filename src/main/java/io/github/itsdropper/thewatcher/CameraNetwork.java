@@ -56,6 +56,9 @@ public final class CameraNetwork {
         ServerPlayNetworking.registerGlobalReceiver(CameraFeedClosePayload.ID, (payload, context) ->
                 context.server().execute(() -> endFeed(context.player())));
 
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                server.execute(() -> WatcherRunManager.syncEndingMusic(handler.player)));
+
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 server.execute(() -> endFeed(handler.player)));
     }
