@@ -36,10 +36,11 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: spawn | status | structures | despawn | simulate [stop] | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
+                                    "Watcher debug: spawn | status | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
                                     false);
                             return 1;
                         })
+                        .then(literal("ending").executes(context -> triggerEnding(context.getSource())))
                         .then(literal("spawn").executes(context -> spawnWatcher(context.getSource())))
                         .then(literal("status").executes(context -> showStatus(context.getSource())))
                         .then(literal("structures").executes(context -> showStructures(context.getSource())))
@@ -60,6 +61,14 @@ public final class WatcherCommands {
                         .then(literal("darkness")
                                 .then(literal("on").executes(context -> setDarkness(context.getSource(), true)))
                                 .then(literal("off").executes(context -> setDarkness(context.getSource(), false))))));
+    }
+
+    private static int triggerEnding(ServerCommandSource source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        io.github.itsdropper.thewatcher.WatcherRunManager.startDebugEnding((ServerWorld) source.getWorld(), player);
+        source.sendFeedback(() -> Text.literal("Ending triggered. Survive the pursuit."), false);
+        return 1;
     }
 
     private static int spawnWatcher(ServerCommandSource source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
