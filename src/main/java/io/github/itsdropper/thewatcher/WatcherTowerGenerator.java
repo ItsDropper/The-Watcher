@@ -110,8 +110,9 @@ public final class WatcherTowerGenerator {
                 for (int dy = 1; dy <= 9; dy++) {
                     boolean wall = Math.abs(dx) == 4 || Math.abs(dz) == 4;
                     if (!wall) continue;
-                    boolean windowGap = (dy == 4 || dy == 7)
-                            && ((dx == 0 && Math.abs(dz) == 4) || (dz == 0 && Math.abs(dx) == 4));
+                    boolean doorway = dz == -4 && dx == 0 && dy <= 2;
+                    boolean windowGap = doorway || ((dy == 4 || dy == 7)
+                            && ((dx == 0 && Math.abs(dz) == 4) || (dz == 0 && Math.abs(dx) == 4)));
                     if (!windowGap) {
                         BlockState material = ((dx + dz + dy) % 5 == 0) ? weathered : stone;
                         world.setBlockState(new BlockPos(x0 + dx, y0 + dy, z0 + dz), material, 3);
