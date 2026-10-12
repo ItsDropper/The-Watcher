@@ -115,14 +115,15 @@ public final class CameraMonitorScreen extends Screen {
 
         context.fill(left, top, left + panelWidth, bottom, 0xFF10141B);
         context.fill(left, top, left + panelWidth, top + 2, 0xFFFF3535);
-        context.drawCenteredText(textRenderer, "CAMERA NETWORK", centerX, top + 12, 0xFFE4EAF2);
-        context.drawCenteredText(textRenderer,
-                "Nearby loaded cameras • select VIEW for a live feed", centerX, top + 28, 0xFF9BA8B8);
+        context.drawText(textRenderer, "CAMERA NETWORK", centerX - textRenderer.getWidth("CAMERA NETWORK") / 2, top + 12, 0xFFE4EAF2, false);
+        String subtitle = "Nearby loaded cameras • select VIEW for a live feed";
+        context.drawText(textRenderer, subtitle, centerX - textRenderer.getWidth(subtitle) / 2, top + 28, 0xFF9BA8B8, false);
 
         if (cameras.isEmpty()) {
-            context.drawCenteredText(textRenderer, "NO CAMERAS FOUND", centerX, top + 60, 0xFFFF7777);
-            context.drawCenteredText(textRenderer,
-                    "Place a camera or move closer to one.", centerX, top + 77, 0xFFB6BEC9);
+            String emptyTitle = "NO CAMERAS FOUND";
+            context.drawText(textRenderer, emptyTitle, centerX - textRenderer.getWidth(emptyTitle) / 2, top + 60, 0xFFFF7777, false);
+            String emptyHint = "Place a camera or move closer to one.";
+            context.drawText(textRenderer, emptyHint, centerX - textRenderer.getWidth(emptyHint) / 2, top + 77, 0xFFB6BEC9, false);
         } else {
             int shown = Math.min(MAX_VISIBLE_CAMERAS, cameras.size());
             for (int i = 0; i < shown; i++) {
@@ -140,10 +141,10 @@ public final class CameraMonitorScreen extends Screen {
                         left + panelWidth - 160 - textRenderer.getWidth(status), rowY + 3, color, false);
             }
             if (cameras.size() > MAX_VISIBLE_CAMERAS) {
-                context.drawCenteredText(textRenderer,
-                        "+" + (cameras.size() - MAX_VISIBLE_CAMERAS)
-                                + " more loaded cameras; move closer to view them",
-                        centerX, bottom - 17, 0xFF9BA8B8);
+                String moreCameras = "+" + (cameras.size() - MAX_VISIBLE_CAMERAS)
+                        + " more loaded cameras; move closer to view them";
+                context.drawText(textRenderer, moreCameras,
+                        centerX - textRenderer.getWidth(moreCameras) / 2, bottom - 17, 0xFF9BA8B8, false);
             }
         }
 
