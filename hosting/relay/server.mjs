@@ -111,10 +111,9 @@ export function createRelayServer({ cert, key, logger = console } = {}) {
     for (const [channelId, owner] of room.channels) {
       if (owner === guest) {
         room.channels.delete(channelId);
-        const closeFrame = Buffer.alloc(5);
-        closeFrame.writeUInt8(3, 0);
-        closeFrame.writeUInt32BE(channelId, 1);
-        safeSend(room.host, closeFrame);
+        // This is a relay transport notification, not an authenticated tunnel frame.
+        // It can close one channel but cannot forge or decrypt game traffic.
+        safeSend(room.host, JSON.stringify({ type: "channel-closed", channelId }));
       }
     }
   }
