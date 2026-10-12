@@ -2,6 +2,7 @@ package io.github.itsdropper.thewatcher.entity;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.entity.player.PlayerEntity;
+import java.util.Properties;
 
 /**
  * A small, deterministic, offline learning model for the Watcher.
@@ -205,4 +206,62 @@ public final class WatcherLearningEngine {
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
     }
+    public void writeToProperties(Properties properties, String prefix) {
+        properties.setProperty(prefix + "averageWatchedTicks", Double.toString(averageWatchedTicks));
+        properties.setProperty(prefix + "averageUnwatchedTicks", Double.toString(averageUnwatchedTicks));
+        properties.setProperty(prefix + "averagePlayerDistance", Double.toString(averagePlayerDistance));
+        properties.setProperty(prefix + "proximityPressure", Double.toString(proximityPressure));
+        properties.setProperty(prefix + "currentRunTicks", Integer.toString(currentRunTicks));
+        properties.setProperty(prefix + "observedTicks", Long.toString(observedTicks));
+        properties.setProperty(prefix + "hasPreviousState", Boolean.toString(hasPreviousState));
+        properties.setProperty(prefix + "previousWatched", Boolean.toString(previousWatched));
+        properties.setProperty(prefix + "averageHorizontalSpeed", Double.toString(averageHorizontalSpeed));
+        properties.setProperty(prefix + "averageStationaryTicks", Double.toString(averageStationaryTicks));
+        properties.setProperty(prefix + "averageSprintRatio", Double.toString(averageSprintRatio));
+        properties.setProperty(prefix + "averagePlayerHeight", Double.toString(averagePlayerHeight));
+        properties.setProperty(prefix + "currentStationaryTicks", Integer.toString(currentStationaryTicks));
+    }
+
+    public void readFromProperties(Properties properties, String prefix) {
+        averageWatchedTicks = readDouble(properties, prefix + "averageWatchedTicks", averageWatchedTicks, 1.0D, MAX_RUN_TICKS);
+        averageUnwatchedTicks = readDouble(properties, prefix + "averageUnwatchedTicks", averageUnwatchedTicks, 1.0D, MAX_RUN_TICKS);
+        averagePlayerDistance = readDouble(properties, prefix + "averagePlayerDistance", averagePlayerDistance, 0.0D, 512.0D);
+        proximityPressure = readDouble(properties, prefix + "proximityPressure", proximityPressure, 0.0D, 1.0D);
+        currentRunTicks = readInt(properties, prefix + "currentRunTicks", currentRunTicks, 0, MAX_RUN_TICKS);
+        observedTicks = readLong(properties, prefix + "observedTicks", observedTicks, 0L, Long.MAX_VALUE);
+        hasPreviousState = Boolean.parseBoolean(properties.getProperty(prefix + "hasPreviousState",
+                Boolean.toString(hasPreviousState)));
+        previousWatched = Boolean.parseBoolean(properties.getProperty(prefix + "previousWatched",
+                Boolean.toString(previousWatched)));
+        averageHorizontalSpeed = readDouble(properties, prefix + "averageHorizontalSpeed", averageHorizontalSpeed, 0.0D, 1.5D);
+        averageStationaryTicks = readDouble(properties, prefix + "averageStationaryTicks", averageStationaryTicks, 0.0D, 1200.0D);
+        averageSprintRatio = readDouble(properties, prefix + "averageSprintRatio", averageSprintRatio, 0.0D, 1.0D);
+        averagePlayerHeight = readDouble(properties, prefix + "averagePlayerHeight", averagePlayerHeight, -64.0D, 320.0D);
+        currentStationaryTicks = readInt(properties, prefix + "currentStationaryTicks", currentStationaryTicks, 0, 1200);
+    }
+
+    private static double readDouble(Properties properties, String key, double fallback, double min, double max) {
+        try {
+            return clamp(Double.parseDouble(properties.getProperty(key, Double.toString(fallback))), min, max);
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    private static int readInt(Properties properties, String key, int fallback, int min, int max) {
+        try {
+            return Math.max(min, Math.min(max, Integer.parseInt(properties.getProperty(key, Integer.toString(fallback)))));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    private static long readLong(Properties properties, String key, long fallback, long min, long max) {
+        try {
+            return Math.max(min, Math.min(max, Long.parseLong(properties.getProperty(key, Long.toString(fallback)))));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
 }
