@@ -28,8 +28,8 @@ Place the **Surveillance Camera** block from the Redstone creative tab, or use `
 - Cameras check all directions within 48 blocks; a clear line of sight to The Watcher triggers a top-right camera-network alert without revealing the entity's coordinates.
 - A small chance of signal interference replaces the motion warning with **SIGNAL LOST**.
 - Cameras can be crafted with 4 iron ingots, 2 redstone dust, and 1 spyglass. They can also appear as loot in the chests of the custom watchtower, abandoned cabin, ritual shrine, and ruined camp.
-- The Watcher can destroy a camera if it gets within roughly three blocks, so a camera network provides information, not protection.
-- Press **V** (rebindable in Options → Controls) to open the **Camera Network** menu. The sharp, non-pausing overlay lists cameras in currently loaded chunks near you, their coordinates, and detection status.
+- Placed cameras persist with their saved chunks and The Watcher no longer destroys them. Players can still break and pick them up normally.
+- Press **V** (rebindable in Options → Controls) to open the **Camera Network** menu. The sharp, non-pausing overlay lists cameras found in currently loaded chunks within roughly 96 blocks, with coordinates and detection status. After teleporting back, let the area load and press **Refresh** if needed.
 - Select **VIEW** beside a camera to open its live rendered viewpoint. Use **W/S** to tilt and **A/D** to pan; **Esc** returns to the network. The feed uses already-loaded world chunks, so cameras outside loaded areas are not remotely streamed. Recording history is not implemented.
 
 ## Debug commands
