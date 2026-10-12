@@ -36,7 +36,7 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: spawn | status | despawn | simulate [stop] | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
+                                    "Watcher debug: spawn | status | structures | despawn | simulate [stop] | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
                                     false);
                             return 1;
                         })
@@ -136,7 +136,7 @@ public final class WatcherCommands {
                                                int key, String name) {
         BlockPos pos = positions.get(key);
         if (pos != null) {
-            result.append("\\n").append(name).append(": ")
+            result.append("\n").append(name).append(": ")
                     .append(pos.getX()).append(", ").append(pos.getY()).append(", ").append(pos.getZ());
         }
     }
