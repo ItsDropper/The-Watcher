@@ -1,0 +1,17 @@
+{
+  "name": "the-watcher-hosting-relay",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Optional TLS WebSocket relay for The Watcher peer-hosting tunnel",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "ws": "8.18.3"
+  }
+}
