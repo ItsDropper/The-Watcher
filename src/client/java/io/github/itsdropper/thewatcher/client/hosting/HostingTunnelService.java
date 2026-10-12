@@ -106,7 +106,7 @@ public final class HostingTunnelService {
     }
 
     public static final class HostSession implements TunnelSession {
-        private final String inviteCode;
+        private String inviteCode;
         private final String room;
         private final byte[] secret;
         private final int localPort;
@@ -126,11 +126,16 @@ public final class HostingTunnelService {
             return endpoint.connect(relayUri);
         }
 
-        public String inviteCode() { return inviteCode; }
+        public synchronized String inviteCode() {
+            String code = inviteCode;
+            inviteCode = null;
+            return code;
+        }
 
         @Override public void close() {
             endpoint.close();
             java.util.Arrays.fill(secret, (byte) 0);
+            inviteCode = null;
         }
     }
 
