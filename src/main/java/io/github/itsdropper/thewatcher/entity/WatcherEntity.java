@@ -148,14 +148,16 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         boolean watched = isPlayerWatching(player);
         double distance = Math.sqrt(squaredDistanceTo(player));
         learningEngine.observe(watched, distance);
+        learningEngine.observePlayerBehavior(player);
         // The simulation deliberately starts close and visible; normal gameplay still enforces distance in OBSERVING.
         boolean distanceSensitivePhase = phase == Phase.STALKING
                 || (phase == Phase.OBSERVING && !debugSimulation);
         if (distanceSensitivePhase) {
             learningEngine.observeStalkingDistance(distance, renderChunks);
         }
-        double minimumSafeDistance = WatcherStalkingDirector.minimumStalkingDistance(renderChunks)
-                + learningEngine.getLearnedSafetyDistanceBonus(renderChunks);
+        double minimumSafeDistance = Math.max(26.0D,
+                WatcherStalkingDirector.minimumStalkingDistance(renderChunks)
+                        - learningEngine.getLearnedApproachBonus());
         boolean tooCloseForPhase = distanceSensitivePhase && distance < minimumSafeDistance;
         boolean proximityRelocated = false;
 
@@ -225,7 +227,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     moveAwayFrom(player, 1.8D);
                 }
 
-                int baseTeleportChance = 24;
+                int baseTeleportChance = 32;
                 int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
                 boolean relocationRoll = random.nextInt(100) < teleportChance;
                 if (!tooCloseForPhase && TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
@@ -306,19 +308,22 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         int attempts = 72;
         int renderChunks = WatcherStalkingDirector.renderDistanceChunks(
                 TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
-        int renderBlocks = (int) WatcherStalkingDirector.renderDistanceBlocks(renderChunks);
+        double bestScore = -Double.MAX_VALUE;
+        int bestX = 0;
+        int bestY = 0;
+        int bestZ = 0;
+        boolean found = false;
+
         for (int i = 0; i < attempts; i++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
             double radius;
             if (retreat) {
-                // Retreats leave the immediate area, but do not use the extreme stalking ring.
-                radius = Math.max(32.0D, Math.min(64.0D,
-                        WatcherStalkingDirector.minimumStalkingDistance(renderChunks) * 0.38D))
-                        + random.nextDouble() * 12.0D;
+                radius = Math.max(30.0D, Math.min(52.0D,
+                        WatcherStalkingDirector.minimumStalkingDistance(renderChunks) * 0.72D))
+                        + random.nextDouble() * 10.0D;
             } else {
-                // Relocate just inside the render edge, with a narrow distance band for distant sightings.
                 radius = WatcherStalkingDirector.candidateRadius(renderChunks, random.nextDouble(),
-                        learningEngine.getLearnedSafetyDistanceBonus(renderChunks));
+                        -learningEngine.getLearnedApproachBonus());
             }
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
@@ -340,8 +345,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 continue;
             }
 
-            // Validate the entity's complete collision box at the destination, not only
-            // the two blocks at its feet. This rejects overhangs and narrow spaces.
             double offsetX = x + 0.5D - getX();
             double offsetY = y - getY();
             double offsetZ = z + 0.5D - getZ();
@@ -357,17 +360,51 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             Vec3d destinationDirection = destinationEyes.subtract(player.getEyePos()).normalize();
             boolean destinationInView = player.getRotationVec(1.0F).normalize()
                     .dotProduct(destinationDirection) > 0.15D;
-            // A destination may be visible from the player's current position only if solid cover hides it.
             if (sightCheck.getType() == BlockHitResult.Type.MISS && destinationInView) {
                 continue;
             }
 
-            requestTeleport(x + 0.5D, y, z + 0.5D);
-            getNavigation().stop();
-            return true;
+            // Retreats should be immediate. Stalking relocations compare every safe
+            // candidate and favor ridgelines, hilltops, and positions above the player.
+            if (retreat) {
+                requestTeleport(x + 0.5D, y, z + 0.5D);
+                getNavigation().stop();
+                return true;
+            }
+
+            double elevation = Math.max(-16.0D, Math.min(24.0D, y - player.getY()));
+            int surroundingHeight = 0;
+            int heightSamples = 0;
+            int[][] sampleOffsets = {{8, 0}, {-8, 0}, {0, 8}, {0, -8}};
+            for (int[] sampleOffset : sampleOffsets) {
+                int sx = x + sampleOffset[0];
+                int sz = z + sampleOffset[1];
+                if (world.isChunkLoaded(sx >> 4, sz >> 4)) {
+                    surroundingHeight += world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, sx, sz);
+                    heightSamples++;
+                }
+            }
+            double prominence = heightSamples == 0 ? 0.0D
+                    : y - (surroundingHeight / (double) heightSamples);
+            double learnedHeightBias = Math.max(-6.0D, Math.min(6.0D,
+                    (y - learningEngine.getAveragePlayerHeight()) * 0.15D));
+            double score = elevation * 0.8D + prominence * 1.6D + learnedHeightBias
+                    + random.nextDouble() * 4.0D;
+            if (score > bestScore) {
+                bestScore = score;
+                bestX = x;
+                bestY = y;
+                bestZ = z;
+                found = true;
+            }
         }
 
-        return false;
+        if (!found) {
+            return false;
+        }
+        requestTeleport(bestX + 0.5D, bestY, bestZ + 0.5D);
+        getNavigation().stop();
+        return true;
     }
 
     private boolean isUnsafeGround(net.minecraft.block.BlockState state) {
