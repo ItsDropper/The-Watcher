@@ -574,6 +574,14 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return debugSimulation;
     }
 
+    public double getLearnedSafetyDistanceBonus(int renderChunks) {
+        return learningEngine.getLearnedSafetyDistanceBonus(renderChunks);
+    }
+
+    public double getProximityPressure() {
+        return learningEngine.getProximityPressure();
+    }
+
     public void forceDebugPhase(Phase newPhase, PlayerEntity player) {
         if (newPhase == null || player == null) {
             return;
