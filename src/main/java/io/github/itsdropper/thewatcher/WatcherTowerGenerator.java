@@ -387,17 +387,25 @@ public final class WatcherTowerGenerator {
                     .with(net.minecraft.block.LadderBlock.FACING, Direction.SOUTH), 3);
         }
 
-        // Interior furnishings and the same lore chest, now tucked against a wall.
+        // A lived-in lookout: charting table, supply barrel, and a light that feels too cold.
+        world.setBlockState(new BlockPos(x0 - 2, y0 + 1, z0 - 2), net.minecraft.block.Blocks.CARTOGRAPHY_TABLE.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x0 - 2, y0 + 1, z0 + 2), net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x0, y0 + 7, z0), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x0 + 3, y0 + 7, z0 + 3), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x0 - 3, y0 + 7, z0 - 3), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+
+        // Interior furnishings and lore chest, tucked against a wall.
         BlockPos chestPos = new BlockPos(x0 + 2, y0 + 1, z0 + 2);
         world.setBlockState(chestPos, net.minecraft.block.Blocks.CHEST.getDefaultState()
                 .with(ChestBlock.FACING, Direction.NORTH), 3);
         if (world.getBlockEntity(chestPos) instanceof ChestBlockEntity chest) {
             ItemStack logbook = new ItemStack(Items.WRITABLE_BOOK);
             logbook.set(DataComponentTypes.WRITABLE_BOOK_CONTENT, new WritableBookContentComponent(List.of(
-                    RawFilteredPair.of("We built this tower after the first night. The tracks below it stopped at the tree line, though none of us heard anyone approach."),
-                    RawFilteredPair.of("It does not hunt like an animal. It watches until you begin to expect it. Then it changes where it stands. Never trust a place just because it was empty a moment ago."),
-                    RawFilteredPair.of("We called it the Watcher. We do not know whether it came with this forest or learned to imitate the people who lived here before us. It remembers where we look."),
-                    RawFilteredPair.of("If the message says it has joined the game, do not assume it has only just arrived. Keep this tower in mind. We left what we could spare. - M.")
+                    RawFilteredPair.of("FIELD REPORT 01 — The tower was built after the first night. Tracks crossed the clearing and stopped at the wall. No tracks led away. The door was barred from inside."),
+                    RawFilteredPair.of("We tried keeping watch in pairs. Whoever stared into the trees saw nothing. Whoever looked down to write found a figure standing closer when they looked up. It never crossed the open ground."),
+                    RawFilteredPair.of("It repeats small things: a footstep after yours, a knock from the wrong side of a door, a voice saying a name nobody used aloud. Do not answer a voice you cannot see."),
+                    RawFilteredPair.of("At 03:17, every camera showed the same empty corridor. The monitor in the locked room showed all four of us standing behind the operator. There were only three of us on shift."),
+                    RawFilteredPair.of("If you found this tower, take the supplies. Do not sleep here. The top floor is not safer; it only gives you fewer directions to look. — M.")
             )));
             chest.setStack(0, logbook);
 
@@ -448,13 +456,20 @@ public final class WatcherTowerGenerator {
         }
         world.setBlockState(new BlockPos(x - 2, y + 1, z - 2),
                 net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
-        world.setBlockState(new BlockPos(x + 3, y + 1, z + 2),
-                net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 1, z + 2), net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        // Signs of a hurried retreat: a cold hearth, boarded sightlines, and a place set for nobody.
+        world.setBlockState(new BlockPos(x, y + 1, z), net.minecraft.block.Blocks.CAMPFIRE.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 3, y + 1, z - 3), net.minecraft.block.Blocks.CAULDRON.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 1, z - 3), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 3, y + 1, z + 3), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 3, z - 4), net.minecraft.block.Blocks.DARK_OAK_TRAPDOOR.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 2, y + 3, z - 4), net.minecraft.block.Blocks.DARK_OAK_TRAPDOOR.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 1, y + 1, z + 1), net.minecraft.block.Blocks.SPRUCE_STAIRS.getDefaultState(), 3);
         placeLoreChest(world, new BlockPos(x + 2, y + 1, z + 2), Direction.NORTH, List.of(
-                "The cabin was empty when I found it. The fire was cold, but there were fresh footprints around the bed. They stopped at the wall.",
-                "I watched the tree line until sunrise. It never moved while I looked directly at it. When I checked the window again, the glass was on the floor and the door was open.",
-                "I have started counting the footsteps outside. There are always two more than the number I hear.",
-                "If you found this, do not sleep here. It knows this place better than you do. - E."
+                "E.'s journal — Entry 1. I found the cabin with smoke still in the chimney and nobody inside. One bowl was warm. There were wet footprints around the table, but the floorboards beyond the door were dry.",
+                "Entry 2. I nailed planks over the windows. In the morning, the nails were still in the wood, but the boards had been fitted from the outside. I live alone. I have never owned a second hammer.",
+                "Entry 3. Three knocks came from beneath the floor. I moved the bed and found no cellar. The knocks followed me to the other side of the room, always from below my feet.",
+                "Last entry. I heard my brother call from the woods. He has been dead for nine years. The voice asked me to open the door so it could stop standing in the rain. The rain had not started yet. Do not stay here."
         ));
     }
 
@@ -485,11 +500,18 @@ public final class WatcherTowerGenerator {
         world.setBlockState(new BlockPos(x, y + 2, z), net.minecraft.block.Blocks.BLACK_CANDLE.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x - 1, y + 1, z), mossy, 3);
         world.setBlockState(new BlockPos(x + 1, y + 1, z), mossy, 3);
+        // Deliberate asymmetry: the fourth corner is missing, but its chain still hangs.
+        world.setBlockState(new BlockPos(x - 3, y + 1, z), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 1, z), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 2, y + 1, z - 2), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 1, z - 2), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x, y + 1, z - 3), net.minecraft.block.Blocks.BLACK_CANDLE.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x, y + 1, z + 3), net.minecraft.block.Blocks.BLACK_CANDLE.getDefaultState(), 3);
         placeLoreChest(world, new BlockPos(x, y + 1, z + 2), Direction.SOUTH, List.of(
-                "Fragment 1: We thought it was a spirit. We built a place for it and left offerings so it would stay away from our homes.",
-                "Fragment 2: The offerings were untouched. The next night, every candle was burning, though no one had lit them.",
-                "Fragment 3: It does not want food. It wants witnesses. Each person who sees it makes the silence around it feel more complete.",
-                "Fragment 4: We are dismantling the shrine. If the Watcher appears between the pillars, do not count them. There are never the same number twice."
+                "ARCHIVE FRAGMENT A. We built the shrine after the same dream reached seven houses in one night. Everyone described a person standing just beyond the doorway. Nobody described a face.",
+                "FRAGMENT B. The offerings remained untouched. We began leaving written names instead. The next morning, every name had been crossed out except those of people who had not yet been born.",
+                "FRAGMENT C. We tried counting the pillars to prove the dream was only a dream. At dusk there were four. At dawn, five shadows crossed the floor, though the fifth pillar had no body and cast no shadow of its own.",
+                "FINAL FRAGMENT. Pull down the shrine. Burn the names. Do not look into the dark space between the chains. It is not an altar. It is a place where something learned to wait."
         ));
     }
 
@@ -516,11 +538,19 @@ public final class WatcherTowerGenerator {
         world.setBlockState(new BlockPos(x - 3, y + 1, z + 3), cobble, 3);
         world.setBlockState(new BlockPos(x - 3, y + 2, z + 3), net.minecraft.block.Blocks.OAK_SIGN.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 3, y + 1, z + 3), cobble, 3);
+        // A collapsed perimeter and half-packed camp: the party left useful gear behind.
+        world.setBlockState(new BlockPos(x - 2, y + 1, z - 2), net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 1, z + 2), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 4, y + 1, z + 1), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 4, y + 1, z - 1), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 3, y + 1, z - 3), net.minecraft.block.Blocks.SKELETON_SKULL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 1, z - 3), net.minecraft.block.Blocks.SKELETON_SKULL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x, y + 1, z + 3), net.minecraft.block.Blocks.OAK_PRESSURE_PLATE.getDefaultState(), 3);
         placeLoreChest(world, new BlockPos(x + 2, y + 1, z - 2), Direction.WEST, List.of(
-                "Expedition log, day 4: There are three of us. Every morning we find four sets of footprints around the camp.",
-                "Day 6: Mara says she saw someone standing where the river bends. I told her it was a spruce trunk. There are no spruce trees on that bank.",
-                "Day 8: We took turns staying awake. All three of us remember hearing the fourth person speaking, but none of us remembers the words.",
-                "Last entry: I can hear my friend outside the tent. He is asleep beside me. I am not opening the flap."
+                "EXPEDITION LOG — DAY 4. There are three of us. Each morning there are four sets of footprints around the fire. The fourth set is always dry, even after rain, and ends beside the sleeping bag of whoever kept watch.",
+                "DAY 6. Mara saw someone at the river bend. I blamed the fog. She drew the figure in her notebook; when we checked later, the page showed our camp from above. One tent had a person standing inside it. We had only brought two tents.",
+                "DAY 8. We made a roster so nobody could invent a fourth voice. At midnight the roster had four names. The new name was written in my handwriting. I have not told the others.",
+                "LAST ENTRY. I can hear my friend outside the tent. He is asleep beside me. The voice outside is asking me to come help carry something. It knows the name we gave the missing person. We never told it that name."
         ));
     }
 
@@ -534,11 +564,22 @@ public final class WatcherTowerGenerator {
                 pages.stream().map(RawFilteredPair::of).toList()));
         chest.setStack(0, book);
 
-        Item[] supplies = {Items.BREAD, Items.TORCH, Items.STRING, Items.IRON_NUGGET,
-                Items.PAPER, Items.COAL, Items.ARROW, Items.BONE, TheWatcher.SURVEILLANCE_CAMERA_ITEM};
-        for (int slot = 1; slot <= 4; slot++) {
+        // Reward exploration properly: survival supplies, navigation tools, and a few rare finds.
+        Item[] supplies = {
+                Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
+                Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.STRING,
+                Items.COMPASS, Items.SPYGLASS, Items.GOLDEN_APPLE, Items.IRON_PICKAXE,
+                Items.SHIELD, Items.NAME_TAG, Items.ENDER_PEARL,
+                TheWatcher.SURVEILLANCE_CAMERA_ITEM
+        };
+        for (int slot = 1; slot <= 8; slot++) {
             Item item = supplies[world.random.nextInt(supplies.length)];
-            chest.setStack(slot, new ItemStack(item, 1 + world.random.nextInt(3)));
+            boolean single = item == Items.COMPASS || item == Items.SPYGLASS
+                    || item == Items.GOLDEN_APPLE || item == Items.IRON_PICKAXE
+                    || item == Items.SHIELD || item == Items.NAME_TAG
+                    || item == Items.ENDER_PEARL || item == TheWatcher.SURVEILLANCE_CAMERA_ITEM;
+            int count = single ? 1 : 2 + world.random.nextInt(5);
+            chest.setStack(slot, new ItemStack(item, count));
         }
         chest.markDirty();
     }
