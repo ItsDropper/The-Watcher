@@ -2,6 +2,7 @@ package io.github.itsdropper.thewatcher.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import io.github.itsdropper.thewatcher.TheWatcher;
+import io.github.itsdropper.thewatcher.WatcherTowerGenerator;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import io.github.itsdropper.thewatcher.entity.WatcherStalkingDirector;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -41,6 +42,7 @@ public final class WatcherCommands {
                         })
                         .then(literal("spawn").executes(context -> spawnWatcher(context.getSource())))
                         .then(literal("status").executes(context -> showStatus(context.getSource())))
+                        .then(literal("structures").executes(context -> showStructures(context.getSource())))
                         .then(literal("despawn").executes(context -> despawnNearest(context.getSource())))
                         .then(literal("simulate")
                                 .executes(context -> startSimulation(context.getSource()))
@@ -101,13 +103,42 @@ public final class WatcherCommands {
                 + ", health=" + String.format(java.util.Locale.ROOT, "%.1f", watcher.getHealth())
                 + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", player.distanceTo(watcher))
                 + ", renderDistance=" + TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS + " chunks"
-                + ", learnedSafetyBonus=" + String.format(java.util.Locale.ROOT, "%.1f blocks", watcher.getLearnedSafetyDistanceBonus(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS))
+                + ", learnedApproachBonus=" + String.format(java.util.Locale.ROOT, "%.1f blocks", watcher.getLearnedApproachBonus())
+                + ", avgSpeed=" + String.format(java.util.Locale.ROOT, "%.3f", watcher.getAverageHorizontalSpeed())
+                + ", sprintHabit=" + String.format(java.util.Locale.ROOT, "%.2f", watcher.getAverageSprintRatio())
                 + ", proximityPressure=" + String.format(java.util.Locale.ROOT, "%.2f", watcher.getProximityPressure())
                 + ", stalkingBand=" + String.format(java.util.Locale.ROOT, "%.0f-%.0f blocks",
                         WatcherStalkingDirector.minimumStalkingDistance(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS),
                         WatcherStalkingDirector.maximumStalkingDistance(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS))
                 + ", target=" + (watcher.getTarget() == null ? "none" : watcher.getTarget().getName().getString())), false);
         return 1;
+    }
+
+
+    private static int showStructures(ServerCommandSource source) {
+        var positions = WatcherTowerGenerator.snapshotGuaranteedPositions();
+        if (positions.isEmpty()) {
+            source.sendError(Text.literal("No guaranteed structure locations are recorded yet. Start a Watcher run first."));
+            return 0;
+        }
+
+        StringBuilder result = new StringBuilder("Guaranteed Watcher story sites:");
+        appendStructurePosition(result, positions, 1, "Watchtower");
+        appendStructurePosition(result, positions, 2, "Abandoned cabin");
+        appendStructurePosition(result, positions, 4, "Ritual shrine");
+        appendStructurePosition(result, positions, 8, "Ruined expedition camp");
+        source.sendFeedback(() -> Text.literal(result.toString()), false);
+        return 1;
+    }
+
+    private static void appendStructurePosition(StringBuilder result,
+                                               java.util.Map<Integer, BlockPos> positions,
+                                               int key, String name) {
+        BlockPos pos = positions.get(key);
+        if (pos != null) {
+            result.append("\\n").append(name).append(": ")
+                    .append(pos.getX()).append(", ").append(pos.getY()).append(", ").append(pos.getZ());
+        }
     }
 
     private static int setNearestPhase(ServerCommandSource source, WatcherEntity.Phase phase)
