@@ -31,7 +31,7 @@ public final class CameraFeedScreen extends Screen {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null || client.player == null) return null;
 
-        Entity view = EntityType.ARMOR_STAND.create(client.world);
+        var view = EntityType.ARMOR_STAND.create(client.world);
         if (view == null) return null;
 
         // Armor-stand eye height places the virtual viewpoint at the camera's lens.
