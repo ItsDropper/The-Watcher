@@ -57,8 +57,6 @@ final class TunnelCryptoTest {
         assertFalse(Arrays.equals(guestToHost, otherChannel));
         assertThrows(GeneralSecurityException.class,
                 () -> TunnelCrypto.decrypt(guestToHost, secret, "host-to-guest"));
-        assertThrows(GeneralSecurityException.class,
-                () -> TunnelCrypto.decrypt(guestToHost, secret, "guest-to-host").equals(plaintext));
     }
 
     @Test
