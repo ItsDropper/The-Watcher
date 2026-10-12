@@ -10,7 +10,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.sound.SoundCategory;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
@@ -19,6 +18,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class TheWatcherClient implements ClientModInitializer {
     private static KeyBinding openCameraMonitorKey;
+    private static PositionedSoundInstance endingMusic;
 
     @Override
     public void onInitializeClient() {
@@ -27,10 +27,14 @@ public class TheWatcherClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(io.github.itsdropper.thewatcher.CameraNetwork.EndingMusicPayload.ID, (payload, context) ->
                 context.client().execute(() -> {
                     if (payload.playing()) {
-                        if (context.client().getSoundManager().isPlaying(PositionedSoundInstance.music(TheWatcher.ENDING_THEME))) return;
-                        context.client().getSoundManager().play(PositionedSoundInstance.music(TheWatcher.ENDING_THEME));
+                        if (endingMusic != null && context.client().getSoundManager().isPlaying(endingMusic)) return;
+                        endingMusic = PositionedSoundInstance.music(TheWatcher.ENDING_THEME);
+                        context.client().getSoundManager().play(endingMusic);
                     } else {
-                        context.client().getSoundManager().stop(TheWatcher.id("ending_theme"), SoundCategory.MUSIC);
+                        if (endingMusic != null) {
+                            context.client().getSoundManager().stop(endingMusic);
+                            endingMusic = null;
+                        }
                     }
                 }));
         ClientPlayNetworking.registerGlobalReceiver(CameraListPayload.ID, (payload, context) ->
