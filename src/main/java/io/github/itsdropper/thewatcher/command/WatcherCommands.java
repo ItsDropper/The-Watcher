@@ -3,6 +3,7 @@ package io.github.itsdropper.thewatcher.command;
 import com.mojang.brigadier.CommandDispatcher;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.WatcherTowerGenerator;
+import io.github.itsdropper.thewatcher.WatcherRunManager;
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
 import io.github.itsdropper.thewatcher.entity.WatcherStalkingDirector;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -33,6 +34,9 @@ public final class WatcherCommands {
     private static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(literal("watcher")
                 .requires(source -> source.hasPermissionLevel(2))
+                .then(literal("mode")
+                        .then(literal("on").executes(context -> startMode(context.getSource())))
+                        .then(literal("off").executes(context -> stopMode(context.getSource()))))
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
@@ -61,6 +65,26 @@ public final class WatcherCommands {
                         .then(literal("darkness")
                                 .then(literal("on").executes(context -> setDarkness(context.getSource(), true)))
                                 .then(literal("off").executes(context -> setDarkness(context.getSource(), false))))));
+    }
+
+    private static int startMode(ServerCommandSource source) {
+        ServerWorld world = source.getWorld();
+        if (world.getRegistryKey() != net.minecraft.world.World.OVERWORLD) {
+            source.sendError(Text.literal("Start Watcher mode from the Overworld."));
+            return 0;
+        }
+        if (!WatcherRunManager.requestStartRun(world)) {
+            source.sendError(Text.literal("A Watcher run already exists for this world, or a saved run file is present. Existing world data was left untouched."));
+            return 0;
+        }
+        source.sendFeedback(() -> Text.literal("Watcher mode enabled. The server will initialize the run and save its state on the next tick."), false);
+        return 1;
+    }
+
+    private static int stopMode(ServerCommandSource source) {
+        WatcherRunManager.cancelPendingRun();
+        source.sendFeedback(() -> Text.literal("Cancelled any pending Watcher run start. This does not stop an active run."), false);
+        return 1;
     }
 
     private static int triggerEnding(ServerCommandSource source)
