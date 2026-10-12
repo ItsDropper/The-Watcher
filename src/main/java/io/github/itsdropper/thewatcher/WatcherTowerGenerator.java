@@ -2,7 +2,6 @@ package io.github.itsdropper.thewatcher;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
-import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.block.entity.ChestBlockEntity;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.WritableBookContent;
