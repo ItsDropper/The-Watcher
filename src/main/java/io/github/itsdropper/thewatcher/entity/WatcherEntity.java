@@ -541,8 +541,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         nbt.putInt("WatcherDreadEffectCooldown", dreadEffectCooldown);
         nbt.putInt("WatcherAttentionTicks", attentionTicks);
         nbt.putInt("WatcherUnseenTicks", unseenTicks);
-        nbt.putInt("WatcherDaylightTicks", daylightTicks);
         nbt.putBoolean("WatcherAttemptedEscalationAttack", attemptedEscalationAttack);
+        nbt.putBoolean("WatcherNaturalRunEntity", naturalRunEntity);
         learningEngine.writeToNbt(nbt);
     }
 
@@ -564,8 +564,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         dreadEffectCooldown = Math.max(0, nbt.getInt("WatcherDreadEffectCooldown"));
         attentionTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherAttentionTicks")));
         unseenTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherUnseenTicks")));
-        daylightTicks = Math.max(0, Math.min(600, nbt.getInt("WatcherDaylightTicks")));
         attemptedEscalationAttack = nbt.getBoolean("WatcherAttemptedEscalationAttack");
+        naturalRunEntity = nbt.getBoolean("WatcherNaturalRunEntity");
         // Debug controls are session-only; never reload an entity stuck in a forced test phase.
         debugPhaseLocked = false;
         debugSimulation = false;
