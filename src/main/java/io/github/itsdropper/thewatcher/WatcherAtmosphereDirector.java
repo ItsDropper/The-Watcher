@@ -8,6 +8,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
@@ -55,8 +56,23 @@ public final class WatcherAtmosphereDirector {
             PlayerState state = states.computeIfAbsent(player.getUuid(), ignored -> {
                 PlayerState created = new PlayerState();
                 created.nextEventAt = world.getTime() + 2_400L + world.random.nextInt(3_601);
+                created.lastYaw = player.getYaw();
+                created.lastPosition = player.getPos();
+                created.hasLastSample = true;
                 return created;
             });
+
+            updatePlayerHabits(world, player, state);
+            if (state.lookBackCount >= 2 && world.getTime() >= state.nextAdaptiveCueAt) {
+                // Repeatedly checking behind can itself become a trigger: answer only
+                // after the player has turned away, and then leave another long quiet gap.
+                playFootstep(world, player, state, 3.2D, false);
+                state.lookBackCount = 0;
+                state.events++;
+                state.nextAdaptiveCueAt = world.getTime() + 1_200L + world.random.nextInt(1_801);
+                state.nextEventAt = Math.max(state.nextEventAt, world.getTime() + 900L);
+                continue;
+            }
 
             // Remove stale per-player state occasionally; this also avoids a growing map
             // when people join a world once and never return.
@@ -77,6 +93,26 @@ public final class WatcherAtmosphereDirector {
 
             state.nextEventAt = world.getTime() + 1_800L + world.random.nextInt(4_801);
         }
+    }
+
+    private static void updatePlayerHabits(ServerWorld world, ServerPlayerEntity player, PlayerState state) {
+        if (state.hasLastSample) {
+            float turn = Math.abs(MathHelper.wrapDegrees(player.getYaw() - state.lastYaw));
+            if (turn > 105.0F) {
+                state.lookBackCount = Math.min(4, state.lookBackCount + 1);
+            } else if (state.lookBackCount > 0) {
+                state.lookBackCount--;
+            }
+
+            if (player.getPos().squaredDistanceTo(state.lastPosition) < 0.04D) {
+                state.stillTicks = Math.min(12_000, state.stillTicks + 20);
+            } else {
+                state.stillTicks = Math.max(0, state.stillTicks - 40);
+            }
+        }
+        state.lastYaw = player.getYaw();
+        state.lastPosition = player.getPos();
+        state.hasLastSample = true;
     }
 
     private static void deliverCue(ServerWorld world, ServerPlayerEntity player, PlayerState state) {
@@ -142,6 +178,12 @@ public final class WatcherAtmosphereDirector {
 
     private static final class PlayerState {
         private long nextEventAt;
+        private long nextAdaptiveCueAt;
         private int events;
+        private int lookBackCount;
+        private int stillTicks;
+        private float lastYaw;
+        private Vec3d lastPosition = Vec3d.ZERO;
+        private boolean hasLastSample;
     }
 }
