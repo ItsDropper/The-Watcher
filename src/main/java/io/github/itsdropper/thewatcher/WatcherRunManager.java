@@ -84,6 +84,11 @@ public final class WatcherRunManager {
             return;
         }
 
+        if (WatcherTowerGenerator.snapshotBuiltRegions().isEmpty() && world.getTime() % 1_200L == 0L) {
+            if (WatcherTowerGenerator.generateGuaranteedSpawnTower(world)) saveRun(world, run);
+        }
+        WatcherOllamaDirector.tick(world, run.revealed);
+
         if (world.getTime() % 20L == 0L) {
             samplePlayers(world, run);
         }
