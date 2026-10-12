@@ -905,6 +905,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 phase = Phase.ESCALATING;
                 phaseTicks = 0;
                 attemptedEscalationAttack = false;
+                escalationAttackCooldown = 0;
                 getNavigation().stop();
                 getNavigation().startMovingTo(player, 2.8D);
                 world.playSound(null, getBlockPos(), SoundEvents.ENTITY_WARDEN_ROAR,
@@ -928,6 +929,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 phase = Phase.ESCALATING;
                 phaseTicks = 0;
                 attemptedEscalationAttack = false;
+                escalationAttackCooldown = 0;
                 player.addStatusEffect(new StatusEffectInstance(
                         StatusEffects.DARKNESS, 50, 0, false, false, true));
                 player.addStatusEffect(new StatusEffectInstance(
