@@ -1,7 +1,5 @@
 package io.github.itsdropper.thewatcher;
 
-import java.util.Arrays;
-
 /**
  * Client-selected options for the next single-player world created with The Watcher mode.
  * The common-side run manager reads these values in an integrated server.
