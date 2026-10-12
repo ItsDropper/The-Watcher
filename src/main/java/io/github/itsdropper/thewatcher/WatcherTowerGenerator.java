@@ -16,12 +16,15 @@ import net.minecraft.text.RawFilteredPair;
 import net.minecraft.world.Heightmap;
 
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Builds a small, old watchtower in explored, already-loaded terrain. */
 public final class WatcherTowerGenerator {
     private static final Set<Long> BUILT_REGIONS = new HashSet<>();
+    private static final Map<Integer, BlockPos> GUARANTEED_POSITIONS = new HashMap<>();
     private static final int MAX_STRUCTURES_PER_SESSION = 10;
     private static int guaranteedStructuresMask;
     private static int towersBuilt;
@@ -31,6 +34,7 @@ public final class WatcherTowerGenerator {
 
     public static void resetForRun() {
         BUILT_REGIONS.clear();
+        GUARANTEED_POSITIONS.clear();
         towersBuilt = 0;
         guaranteedStructuresMask = 0;
     }
@@ -47,6 +51,15 @@ public final class WatcherTowerGenerator {
 
     public static int snapshotGuaranteedStructuresMask() {
         return guaranteedStructuresMask;
+    }
+
+    public static Map<Integer, BlockPos> snapshotGuaranteedPositions() {
+        return Map.copyOf(GUARANTEED_POSITIONS);
+    }
+
+    public static void restoreGuaranteedPositions(Map<Integer, BlockPos> positions) {
+        GUARANTEED_POSITIONS.clear();
+        GUARANTEED_POSITIONS.putAll(positions);
     }
 
     public static void restoreGuaranteedStructuresMask(int mask) {
@@ -119,6 +132,7 @@ public final class WatcherTowerGenerator {
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
             guaranteedStructuresMask |= bit;
+            GUARANTEED_POSITIONS.put(bit, new BlockPos(x, y, z));
             TheWatcher.LOGGER.info("Generated guaranteed Watcher story site {} at {}", bit, new BlockPos(x, y, z));
             return;
         }
@@ -183,6 +197,7 @@ public final class WatcherTowerGenerator {
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
             guaranteedStructuresMask |= 1;
+            GUARANTEED_POSITIONS.put(1, base);
             TheWatcher.LOGGER.info("Generated guaranteed Watcher tower near world spawn at {}", base);
             return true;
         }
