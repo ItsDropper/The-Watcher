@@ -35,7 +35,7 @@ public final class CameraFeedScreen extends Screen {
     private boolean draggingLook;
     private final int originalFov = MinecraftClient.getInstance().options.getFov().getValue();
     private int zoomFov = 30;
-    private boolean zoomHeld;
+    private boolean zoomTransitionActive;
 
     private CameraFeedScreen(BlockPos cameraPos, Screen networkScreen,
                              Entity previousCameraEntity, Entity viewEntity, World cameraWorld) {
@@ -84,12 +84,17 @@ public final class CameraFeedScreen extends Screen {
         if (client == null || client.getWindow() == null) return;
         long window = client.getWindow().getHandle();
         boolean holdingZoom = InputUtil.isKeyPressed(window, GLFW.GLFW_KEY_C);
-        if (holdingZoom) {
-            zoomHeld = true;
-            client.options.getFov().setValue(zoomFov);
-        } else if (zoomHeld) {
-            client.options.getFov().setValue(originalFov);
-            zoomHeld = false;
+        if (holdingZoom) zoomTransitionActive = true;
+        if (zoomTransitionActive) {
+            int targetFov = holdingZoom ? zoomFov : originalFov;
+            int currentFov = client.options.getFov().getValue();
+            int nextFov = Math.round(currentFov + (targetFov - currentFov) * 0.30F);
+            // FOV is stored as an integer option, so guarantee progress on small final steps.
+            if (nextFov == currentFov && currentFov != targetFov) {
+                nextFov += Integer.compare(targetFov, currentFov);
+            }
+            client.options.getFov().setValue(nextFov);
+            if (!holdingZoom && nextFov == originalFov) zoomTransitionActive = false;
         }
         if (!cameraOrientationSet && client.world != null) {
             var chunk = client.world.getChunkManager().getWorldChunk(
@@ -157,8 +162,7 @@ public final class CameraFeedScreen extends Screen {
         if (client != null && client.getWindow() != null
                 && InputUtil.isKeyPressed(client.getWindow().getHandle(), GLFW.GLFW_KEY_C)) {
             zoomFov = MathHelper.clamp(zoomFov - (int) Math.signum(verticalAmount) * 4, 10, 30);
-            client.options.getFov().setValue(zoomFov);
-            zoomHeld = true;
+            zoomTransitionActive = true;
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -245,7 +249,7 @@ public final class CameraFeedScreen extends Screen {
         if (restored) return;
         restored = true;
         if (client != null) client.options.getFov().setValue(originalFov);
-        zoomHeld = false;
+        zoomTransitionActive = false;
         ClientPlayNetworking.send(new CameraFeedClosePayload());
         if (client != null && previousCameraEntity != null) {
             client.setCameraEntity(previousCameraEntity);
