@@ -100,7 +100,8 @@ public final class WatcherAtmosphereDirector {
             float turn = Math.abs(MathHelper.wrapDegrees(player.getYaw() - state.lastYaw));
             if (turn > 105.0F) {
                 state.lookBackCount = Math.min(4, state.lookBackCount + 1);
-            } else if (state.lookBackCount > 0) {
+                state.lastBigTurnAt = world.getTime();
+            } else if (state.lookBackCount > 0 && world.getTime() - state.lastBigTurnAt > 100L) {
                 state.lookBackCount--;
             }
 
@@ -121,7 +122,8 @@ public final class WatcherAtmosphereDirector {
         int event = world.random.nextInt(100);
 
         if (event < 39) {
-            playFootstep(world, player, state, 2.8D + world.random.nextDouble() * 2.4D, false);
+            double distance = state.stillTicks > 600 ? 2.4D : 2.8D + world.random.nextDouble() * 2.4D;
+            playFootstep(world, player, state, distance, false);
             return;
         }
 
@@ -179,6 +181,7 @@ public final class WatcherAtmosphereDirector {
     private static final class PlayerState {
         private long nextEventAt;
         private long nextAdaptiveCueAt;
+        private long lastBigTurnAt;
         private int events;
         private int lookBackCount;
         private int stillTicks;
