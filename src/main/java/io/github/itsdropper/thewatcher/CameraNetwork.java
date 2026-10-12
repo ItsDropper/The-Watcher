@@ -63,7 +63,7 @@ public final class CameraNetwork {
                 ChunkPos chunk = new ChunkPos(x, z);
                 String key = world.getRegistryKey().getValue() + "|" + chunk.toLong();
                 if (!world.getForcedChunks().contains(chunk.toLong())) {
-                    world.setChunkForced(chunk, true);
+                    world.setChunkForced(x, z, true);
                     FORCED_BY_US.add(key);
                 }
             }
@@ -87,7 +87,7 @@ public final class CameraNetwork {
             for (int z = center.z - 2; z <= center.z + 2; z++) {
                 ChunkPos chunk = new ChunkPos(x, z);
                 String key = player.getServerWorld().getRegistryKey().getValue() + "|" + chunk.toLong();
-                if (FORCED_BY_US.remove(key)) player.getServerWorld().setChunkForced(chunk, false);
+                if (FORCED_BY_US.remove(key)) player.getServerWorld().setChunkForced(x, z, false);
             }
         }
 
