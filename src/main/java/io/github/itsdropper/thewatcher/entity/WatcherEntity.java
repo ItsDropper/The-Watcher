@@ -410,6 +410,12 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             length = 1.0D;
         }
 
+        // Do not rebuild the same path every tick: that can reset navigation progress
+        // and make the Watcher appear permanently stuck during retreat.
+        if (!getNavigation().isIdle()) {
+            return;
+        }
+
         double destinationX = getX() + (dx / length) * 24.0D;
         double destinationZ = getZ() + (dz / length) * 24.0D;
         getNavigation().startMovingTo(destinationX, getY(), destinationZ, speed);
