@@ -405,7 +405,8 @@ public final class WatcherTowerGenerator {
                     RawFilteredPair.of("We tried keeping watch in pairs. Whoever stared into the trees saw nothing. Whoever looked down to write found a figure standing closer when they looked up. It never crossed the open ground."),
                     RawFilteredPair.of("It repeats small things: a footstep after yours, a knock from the wrong side of a door, a voice saying a name nobody used aloud. Do not answer a voice you cannot see."),
                     RawFilteredPair.of("At 03:17, every camera showed the same empty corridor. The monitor in the locked room showed all four of us standing behind the operator. There were only three of us on shift."),
-                    RawFilteredPair.of("If you found this tower, take the supplies. Do not sleep here. The top floor is not safer; it only gives you fewer directions to look. — M.")
+                    RawFilteredPair.of("If you found this tower, take the supplies. Do not sleep here. The top floor is not safer; it only gives you fewer directions to look. — M."),
+                    RawFilteredPair.of("The four sites each held a record: tower, cabin, shrine, camp. Keep every evidence page. The Watcher cannot be hurt while the story is incomplete. When all four records are together, it can bleed. Do not mistake that for mercy.")
             )));
             chest.setStack(0, logbook);
             ItemStack evidence = new ItemStack(Items.PAPER);\n            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));\n            chest.setStack(9, evidence);
