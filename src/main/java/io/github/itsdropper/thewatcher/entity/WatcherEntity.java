@@ -480,8 +480,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 && WatcherHorrorDirector.shouldPlayDistantCue(distance, renderChunks, random.nextFloat())) {
             dreadEffectCooldown = WatcherHorrorDirector.nextDistantCueCooldown(random.nextInt(221));
             float cue = random.nextFloat();
+            Vec3d look = player.getRotationVec(1.0F).normalize();
             if (cue < 0.50F) {
-                Vec3d look = player.getRotationVec(1.0F).normalize();
                 BlockPos behind = BlockPos.ofFloored(player.getX() - look.x * 3.0D,
                         player.getY(), player.getZ() - look.z * 3.0D);
                 world.playSound(null, behind, SoundEvents.BLOCK_STONE_STEP,
