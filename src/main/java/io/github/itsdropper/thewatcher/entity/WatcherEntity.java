@@ -270,24 +270,10 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 }
             }
             case RETREATING -> {
+                // Retreating is physical movement, not a teleport phase.
                 lookAtPlayer(player);
-                boolean teleported = false;
-                if (TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
-                        && !isWithinPlayerView(player) && random.nextInt(100) < 62) {
-                    teleported = tryHiddenTeleport(world, player, true);
-                    hiddenMoveCooldown = 8 + random.nextInt(15);
-                    if (teleported) {
-                        world.playSound(null, getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT,
-                                SoundCategory.HOSTILE, 0.8F, 0.45F + random.nextFloat() * 0.25F);
-                    }
-                }
-                if (!teleported) {
-                    moveAwayFrom(player, 2.2D);
-                    recoverStuckRetreat(world, player);
-                } else {
-                    getNavigation().stop();
-                    resetNavigationRecovery();
-                }
+                moveAwayFrom(player, 2.2D);
+                recoverStuckRetreat(world, player);
 
                 int duration = RETREAT_TICKS;
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
