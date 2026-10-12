@@ -118,7 +118,13 @@ public final class WatcherTowerGenerator {
             double radius = 72.0D + world.random.nextDouble() * 88.0D;
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
-            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+            int candidateChunkX = x >> 4;
+            int candidateChunkZ = z >> 4;
+            if ((long) candidateChunkX * candidateChunkX
+                    + (long) candidateChunkZ * candidateChunkZ < 100L) {
+                continue;
+            }
+            if (!world.isChunkLoaded(candidateChunkX, candidateChunkZ)) {
                 continue;
             }
 
@@ -154,7 +160,7 @@ public final class WatcherTowerGenerator {
                 if (Math.abs(top - baseY) > 1) {
                     return false;
                 }
-                for (int dy = 0; dy < 11; dy++) {
+                for (int dy = 0; dy < 15; dy++) {
                     BlockPos pos = new BlockPos(px, baseY + dy, pz);
                     if (!world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()) {
                         return false;
@@ -179,7 +185,6 @@ public final class WatcherTowerGenerator {
         BlockState deep = net.minecraft.block.Blocks.COBBLED_DEEPSLATE.getDefaultState();
         BlockState polished = net.minecraft.block.Blocks.POLISHED_ANDESITE.getDefaultState();
         BlockState wood = net.minecraft.block.Blocks.DARK_OAK_PLANKS.getDefaultState();
-        BlockState fence = net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState();
         BlockState air = net.minecraft.block.Blocks.AIR.getDefaultState();
 
         // Broad stepped foundation, with a stone border to make the tower read clearly from a distance.
@@ -221,6 +226,14 @@ public final class WatcherTowerGenerator {
                     }
                 }
             }
+        }
+
+        // Projecting timber braces on each face break up the flat stone walls.
+        for (int offset = -2; offset <= 2; offset++) {
+            world.setBlockState(new BlockPos(x0 + offset, y0 + 5, z0 - 5), wood, 3);
+            world.setBlockState(new BlockPos(x0 + offset, y0 + 9, z0 + 5), wood, 3);
+            world.setBlockState(new BlockPos(x0 - 5, y0 + 5, z0 + offset), wood, 3);
+            world.setBlockState(new BlockPos(x0 + 5, y0 + 9, z0 + offset), wood, 3);
         }
 
         // Internal upper floor with an access opening, so the ladder remains usable.
