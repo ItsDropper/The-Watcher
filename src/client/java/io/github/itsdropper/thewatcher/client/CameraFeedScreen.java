@@ -164,7 +164,7 @@ public final class CameraFeedScreen extends Screen {
             client.setCameraEntity(previousCameraEntity);
         }
         if (cameraWorld != null && cameraWorld.getEntityById(viewEntity.getId()) == viewEntity) {
-            cameraWorld.removeEntity(viewEntity.getId(), Entity.RemovalReason.DISCARDED);
+            viewEntity.remove(Entity.RemovalReason.DISCARDED);
         }
     }
 }
