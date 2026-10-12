@@ -409,15 +409,17 @@ public final class WatcherTowerGenerator {
             )));
             chest.setStack(0, logbook);
 
-            Item[] supplies = {Items.BREAD, Items.COOKED_BEEF, Items.TORCH, Items.IRON_INGOT,
-                    Items.STRING, Items.ARROW, Items.COMPASS, Items.PAPER, Items.SPYGLASS,
-                    TheWatcher.SURVEILLANCE_CAMERA_ITEM};
-            for (int slot = 1; slot <= 5; slot++) {
+            Item[] supplies = {Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
+                    Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.COMPASS, Items.SPYGLASS,
+                    Items.GOLDEN_APPLE, Items.IRON_PICKAXE, Items.SHIELD, Items.NAME_TAG,
+                    Items.ENDER_PEARL, TheWatcher.SURVEILLANCE_CAMERA_ITEM};
+            for (int slot = 1; slot <= 8; slot++) {
                 Item item = supplies[world.random.nextInt(supplies.length)];
-                int count = item == Items.IRON_INGOT || item == Items.COMPASS || item == Items.SPYGLASS
-                        || item == TheWatcher.SURVEILLANCE_CAMERA_ITEM
-                        ? 1 : 1 + world.random.nextInt(4);
-                chest.setStack(slot, new ItemStack(item, count));
+                boolean single = item == Items.COMPASS || item == Items.SPYGLASS
+                        || item == Items.GOLDEN_APPLE || item == Items.IRON_PICKAXE
+                        || item == Items.SHIELD || item == Items.NAME_TAG
+                        || item == Items.ENDER_PEARL || item == TheWatcher.SURVEILLANCE_CAMERA_ITEM;
+                chest.setStack(slot, new ItemStack(item, single ? 1 : 2 + world.random.nextInt(5)));
             }
             chest.markDirty();
         }
@@ -522,6 +524,15 @@ public final class WatcherTowerGenerator {
         BlockState gravel = net.minecraft.block.Blocks.GRAVEL.getDefaultState();
         BlockState cobble = net.minecraft.block.Blocks.MOSSY_COBBLESTONE.getDefaultState();
 
+        // Patchwork ground where the expedition tried to make the camp look orderly.
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                BlockState ground = ((dx + dz) & 3) == 0 ? gravel
+                        : ((dx - dz) & 3) == 0 ? cobble
+                        : net.minecraft.block.Blocks.COARSE_DIRT.getDefaultState();
+                world.setBlockState(new BlockPos(x + dx, y, z + dz), ground, 3);
+            }
+        }
         for (int dx = -4; dx <= 4; dx++) {
             for (int dz = -4; dz <= 4; dz++) {
                 if (Math.abs(dx) == 4 || Math.abs(dz) == 4) {
@@ -568,20 +579,3 @@ public final class WatcherTowerGenerator {
         Item[] supplies = {
                 Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
                 Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.STRING,
-                Items.COMPASS, Items.SPYGLASS, Items.GOLDEN_APPLE, Items.IRON_PICKAXE,
-                Items.SHIELD, Items.NAME_TAG, Items.ENDER_PEARL,
-                TheWatcher.SURVEILLANCE_CAMERA_ITEM
-        };
-        for (int slot = 1; slot <= 8; slot++) {
-            Item item = supplies[world.random.nextInt(supplies.length)];
-            boolean single = item == Items.COMPASS || item == Items.SPYGLASS
-                    || item == Items.GOLDEN_APPLE || item == Items.IRON_PICKAXE
-                    || item == Items.SHIELD || item == Items.NAME_TAG
-                    || item == Items.ENDER_PEARL || item == TheWatcher.SURVEILLANCE_CAMERA_ITEM;
-            int count = single ? 1 : 2 + world.random.nextInt(5);
-            chest.setStack(slot, new ItemStack(item, count));
-        }
-        chest.markDirty();
-    }
-
-}
