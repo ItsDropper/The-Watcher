@@ -165,13 +165,17 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     learningEngine.observe(isPlayerWatching(daytimeTarget), daytimeDistance);
 
                     if (daytimeDistance < 200.0D) {
-                        if (!isWithinPlayerView(daytimeTarget)
-                                && tryDaytimeRelocation(world, daytimeTarget)) {
+                        // Daytime is a hard separation rule: teleport away as soon as the
+                        // Watcher gets inside 200 blocks, even if the player is looking at it.
+                        if (TheWatcher.TELEPORTS_ENABLED && tryDaytimeRelocation(world, daytimeTarget)) {
                             hiddenMoveCooldown = 0;
+                            proximityCorrectionCooldown = 0;
                             getNavigation().stop();
+                            setVelocity(0.0D, getVelocity().y, 0.0D);
+                            resetNavigationRecovery();
                         } else {
-                            // Never teleport in front of a player. If they keep it in sight,
-                            // it physically withdraws instead of breaking the established rule.
+                            // If no safe destination exists in already-loaded chunks, retreat
+                            // physically until a valid relocation becomes available.
                             getNavigation().stop();
                             moveAwayFrom(daytimeTarget, 2.4D);
                         }
@@ -441,7 +445,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
      * It only selects already-loaded, safe terrain and never relocates while visible.
      */
     private boolean tryDaytimeRelocation(ServerWorld world, PlayerEntity player) {
-        if (isWithinPlayerView(player)) return false;
         double bestScore = -Double.MAX_VALUE;
         BlockPos best = null;
 
@@ -466,15 +469,8 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 continue;
             }
 
-            Vec3d eyes = new Vec3d(x + 0.5D, y + 1.4D, z + 0.5D);
-            Vec3d direction = eyes.subtract(player.getEyePos()).normalize();
-            BlockHitResult sight = world.raycast(new RaycastContext(player.getEyePos(), eyes,
-                    RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, player));
-            if (sight.getType() == BlockHitResult.Type.MISS
-                    && player.getRotationVec(1.0F).normalize().dotProduct(direction) > 0.15D) {
-                continue;
-            }
-
+            // Destination visibility is intentionally irrelevant in daytime: the goal is
+            // immediate separation, not a hidden stalking reposition.
             double distance = Math.sqrt(player.getBlockPos().getSquaredDistance(feet));
             if (distance < 200.0D) continue;
             double score = distance + random.nextDouble() * 20.0D;
