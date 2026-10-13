@@ -19,6 +19,10 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
 - The entity does not use the usual automatic target and continuous melee goals.
 
+### Optional native desktop horror popups (Windows)
+
+In **The Watcher Settings → Gameplay**, enable **Native desktop popups** to opt in. When enabled, a rare event can open a real Windows desktop message box over the game, using a separate PowerShell process rather than Minecraft's Java process. It is disabled by default, only runs in the Overworld, and uses fictional messages titled **The Watcher**—it does not impersonate Windows Security or claim that a real system problem occurred. Turn the option off to stop future popups. This feature is Windows-only and requires Windows PowerShell.
+
 Natural runs begin with a hidden-learning phase and then announce the first reveal with `Watcher joined the game`. After that reveal, the run manager checks the natural entity every second and retries a replacement after ten seconds of absence. Use `/watcher debug spawn` or vanilla `/summon the-watcher:watcher` for predictable testing.
 
 ## Surveillance cameras (experimental)
