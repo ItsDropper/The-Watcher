@@ -28,6 +28,12 @@ public final class WatcherLearningEngine {
     private double averageStationaryTicks;
     private double averageSprintRatio = 0.25D;
     private double averagePlayerHeight = 64.0D;
+    private double averageSneakRatio = 0.0D;
+    private double averageItemUseRatio = 0.0D;
+    private double averageJumpRatio = 0.0D;
+    private double averageLookBackRatio = 0.15D;
+    private float previousYaw;
+    private boolean hasPreviousYaw;
     private int currentStationaryTicks;
 
     public void observe(boolean watched, double distance) {
@@ -63,8 +69,11 @@ public final class WatcherLearningEngine {
      * The hard lower bound prevents twitchy, instantly repeated teleports.
      */
     public int getHiddenTeleportDelayTicks() {
-        double learnedDelay = averageUnwatchedTicks * 0.42D;
-        return (int) Math.round(clamp(learnedDelay, 12.0D, 48.0D));
+        // Players who repeatedly check behind themselves create fewer safe relocation
+        // windows, so the Watcher waits longer instead of visibly cheating the rule.
+        double vigilancePenalty = averageLookBackRatio * 16.0D;
+        double learnedDelay = averageUnwatchedTicks * 0.42D + vigilancePenalty;
+        return (int) Math.round(clamp(learnedDelay, 12.0D, 64.0D));
     }
 
     /**
@@ -73,8 +82,11 @@ public final class WatcherLearningEngine {
      */
     public int adjustTeleportChance(int baseChance) {
         double gazePattern = averageWatchedTicks - averageUnwatchedTicks;
-        int adjustment = (int) Math.round(clamp(gazePattern * 0.08D, -8.0D, 12.0D));
-        return (int) clamp(baseChance + adjustment, 5.0D, 70.0D);
+        double campingOpportunity = clamp((averageStationaryTicks - 80.0D) * 0.018D, 0.0D, 8.0D);
+        double vigilancePenalty = averageLookBackRatio * 16.0D;
+        int adjustment = (int) Math.round(clamp(gazePattern * 0.08D + campingOpportunity
+                - vigilancePenalty, -18.0D, 14.0D));
+        return (int) clamp(baseChance + adjustment, 4.0D, 68.0D);
     }
 
     /**
@@ -88,6 +100,16 @@ public final class WatcherLearningEngine {
         averageHorizontalSpeed = blend(averageHorizontalSpeed, clamp(horizontalSpeed, 0.0D, 1.5D));
         averageSprintRatio = blend(averageSprintRatio, player.isSprinting() ? 1.0D : 0.0D);
         averagePlayerHeight = blend(averagePlayerHeight, clamp(player.getY(), -64.0D, 320.0D));
+        averageSneakRatio = blend(averageSneakRatio, player.isSneaking() ? 1.0D : 0.0D);
+        averageItemUseRatio = blend(averageItemUseRatio, player.isUsingItem() ? 1.0D : 0.0D);
+        averageJumpRatio = blend(averageJumpRatio, player.getVelocity().y > 0.12D ? 1.0D : 0.0D);
+        if (hasPreviousYaw) {
+            double turn = Math.abs(player.getYaw() - previousYaw) % 360.0D;
+            turn = Math.min(turn, 360.0D - turn);
+            averageLookBackRatio = blend(averageLookBackRatio, turn >= 95.0D ? 1.0D : 0.0D);
+        }
+        previousYaw = player.getYaw();
+        hasPreviousYaw = true;
 
         if (horizontalSpeed < 0.025D) {
             currentStationaryTicks = Math.min(1200, currentStationaryTicks + 1);
@@ -115,7 +137,11 @@ public final class WatcherLearningEngine {
         double campingBonus = clamp((averageStationaryTicks - 20.0D) * 0.025D, 0.0D, 6.0D);
         double cautiousBonus = clamp((0.35D - averageSprintRatio) * 8.0D, 0.0D, 2.8D);
         double movementBonus = clamp(averageHorizontalSpeed * 8.0D, 0.0D, 5.0D);
-        return clamp(proximityPressure * 18.0D + campingBonus + cautiousBonus + movementBonus, 0.0D, 24.0D);
+        double sneakingBonus = clamp(averageSneakRatio * 2.5D, 0.0D, 2.5D);
+        double itemFocusBonus = clamp(averageItemUseRatio * 2.0D, 0.0D, 2.0D);
+        double vigilanceReduction = clamp(averageLookBackRatio * 5.0D, 0.0D, 5.0D);
+        return clamp(proximityPressure * 18.0D + campingBonus + cautiousBonus + movementBonus
+                + sneakingBonus + itemFocusBonus - vigilanceReduction, 0.0D, 24.0D);
     }
 
     public double getAveragePlayerHeight() {
@@ -165,6 +191,12 @@ public final class WatcherLearningEngine {
         nbt.putDouble("WatcherLearningAverageStationaryTicks", averageStationaryTicks);
         nbt.putDouble("WatcherLearningAverageSprintRatio", averageSprintRatio);
         nbt.putDouble("WatcherLearningAveragePlayerHeight", averagePlayerHeight);
+        nbt.putDouble("WatcherLearningAverageSneakRatio", averageSneakRatio);
+        nbt.putDouble("WatcherLearningAverageItemUseRatio", averageItemUseRatio);
+        nbt.putDouble("WatcherLearningAverageJumpRatio", averageJumpRatio);
+        nbt.putDouble("WatcherLearningAverageLookBackRatio", averageLookBackRatio);
+        nbt.putFloat("WatcherLearningPreviousYaw", previousYaw);
+        nbt.putBoolean("WatcherLearningHasPreviousYaw", hasPreviousYaw);
         nbt.putInt("WatcherLearningCurrentStationaryTicks", currentStationaryTicks);
     }
 
@@ -197,6 +229,12 @@ public final class WatcherLearningEngine {
         if (nbt.contains("WatcherLearningAveragePlayerHeight")) {
             averagePlayerHeight = clamp(nbt.getDouble("WatcherLearningAveragePlayerHeight"), -64.0D, 320.0D);
         }
+        if (nbt.contains("WatcherLearningAverageSneakRatio")) averageSneakRatio = clamp(nbt.getDouble("WatcherLearningAverageSneakRatio"), 0.0D, 1.0D);
+        if (nbt.contains("WatcherLearningAverageItemUseRatio")) averageItemUseRatio = clamp(nbt.getDouble("WatcherLearningAverageItemUseRatio"), 0.0D, 1.0D);
+        if (nbt.contains("WatcherLearningAverageJumpRatio")) averageJumpRatio = clamp(nbt.getDouble("WatcherLearningAverageJumpRatio"), 0.0D, 1.0D);
+        if (nbt.contains("WatcherLearningAverageLookBackRatio")) averageLookBackRatio = clamp(nbt.getDouble("WatcherLearningAverageLookBackRatio"), 0.0D, 1.0D);
+        previousYaw = nbt.getFloat("WatcherLearningPreviousYaw");
+        hasPreviousYaw = nbt.getBoolean("WatcherLearningHasPreviousYaw");
         currentStationaryTicks = (int) clamp(nbt.getInt("WatcherLearningCurrentStationaryTicks"), 0.0D, 1200.0D);
     }
 
@@ -220,6 +258,12 @@ public final class WatcherLearningEngine {
         properties.setProperty(prefix + "averageStationaryTicks", Double.toString(averageStationaryTicks));
         properties.setProperty(prefix + "averageSprintRatio", Double.toString(averageSprintRatio));
         properties.setProperty(prefix + "averagePlayerHeight", Double.toString(averagePlayerHeight));
+        properties.setProperty(prefix + "averageSneakRatio", Double.toString(averageSneakRatio));
+        properties.setProperty(prefix + "averageItemUseRatio", Double.toString(averageItemUseRatio));
+        properties.setProperty(prefix + "averageJumpRatio", Double.toString(averageJumpRatio));
+        properties.setProperty(prefix + "averageLookBackRatio", Double.toString(averageLookBackRatio));
+        properties.setProperty(prefix + "previousYaw", Float.toString(previousYaw));
+        properties.setProperty(prefix + "hasPreviousYaw", Boolean.toString(hasPreviousYaw));
         properties.setProperty(prefix + "currentStationaryTicks", Integer.toString(currentStationaryTicks));
     }
 
@@ -238,6 +282,16 @@ public final class WatcherLearningEngine {
         averageStationaryTicks = readDouble(properties, prefix + "averageStationaryTicks", averageStationaryTicks, 0.0D, 1200.0D);
         averageSprintRatio = readDouble(properties, prefix + "averageSprintRatio", averageSprintRatio, 0.0D, 1.0D);
         averagePlayerHeight = readDouble(properties, prefix + "averagePlayerHeight", averagePlayerHeight, -64.0D, 320.0D);
+        averageSneakRatio = readDouble(properties, prefix + "averageSneakRatio", averageSneakRatio, 0.0D, 1.0D);
+        averageItemUseRatio = readDouble(properties, prefix + "averageItemUseRatio", averageItemUseRatio, 0.0D, 1.0D);
+        averageJumpRatio = readDouble(properties, prefix + "averageJumpRatio", averageJumpRatio, 0.0D, 1.0D);
+        averageLookBackRatio = readDouble(properties, prefix + "averageLookBackRatio", averageLookBackRatio, 0.0D, 1.0D);
+        try {
+            previousYaw = Float.parseFloat(properties.getProperty(prefix + "previousYaw", Float.toString(previousYaw)));
+        } catch (NumberFormatException ignored) {
+            // Keep the last valid yaw sample.
+        }
+        hasPreviousYaw = Boolean.parseBoolean(properties.getProperty(prefix + "hasPreviousYaw", Boolean.toString(hasPreviousYaw)));
         currentStationaryTicks = readInt(properties, prefix + "currentStationaryTicks", currentStationaryTicks, 0, 1200);
     }
 
