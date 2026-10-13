@@ -157,6 +157,16 @@ public final class WatcherLearningEngine {
         return averagePlayerHeight;
     }
 
+    public double getAverageSneakRatio() { return averageSneakRatio; }
+    public double getAverageItemUseRatio() { return averageItemUseRatio; }
+    public double getAverageJumpRatio() { return averageJumpRatio; }
+    public double getAverageLookBackRatio() { return averageLookBackRatio; }
+    public double getAverageStationaryTicks() { return averageStationaryTicks; }
+    public double getAverageWatchedTicks() { return averageWatchedTicks; }
+    public double getAverageUnwatchedTicks() { return averageUnwatchedTicks; }
+    public double getAveragePlayerDistance() { return averagePlayerDistance; }
+    public long getObservedTicks() { return observedTicks; }
+
     public double getAverageHorizontalSpeed() {
         return averageHorizontalSpeed;
     }
