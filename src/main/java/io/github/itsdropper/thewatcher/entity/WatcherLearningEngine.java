@@ -37,9 +37,6 @@ public final class WatcherLearningEngine {
     private int currentStationaryTicks;
 
     public void observe(boolean watched, double distance) {
-        if (observedTicks < Long.MAX_VALUE) {
-            observedTicks++;
-        }
         averagePlayerDistance = blend(averagePlayerDistance, clamp(distance, 0.0D, 512.0D));
 
         if (!hasPreviousState) {
@@ -102,6 +99,7 @@ public final class WatcherLearningEngine {
      * entity is unloaded, so stationary habits still represent seconds rather than samples.
      */
     public void observePlayerBehavior(PlayerEntity player, int elapsedTicks) {
+        if (observedTicks < Long.MAX_VALUE) observedTicks++;
         int sampleTicks = Math.max(1, Math.min(20, elapsedTicks));
         double vx = player.getVelocity().x;
         double vz = player.getVelocity().z;
