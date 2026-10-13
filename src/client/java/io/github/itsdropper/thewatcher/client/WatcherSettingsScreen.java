@@ -190,7 +190,7 @@ public final class WatcherSettingsScreen extends Screen {
     }
 
     @Override
-    protected void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
         super.renderBackground(context, mouseX, mouseY, delta);
         context.fill(0, 0, this.width, this.height, 0xB804080A);
         context.fill(panelLeft, panelTop, panelRight, this.height - 5, 0xE90A1012);
