@@ -9,11 +9,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Draws atmosphere before HUD elements so the HUD stays sharp. */
+/** Tints only the sky area before HUD elements render. */
 @Mixin(InGameHud.class)
 public abstract class AtmosphereOverlayMixin {
     @Inject(method = "render", at = @At("HEAD"))
-    private void theWatcher$renderPeripheralDread(
+    private void theWatcher$renderSkyGrade(
             DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
         WatcherAtmosphereOverlay.render(context);
     }
