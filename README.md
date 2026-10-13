@@ -72,7 +72,7 @@ The run can now place several distinct exploration sites in suitable, already-lo
 - **Root cellar** — a half-buried shelter whose notes describe a room that seems to connect to itself.
 - **Watchtower** — the original lookout with its own logbook and supplies.
 
-Each site has a distinct layout, lore book, evidence slip, and randomized survival supplies. The five non-tower site types are selected for later discoveries, so repeat runs can reveal different locations and accounts. These are currently built by the run manager in explored terrain rather than registered as vanilla world-generation structures. If a valid site cannot be placed, the run retries instead of treating the attempt as successful.
+Each site has a distinct layout, lore book, evidence slip, and randomized survival supplies. The five non-tower site types are selected for later discoveries, so repeat runs can reveal different locations and accounts. Optional evidence has gameplay value: carrying the Signal Station evidence slightly reduces hidden relocation frequency, while the Root Cellar evidence reduces the chance of a close-range blackout. These are currently built by the run manager in explored terrain rather than registered as vanilla world-generation structures. If a valid site cannot be placed, the run retries instead of treating the attempt as successful.
 
 ### Optional Ollama horror director
 
