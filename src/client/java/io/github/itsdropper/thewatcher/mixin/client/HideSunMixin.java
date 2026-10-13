@@ -28,7 +28,7 @@ public abstract class HideSunMixin {
     )
     private void theWatcher$hideSunTexture(int textureUnit, Identifier texture) {
         if (WatcherFogConfig.shouldHideSun()
-                && "textures/environment/sun.png".equals(texture.getPath())) {
+                && texture.getPath().endsWith("/sun.png")) {
             RenderSystem.setShaderTexture(textureUnit, theWatcher$getTransparentSunTexture());
         } else {
             RenderSystem.setShaderTexture(textureUnit, texture);
