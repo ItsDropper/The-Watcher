@@ -64,6 +64,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private int dreadEffectCooldown;
     private int attentionTicks;
     private int unseenTicks;
+    // Long, uninterrupted eye contact lets the Watcher advance in short, deliberate steps.
+    // This creates pressure without allowing it to teleport while visible or rush unfairly.
+    private int gazeApproachCooldown;
     private boolean attemptedEscalationAttack;
     private int ambushCooldown;
     private int closeJumpscareCooldown;
@@ -140,6 +143,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         hiddenMoveCooldown = Math.max(0, hiddenMoveCooldown - tickScale);
         proximityCorrectionCooldown = Math.max(0, proximityCorrectionCooldown - tickScale);
         dreadEffectCooldown = Math.max(0, dreadEffectCooldown - tickScale);
+        gazeApproachCooldown = Math.max(0, gazeApproachCooldown - tickScale);
         ambushCooldown = Math.max(0, ambushCooldown - tickScale);
         closeJumpscareCooldown = Math.max(0, closeJumpscareCooldown - tickScale);
         watchedAttackCooldown = Math.max(0, watchedAttackCooldown - tickScale);
@@ -285,6 +289,19 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 // A nearby Watcher must not freeze in the player's face during stalking.
                 moveAwayFrom(player, 1.65D);
                 recoverStuckRetreat(world, player);
+            } else if (phase == Phase.STALKING && attentionTicks >= 80) {
+                // It used to freeze indefinitely when watched, which made eye contact a perfect
+                // safety button. Now, after four seconds of uninterrupted direct eye contact,
+                // it advances slowly while visible. Each advance is short and separated by a
+                // pause; it never teleports in view and still withdraws if it gets too close.
+                if (gazeApproachCooldown <= 0 && getNavigation().isIdle()) {
+                    getNavigation().startMovingTo(player, 0.32D);
+                    gazeApproachCooldown = 80 + random.nextInt(41);
+                    if (random.nextFloat() < 0.45F) {
+                        world.playSound(null, getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                                SoundCategory.HOSTILE, 0.22F, 0.55F + random.nextFloat() * 0.18F);
+                    }
+                }
             } else {
                 getNavigation().stop();
                 setVelocity(0.0D, getVelocity().y, 0.0D);
@@ -879,6 +896,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         nbt.putInt("WatcherDreadEffectCooldown", dreadEffectCooldown);
         nbt.putInt("WatcherAttentionTicks", attentionTicks);
         nbt.putInt("WatcherUnseenTicks", unseenTicks);
+        nbt.putInt("WatcherGazeApproachCooldown", gazeApproachCooldown);
         nbt.putBoolean("WatcherAttemptedEscalationAttack", attemptedEscalationAttack);
         nbt.putInt("WatcherEscalationAttackCooldown", escalationAttackCooldown);
         nbt.putBoolean("WatcherNaturalRunEntity", naturalRunEntity);
@@ -903,6 +921,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         dreadEffectCooldown = Math.max(0, nbt.getInt("WatcherDreadEffectCooldown"));
         attentionTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherAttentionTicks")));
         unseenTicks = Math.max(0, Math.min(1200, nbt.getInt("WatcherUnseenTicks")));
+        gazeApproachCooldown = Math.max(0, nbt.getInt("WatcherGazeApproachCooldown"));
         attemptedEscalationAttack = nbt.getBoolean("WatcherAttemptedEscalationAttack");
         escalationAttackCooldown = Math.max(0, nbt.getInt("WatcherEscalationAttackCooldown"));
         naturalRunEntity = nbt.getBoolean("WatcherNaturalRunEntity");
