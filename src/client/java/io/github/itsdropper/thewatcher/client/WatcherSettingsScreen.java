@@ -90,6 +90,11 @@ public final class WatcherSettingsScreen extends Screen {
             DesktopAnomalyConfig.save();
             button.setMessage(toggleText("Native desktop popups", DesktopAnomalyConfig.ENABLED));
         }).dimensions(centerX - 112, top + 108, 224, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(fogDetailText(), button -> {
+            WatcherFogConfig.cycleDetail();
+            button.setMessage(fogDetailText());
+        }).dimensions(centerX - 112, top + 135, 224, 20).build());
     }
 
     private void initLocalAi(int centerX, int left, int panelWidth, int top) {
@@ -161,6 +166,10 @@ public final class WatcherSettingsScreen extends Screen {
         return Text.literal("System prompt preset: " + (WatcherOllamaConfig.getPromptPresetIndex() + 1) + "/3");
     }
 
+    private static Text fogDetailText() {
+        return Text.literal("Atmospheric fog: " + WatcherFogConfig.label());
+    }
+
     private static Text renderDistanceText(int chunks) {
         return Text.literal("Render distance: " + chunks + " chunks");
     }
@@ -190,6 +199,9 @@ public final class WatcherSettingsScreen extends Screen {
                     "The model may choose only approved in-game events.",
                     centerX, this.height - 56, 0x909090);
         } else {
+            context.drawCenteredTextWithShadow(textRenderer,
+                    "Fog quality changes visuals only; Ultra uses no particles.",
+                    centerX, this.height - 70, 0x909090);
             context.drawCenteredTextWithShadow(textRenderer,
                     "The Watcher learns from your movement and where you look.",
                     centerX, this.height - 56, 0x909090);

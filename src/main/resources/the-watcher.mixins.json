@@ -9,6 +9,7 @@
     "client.ScreenAccessor",
     "client.CreateWorldScreenMixin",
     "client.CameraZoomMixin",
+    "client.AtmosphericFogMixin",
     "client.NightLightmapMixin",
     "client.EndingMusicPriorityMixin"
   ],
