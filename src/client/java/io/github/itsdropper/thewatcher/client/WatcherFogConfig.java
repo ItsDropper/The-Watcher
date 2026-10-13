@@ -81,10 +81,10 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.88F;
-            case MEDIUM -> 0.75F;
-            case HIGH -> 0.58F;
-            case ULTRA -> 0.43F;
+            case LOW -> 0.72F;
+            case MEDIUM -> 0.48F;
+            case HIGH -> 0.28F;
+            case ULTRA -> 0.12F;
         };
         return Math.max(0.0F, original * scale * (1.0F - 0.08F * nightFactor()));
     }
@@ -93,15 +93,20 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.96F;
-            case MEDIUM -> 0.90F;
-            case HIGH -> 0.80F;
-            case ULTRA -> 0.68F;
+            case LOW -> 0.84F;
+            case MEDIUM -> 0.70F;
+            case HIGH -> 0.56F;
+            case ULTRA -> 0.38F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
         scale *= 1.0F - 0.12F * nightFactor();
         if (client.world != null && client.world.isRaining()) scale *= 0.93F;
         return Math.max(8.0F, original * scale);
+    }
+
+    /** Hide the vanilla sun while any atmospheric fog preset is active. */
+    public static boolean shouldHideSun() {
+        return shouldApply();
     }
 
     public static float colorBlendWeight() {
