@@ -98,7 +98,8 @@ public final class WatcherRunManager {
             if (WatcherTowerGenerator.generateGuaranteedStructures(world)) saveRun(world, run);
         }
 
-        if (run.revealed && world.getTime() % 20L == 0L) {
+        if (run.revealed && isNight(world) && world.getTime() % 20L == 0L) {
+            // During daylight the Watcher must remain distant or unloaded, never respawn beside players.
             ensureWatcherPresent(world, run);
         }
         WatcherOllamaDirector.tick(world, run.revealed);
