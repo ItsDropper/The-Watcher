@@ -94,6 +94,15 @@ public final class WatcherLearningEngine {
      * camps, sprints, and tends to build/live at higher elevations.
      */
     public void observePlayerBehavior(PlayerEntity player) {
+        observePlayerBehavior(player, 1);
+    }
+
+    /**
+     * Samples at a caller-defined interval. The run manager uses 20 ticks when the
+     * entity is unloaded, so stationary habits still represent seconds rather than samples.
+     */
+    public void observePlayerBehavior(PlayerEntity player, int elapsedTicks) {
+        int sampleTicks = Math.max(1, Math.min(20, elapsedTicks));
         double vx = player.getVelocity().x;
         double vz = player.getVelocity().z;
         double horizontalSpeed = Math.sqrt(vx * vx + vz * vz);
@@ -112,9 +121,9 @@ public final class WatcherLearningEngine {
         hasPreviousYaw = true;
 
         if (horizontalSpeed < 0.025D) {
-            currentStationaryTicks = Math.min(1200, currentStationaryTicks + 1);
+            currentStationaryTicks = Math.min(1200, currentStationaryTicks + sampleTicks);
         } else {
-            currentStationaryTicks = Math.max(0, currentStationaryTicks - 3);
+            currentStationaryTicks = Math.max(0, currentStationaryTicks - 3 * sampleTicks);
         }
         averageStationaryTicks = blend(averageStationaryTicks, currentStationaryTicks);
     }
