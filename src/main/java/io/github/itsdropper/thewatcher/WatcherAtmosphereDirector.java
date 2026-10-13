@@ -55,7 +55,7 @@ public final class WatcherAtmosphereDirector {
 
             PlayerState state = states.computeIfAbsent(player.getUuid(), ignored -> {
                 PlayerState created = new PlayerState();
-                created.nextEventAt = world.getTime() + 6_000L + world.random.nextInt(6_001);
+                created.nextEventAt = world.getTime() + 4_000L + world.random.nextInt(4_001);
                 created.lastYaw = player.getYaw();
                 created.lastPosition = player.getPos();
                 created.hasLastSample = true;
@@ -66,10 +66,10 @@ public final class WatcherAtmosphereDirector {
             if (state.lookBackCount >= 2 && world.getTime() >= state.nextAdaptiveCueAt) {
                 // Repeatedly checking behind can itself become a trigger: answer only
                 // after the player has turned away, and then leave another long quiet gap.
-                playFootstep(world, player, state, 3.2D, false);
+                playFootstep(world, player, state, 5.5D + world.random.nextDouble() * 3.0D, true);
                 state.lookBackCount = 0;
                 state.events++;
-                state.nextAdaptiveCueAt = world.getTime() + 1_200L + world.random.nextInt(1_801);
+                state.nextAdaptiveCueAt = world.getTime() + 1_800L + world.random.nextInt(2_401);
                 state.nextEventAt = Math.max(state.nextEventAt, world.getTime() + 900L);
                 continue;
             }
@@ -91,7 +91,7 @@ public final class WatcherAtmosphereDirector {
                 state.events++;
             }
 
-            state.nextEventAt = world.getTime() + 6_000L + world.random.nextInt(9_001);
+            state.nextEventAt = world.getTime() + 3_600L + world.random.nextInt(6_001);
         }
     }
 
@@ -120,6 +120,34 @@ public final class WatcherAtmosphereDirector {
         int light = world.getLightLevel(player.getBlockPos());
         boolean dark = light <= 7 || isNight(world);
         int event = world.random.nextInt(100);
+
+        // Daylight horror must not depend on the Watcher or darkness. Keep cues physically
+        // plausible enough to dismiss, but place them where the player cannot immediately
+        // identify a source. The long per-player cooldown does the pacing work.
+        if (!dark && event < 24) {
+            playFootstep(world, player, state, 11.0D + world.random.nextDouble() * 8.0D, true);
+            return;
+        }
+        if (!dark && event < 38) {
+            Vec3d look = player.getRotationVec(1.0F).normalize();
+            Vec3d right = new Vec3d(-look.z, 0.0D, look.x).normalize();
+            double behind = 13.0D + world.random.nextDouble() * 9.0D;
+            double side = (world.random.nextBoolean() ? 1.0D : -1.0D)
+                    * (3.0D + world.random.nextDouble() * 5.0D);
+            BlockPos soundPos = BlockPos.ofFloored(
+                    player.getX() - look.x * behind + right.x * side,
+                    player.getY(),
+                    player.getZ() - look.z * behind + right.z * side);
+            world.playSound(null, soundPos, SoundEvents.BLOCK_WOODEN_DOOR_CLOSE,
+                    SoundCategory.AMBIENT, 0.10F, 0.62F + world.random.nextFloat() * 0.22F);
+            return;
+        }
+        if (!dark && event < 46) {
+            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
+                    SoundCategory.AMBIENT, 0.08F + world.random.nextFloat() * 0.05F,
+                    0.55F + world.random.nextFloat() * 0.25F);
+            return;
+        }
 
         // A rare, unhelpful camera warning is more unsettling than constant narration.
         // It never gives coordinates and is separated by the long event cooldown above.
