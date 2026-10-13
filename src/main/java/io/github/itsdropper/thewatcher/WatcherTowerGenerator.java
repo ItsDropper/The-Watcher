@@ -240,10 +240,13 @@ public final class WatcherTowerGenerator {
 
             BlockPos base = new BlockPos(x, baseY, z);
             // The first structure is always the guaranteed tower; later discoveries vary.
-            switch (world.random.nextInt(3)) {
+            // New site types make exploration less repetitive without changing guaranteed spawn sites.
+            switch (world.random.nextInt(5)) {
                 case 0 -> buildAbandonedCabin(world, base);
                 case 1 -> buildRitualShrine(world, base);
-                default -> buildRuinedCamp(world, base);
+                case 2 -> buildRuinedCamp(world, base);
+                case 3 -> buildSignalStation(world, base);
+                default -> buildRootCellar(world, base);
             }
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
@@ -654,6 +657,125 @@ public final class WatcherTowerGenerator {
         ));
     }
 
+    /**
+     * A derelict signal post built by an expedition that tried to map the Watcher's movements.
+     * Its rails and signal lamp suggest the structure once served a practical purpose.
+     */
+    private static void buildSignalStation(ServerWorld world, BlockPos base) {
+        int x = base.getX(), y = base.getY(), z = base.getZ();
+        BlockState stone = net.minecraft.block.Blocks.COBBLED_DEEPSLATE.getDefaultState();
+        BlockState timber = net.minecraft.block.Blocks.STRIPPED_SPRUCE_LOG.getDefaultState();
+        BlockState planks = net.minecraft.block.Blocks.SPRUCE_PLANKS.getDefaultState();
+
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                boolean edge = Math.abs(dx) == 4 || Math.abs(dz) == 4;
+                world.setBlockState(new BlockPos(x + dx, y, z + dz),
+                        edge ? stone : net.minecraft.block.Blocks.COARSE_DIRT.getDefaultState(), 3);
+            }
+        }
+
+        // Four timber supports and a narrow upper platform make the silhouette readable at a distance.
+        for (int dx : new int[]{-3, 3}) {
+            for (int dz : new int[]{-3, 3}) {
+                for (int dy = 1; dy <= 5; dy++) {
+                    world.setBlockState(new BlockPos(x + dx, y + dy, z + dz), timber, 3);
+                }
+            }
+        }
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                if (Math.abs(dx) == 3 || Math.abs(dz) == 3) {
+                    world.setBlockState(new BlockPos(x + dx, y + 5, z + dz), planks, 3);
+                    if ((dx + dz) % 2 == 0) {
+                        world.setBlockState(new BlockPos(x + dx, y + 6, z + dz),
+                                net.minecraft.block.Blocks.SPRUCE_FENCE.getDefaultState(), 3);
+                    }
+                }
+            }
+        }
+        // The signal mast is deliberately dark: its lamp has power, but no signal is being sent.
+        world.setBlockState(new BlockPos(x, y + 6, z), stone, 3);
+        world.setBlockState(new BlockPos(x, y + 7, z),
+                net.minecraft.block.Blocks.REDSTONE_LAMP.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x, y + 8, z),
+                net.minecraft.block.Blocks.IRON_BARS.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 3, y + 1, z), net.minecraft.block.Blocks.LADDER.getDefaultState()
+                .with(net.minecraft.block.LadderBlock.FACING, Direction.EAST), 3);
+        for (int dx = -5; dx <= -1; dx++) {
+            BlockPos railPos = new BlockPos(x + dx, y + 1, z);
+            world.setBlockState(railPos, net.minecraft.block.Blocks.RAIL.getDefaultState(), 3);
+        }
+        world.setBlockState(new BlockPos(x - 5, y, z), net.minecraft.block.Blocks.GRAVEL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 1, z + 2), net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 2, y + 1, z + 2), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 1, z - 2), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        placeLoreChest(world, new BlockPos(x + 1, y + 1, z + 1), Direction.WEST, List.of(
+                "SIGNAL LOG — SHIFT 1. The lamp flashed at 02:14. We had disconnected the redstone line before sunset. Nobody was on the platform.",
+                "SHIFT 3. The signal now repeats in groups of three. We answered once with the hand lamp. Something answered from the tree line, but there was no light to see.",
+                "SHIFT 5. I counted the rail ties from the platform to the forest. There were twenty-six on the way out and twenty-seven on the way back. We did not lay another track.",
+                "FINAL TRANSMISSION. Stop answering the signal. It is not a warning and it is not asking for help. It is checking whether anyone is still listening."
+        ));
+    }
+
+    /**
+     * A half-buried root cellar where the occupants hid from something that kept appearing indoors.
+     */
+    private static void buildRootCellar(ServerWorld world, BlockPos base) {
+        int x = base.getX(), y = base.getY(), z = base.getZ();
+        BlockState mud = net.minecraft.block.Blocks.MUD_BRICKS.getDefaultState();
+        BlockState mossy = net.minecraft.block.Blocks.MOSSY_STONE_BRICKS.getDefaultState();
+        BlockState air = net.minecraft.block.Blocks.AIR.getDefaultState();
+
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                if (Math.abs(dx) == 4 || Math.abs(dz) == 4) {
+                    world.setBlockState(new BlockPos(x + dx, y, z + dz), mossy, 3);
+                }
+            }
+        }
+        // Low walls and a broken roof leave the interior visible and accessible.
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 3;
+                for (int dy = 1; dy <= 3; dy++) {
+                    boolean doorway = dz == -3 && dx == 0 && dy <= 2;
+                    if (edge) {
+                        world.setBlockState(new BlockPos(x + dx, y + dy, z + dz), doorway ? air : mud, 3);
+                    }
+                }
+                if (Math.abs(dx) == 3 || Math.abs(dz) == 3) {
+                    if ((dx + dz) % 2 == 0) {
+                        world.setBlockState(new BlockPos(x + dx, y + 4, z + dz),
+                                net.minecraft.block.Blocks.SPRUCE_LOG.getDefaultState(), 3);
+                    }
+                }
+            }
+        }
+        // Root-like beams intrude into the room; one corner has collapsed inward.
+        for (int i = -2; i <= 2; i++) {
+            world.setBlockState(new BlockPos(x + i, y + 4, z + 2),
+                    net.minecraft.block.Blocks.ROOTED_DIRT.getDefaultState(), 3);
+        }
+        world.setBlockState(new BlockPos(x + 2, y + 1, z + 2),
+                net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 2, y + 1, z + 2),
+                net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 2, y + 1, z - 2),
+                net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 1, z - 2),
+                net.minecraft.block.Blocks.BONE_BLOCK.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x, y + 1, z - 2),
+                net.minecraft.block.Blocks.SKELETON_SKULL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x, y, z - 4), net.minecraft.block.Blocks.COARSE_DIRT.getDefaultState(), 3);
+        placeLoreChest(world, new BlockPos(x + 1, y + 1, z + 1), Direction.NORTH, List.of(
+                "CELLAR NOTES — We moved the pantry underground after the figure began appearing in the kitchen window. It never broke the glass. It was already inside whenever we checked.",
+                "NOTE 2. We covered the hatch with soil and slept below. At night, dirt fell from the ceiling in slow, evenly spaced taps. By morning, the soil above us was untouched.",
+                "NOTE 3. There is a second set of shelves now. I did not build them. They are stocked with jars labelled in my handwriting, dated tomorrow.",
+                "LAST NOTE. The hatch opens to the same room whether it is above us or beside us. If you found this cellar, leave the door open. Do not test whether it can be locked."
+        ));
+    }
+
     private static void placeLoreChest(ServerWorld world, BlockPos pos, Direction facing, List<String> pages) {
         world.setBlockState(pos, net.minecraft.block.Blocks.CHEST.getDefaultState()
                 .with(ChestBlock.FACING, facing), 3);
@@ -684,6 +806,8 @@ public final class WatcherTowerGenerator {
         String evidenceName = pages.get(0).startsWith("E.'s journal") ? "Evidence: Cabin"
                 : pages.get(0).startsWith("ARCHIVE FRAGMENT") ? "Evidence: Shrine"
                 : pages.get(0).startsWith("EXPEDITION LOG") ? "Evidence: Expedition"
+                : pages.get(0).startsWith("SIGNAL LOG") ? "Evidence: Signal Station"
+                : pages.get(0).startsWith("CELLAR NOTES") ? "Evidence: Root Cellar"
                 : "Evidence: Unknown";
         if (!evidenceName.endsWith("Unknown")) {
             ItemStack evidence = new ItemStack(Items.PAPER);
