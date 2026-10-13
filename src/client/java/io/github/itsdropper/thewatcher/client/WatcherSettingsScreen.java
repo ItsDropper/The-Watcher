@@ -200,7 +200,7 @@ public final class WatcherSettingsScreen extends Screen {
                     centerX, this.height - 56, 0x909090);
         } else {
             context.drawCenteredTextWithShadow(textRenderer,
-                    "Fog quality changes visuals only; Ultra uses no particles.",
+                    "Fog presets grade fog and daylight; Ultra uses no particles.",
                     centerX, this.height - 70, 0x909090);
             context.drawCenteredTextWithShadow(textRenderer,
                     "The Watcher learns from your movement and where you look.",
