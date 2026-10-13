@@ -8,6 +8,9 @@ import io.github.itsdropper.thewatcher.client.render.WatcherRenderer;
 import io.github.itsdropper.thewatcher.client.hosting.HostingTunnelService;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.minecraft.text.Text;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
@@ -31,9 +34,30 @@ public class TheWatcherClient implements ClientModInitializer {
         return endingMusic != null;
     }
 
+    private static boolean clientIsInWorld() {
+        var client = net.minecraft.client.MinecraftClient.getInstance();
+        return client.player != null && client.world != null;
+    }
+
     @Override
     public void onInitializeClient() {
         DesktopAnomalyConfig.load();
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+                dispatcher.register(ClientCommandManager.literal("watcherclient")
+                        .then(ClientCommandManager.literal("debug")
+                                .then(ClientCommandManager.literal("desktop-popup")
+                                        .executes(context -> {
+                                            if (clientIsInWorld()) {
+                                                DesktopAnomalyLauncher.showRandomPopup(
+                                                        net.minecraft.util.math.random.Random.create());
+                                                context.getSource().sendFeedback(Text.literal(
+                                                        "Requested a native The Watcher desktop popup. Check Windows if it does not appear."));
+                                            } else {
+                                                context.getSource().sendError(Text.literal(
+                                                        "Join a world before testing the desktop popup."));
+                                            }
+                                            return 1;
+                                        })))));
         EntityRendererRegistry.register(TheWatcher.WATCHER, WatcherRenderer::new);
         CameraAlertHud.register();
         ClientPlayNetworking.registerGlobalReceiver(io.github.itsdropper.thewatcher.CameraNetwork.EndingMusicPayload.ID, (payload, context) ->
