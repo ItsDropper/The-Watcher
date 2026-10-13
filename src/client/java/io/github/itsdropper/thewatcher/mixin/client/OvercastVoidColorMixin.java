@@ -1,33 +1,39 @@
 package io.github.itsdropper.thewatcher.mixin.client;
 
 import io.github.itsdropper.thewatcher.client.WatcherFogConfig;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 /**
- * Tints the sky color used behind the terrain in the Overworld.
+ * Changes the OpenGL framebuffer clear color itself. This is the void/background
+ * color visible through gaps beyond loaded terrain, not the sky dome color.
  */
-@Mixin(ClientWorld.class)
+@Mixin(RenderSystem.class)
 public abstract class OvercastVoidColorMixin {
-    @Inject(
-            method = "getSkyColor(Lnet/minecraft/util/math/Vec3d;F)Lnet/minecraft/util/math/Vec3d;",
-            at = @At("RETURN"),
-            cancellable = true
+    @ModifyArgs(
+            method = "clearColor(FFFF)V",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lcom/mojang/blaze3d/platform/GlStateManager;_clearColor(FFFF)V"
+            ),
+            require = 1
     )
-    private void theWatcher$grayUnloadedTerrainSky(
-            Vec3d cameraPos,
-            float tickDelta,
-            CallbackInfoReturnable<Vec3d> cir
-    ) {
+    private static void theWatcher$grayVoidClearColor(Args args) {
         if (!WatcherFogConfig.shouldApply()) return;
 
-        Vec3d color = cir.getReturnValue();
-        double luminance = 0.2126D * color.x + 0.7152D * color.y + 0.0722D * color.z;
-        double gray = Math.max(0.095D, Math.min(0.41D, luminance * 0.48D));
-        cir.setReturnValue(new Vec3d(gray, gray, gray));
+        float red = ((Number) args.get(0)).floatValue();
+        float green = ((Number) args.get(1)).floatValue();
+        float blue = ((Number) args.get(2)).floatValue();
+
+        // Use a dark neutral gray rather than the vanilla blue.
+        float luminance = 0.2126F * red + 0.7152F * green + 0.0722F * blue;
+        float gray = Math.max(0.075F, Math.min(0.30F, luminance * 0.48F));
+        args.set(0, gray);
+        args.set(1, gray);
+        args.set(2, gray);
     }
 }
