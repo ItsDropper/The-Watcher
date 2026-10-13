@@ -24,8 +24,8 @@ import org.lwjgl.glfw.GLFW;
 public class TheWatcherClient implements ClientModInitializer {
     private static KeyBinding openCameraMonitorKey;
     private static PositionedSoundInstance endingMusic;
-    private static int windowsAnomalyDelay = -1;
-    private static Object windowsAnomalyWorld;
+    private static int desktopAnomalyDelay = -1;
+    private static Object desktopAnomalyWorld;
 
     public static boolean isEndingMusicActive() {
         return endingMusic != null;
@@ -33,6 +33,7 @@ public class TheWatcherClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        DesktopAnomalyConfig.load();
         EntityRendererRegistry.register(TheWatcher.WATCHER, WatcherRenderer::new);
         CameraAlertHud.register();
         ClientPlayNetworking.registerGlobalReceiver(io.github.itsdropper.thewatcher.CameraNetwork.EndingMusicPayload.ID, (payload, context) ->
@@ -86,40 +87,31 @@ public class TheWatcherClient implements ClientModInitializer {
                 }
             }
 
-            // Extremely rare fictional OS-style dialogs, rendered inside Minecraft only.
-            // Reset the initial delay for each world; never interrupt menus or other screens.
+            // Desktop effects are strictly opt-in and never run outside the Overworld.
             if (client.player == null || client.world == null) {
-                windowsAnomalyDelay = -1;
-                windowsAnomalyWorld = null;
+                desktopAnomalyDelay = -1;
+                desktopAnomalyWorld = null;
                 return;
             }
-            if (windowsAnomalyWorld != client.world) {
-                windowsAnomalyWorld = client.world;
-                windowsAnomalyDelay = 6_000 + client.world.random.nextInt(12_001);
+            if (desktopAnomalyWorld != client.world) {
+                desktopAnomalyWorld = client.world;
+                desktopAnomalyDelay = 6_000 + client.world.random.nextInt(12_001);
             }
-            if (windowsAnomalyDelay > 0) {
-                windowsAnomalyDelay--;
+            if (!DesktopAnomalyConfig.ENABLED) {
+                desktopAnomalyDelay = -1;
+                return;
+            }
+            if (desktopAnomalyDelay < 0) {
+                desktopAnomalyDelay = 6_000 + client.world.random.nextInt(12_001);
+            } else if (desktopAnomalyDelay > 0) {
+                desktopAnomalyDelay--;
             } else if (client.currentScreen == null
                     && client.world.getRegistryKey() == World.OVERWORLD) {
-                // A single 35% roll every 20–40 minutes keeps it rare rather than predictable.
+                // Rare desktop interruption: 35% chance every 20–40 minutes after the first delay.
                 if (client.world.random.nextInt(100) < 35) {
-                    String[][] anomalies = {
-                            {"Windows Security", "An unfamiliar process accessed this window.",
-                                    "The process could not be identified."},
-                            {"Application Error", "The requested object could not be located.",
-                                    "It may have been moved or may no longer exist."},
-                            {"Windows", "This application is waiting for a response.",
-                                    "No response was received from the requested window."},
-                            {"System Notification", "A background task changed state.",
-                                    "The previous state could not be restored."},
-                            {"Windows Security", "An unexpected window was detected.",
-                                    "The source of this window is unknown."}
-                    };
-                    String[] anomaly = anomalies[client.world.random.nextInt(anomalies.length)];
-                    client.setScreen(new WindowsAnomalyScreen(client.currentScreen,
-                            anomaly[0], anomaly[1], anomaly[2]));
+                    DesktopAnomalyLauncher.showRandomPopup(client.world.random);
                 }
-                windowsAnomalyDelay = 24_000 + client.world.random.nextInt(24_001);
+                desktopAnomalyDelay = 24_000 + client.world.random.nextInt(24_001);
             }
         });
     }
