@@ -10,6 +10,7 @@
     "client.CreateWorldScreenMixin",
     "client.CameraZoomMixin",
     "client.AtmosphericFogMixin",
+    "client.HideSunMixin",
     "client.NightLightmapMixin",
     "client.EndingMusicPriorityMixin"
   ],
