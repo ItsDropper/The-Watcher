@@ -694,14 +694,18 @@ public final class WatcherTowerGenerator {
                 }
             }
         }
-        // The signal mast is deliberately dark: its lamp has power, but no signal is being sent.
+        // The signal mast is deliberately dark; the last log claims it flashed without power.
         world.setBlockState(new BlockPos(x, y + 6, z), stone, 3);
         world.setBlockState(new BlockPos(x, y + 7, z),
                 net.minecraft.block.Blocks.REDSTONE_LAMP.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x, y + 8, z),
                 net.minecraft.block.Blocks.IRON_BARS.getDefaultState(), 3);
-        world.setBlockState(new BlockPos(x - 3, y + 1, z), net.minecraft.block.Blocks.LADDER.getDefaultState()
-                .with(net.minecraft.block.LadderBlock.FACING, Direction.EAST), 3);
+        // The ladder is attached to the north-west support rather than floating in the air.
+        for (int dy = 1; dy <= 5; dy++) {
+            world.setBlockState(new BlockPos(x - 3, y + dy, z - 2),
+                    net.minecraft.block.Blocks.LADDER.getDefaultState()
+                            .with(net.minecraft.block.LadderBlock.FACING, Direction.SOUTH), 3);
+        }
         for (int dx = -5; dx <= -1; dx++) {
             BlockPos railPos = new BlockPos(x + dx, y + 1, z);
             world.setBlockState(railPos, net.minecraft.block.Blocks.RAIL.getDefaultState(), 3);
