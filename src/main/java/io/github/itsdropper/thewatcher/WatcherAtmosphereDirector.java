@@ -2,6 +2,7 @@ package io.github.itsdropper.thewatcher;
 
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -73,6 +74,15 @@ public final class WatcherAtmosphereDirector {
             });
 
             updatePlayerHabits(world, player, state);
+
+            // Evidence is a progression trigger, not just a key item. Each new record
+            // changes the Watcher's behavior and produces one restrained, player-local cue.
+            int evidenceCount = countRequiredEvidence(player);
+            if (evidenceCount > state.highestEvidenceCount) {
+                state.highestEvidenceCount = evidenceCount;
+                deliverEvidenceMilestone(world, player, evidenceCount);
+            }
+
             if (state.lookBackCount >= 2 && world.getTime() >= state.nextAdaptiveCueAt) {
                 // Repeatedly checking behind can itself become a trigger: answer only
                 // after the player has turned away, and then leave another long quiet gap.
@@ -102,6 +112,44 @@ public final class WatcherAtmosphereDirector {
             }
 
             state.nextEventAt = world.getTime() + 3_600L + world.random.nextInt(6_001);
+        }
+    }
+
+    private static int countRequiredEvidence(ServerPlayerEntity player) {
+        int count = 0;
+        String[] required = {
+                "Evidence: Tower", "Evidence: Cabin",
+                "Evidence: Shrine", "Evidence: Expedition"
+        };
+        for (String evidenceName : required) {
+            for (int slot = 0; slot < player.getInventory().size(); slot++) {
+                net.minecraft.item.ItemStack stack = player.getInventory().getStack(slot);
+                if (!stack.isEmpty() && stack.isOf(net.minecraft.item.Items.PAPER)
+                        && stack.getName().getString().equals(evidenceName)) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    private static void deliverEvidenceMilestone(ServerWorld world, ServerPlayerEntity player, int count) {
+        String message = switch (count) {
+            case 1 -> "The paper feels warmer than it should.";
+            case 2 -> "Something has started keeping pace with you.";
+            case 3 -> "The records agree. It knows what you found.";
+            default -> "It knows you can hurt it now.";
+        };
+        player.sendMessage(Text.literal(message), true);
+        if (count >= 2) {
+            world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                    SoundCategory.AMBIENT, 0.24F, count >= 4 ? 0.48F : 0.62F);
+            world.spawnParticles(ParticleTypes.ASH, player.getX(), player.getEyeY(), player.getZ(),
+                    12 + count * 3, 0.35D, 0.25D, 0.35D, 0.006D);
+        } else {
+            world.playSound(null, player.getBlockPos(), SoundEvents.AMBIENT_CAVE.value(),
+                    SoundCategory.AMBIENT, 0.12F, 0.65F);
         }
     }
 
@@ -310,6 +358,7 @@ public final class WatcherAtmosphereDirector {
         private long nextAdaptiveCueAt;
         private long lastBigTurnAt;
         private int events;
+        private int highestEvidenceCount;
         private int lookBackCount;
         private int stillTicks;
         private int knocksRemaining;
