@@ -89,12 +89,12 @@ public final class CameraMonitorScreen extends Screen {
 
     private void updateViewButtons() {
         for (int i = 0; i < viewButtons.size(); i++) {
-            viewButtons.get(i).active = i < cameras.size();
+            viewButtons.get(i).active = i < cameras.size() && cameras.get(i).loaded();
         }
     }
 
     private void openFeedAt(int index) {
-        if (index < 0 || index >= cameras.size()) return;
+        if (index < 0 || index >= cameras.size() || !cameras.get(index).loaded()) return;
         openFeed(cameras.get(index).pos());
     }
 
@@ -135,7 +135,7 @@ public final class CameraMonitorScreen extends Screen {
         context.fill(left, top, left + panelWidth, bottom, 0xFF10141B);
         context.fill(left, top, left + panelWidth, top + 2, 0xFFFF3535);
         context.drawText(textRenderer, "CAMERA NETWORK", centerX - textRenderer.getWidth("CAMERA NETWORK") / 2, top + 12, 0xFFE4EAF2, false);
-        String subtitle = "World camera registry • offline cameras remain listed";
+        String subtitle = "Remote feeds never move your player • camera area must be loaded on your client";
         context.drawText(textRenderer, subtitle, centerX - textRenderer.getWidth(subtitle) / 2, top + 28, 0xFF9BA8B8, false);
 
         if (cameras.isEmpty()) {
@@ -156,7 +156,7 @@ public final class CameraMonitorScreen extends Screen {
                 context.drawText(textRenderer,
                         camera.pos().getX() + ", " + camera.pos().getY() + ", " + camera.pos().getZ(),
                         left + 94, rowY + 3, 0xFF9BA8B8, false);
-                String status = !camera.loaded() ? "OFFLINE" : camera.detected() ? "WATCHER IN VIEW" : "NO CONTACT";
+                String status = !camera.loaded() ? "OUT OF RANGE" : camera.detected() ? "WATCHER IN VIEW" : "NO CONTACT";
                 int color = !camera.loaded() ? 0xFF8994A3 : camera.detected() ? 0xFFFF5555 : 0xFF76D6A0;
                 context.drawText(textRenderer, status,
                         left + panelWidth - 160 - textRenderer.getWidth(status), rowY + 3, color, false);
