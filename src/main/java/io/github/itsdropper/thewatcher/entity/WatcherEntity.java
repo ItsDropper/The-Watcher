@@ -940,6 +940,20 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         return debugSimulation;
     }
 
+    /**
+     * Shared run-manager sample. The manager calls this once per second so learning remains
+     * current even when the entity is outside the ticking area during daytime.
+     */
+    public void observePlayerForLearning(PlayerEntity player) {
+        if (player == null || !player.isAlive() || player.isSpectator()) return;
+        double distance = Math.sqrt(squaredDistanceTo(player));
+        int renderChunks = WatcherStalkingDirector.renderDistanceChunks(
+                TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
+        learningEngine.observe(isPlayerWatching(player), distance);
+        learningEngine.observePlayerBehavior(player);
+        learningEngine.observeStalkingDistance(distance, renderChunks);
+    }
+
     public double getLearnedSafetyDistanceBonus(int renderChunks) {
         return learningEngine.getLearnedSafetyDistanceBonus(renderChunks);
     }
