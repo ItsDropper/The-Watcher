@@ -14,7 +14,8 @@
     "client.NightLightmapMixin",
     "client.OvercastSkyMixin",
     "client.EndingMusicPriorityMixin",
-    "client.OvercastSkyColorMixin"
+    "client.OvercastSkyColorMixin",
+    "client.OvercastVoidColorMixin"
   ],
   "injectors": {
     "defaultRequire": 1
