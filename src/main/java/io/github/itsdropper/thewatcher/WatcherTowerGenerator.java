@@ -24,7 +24,12 @@ import java.util.Set;
 /** Builds a small, old watchtower in explored, already-loaded terrain. */
 public final class WatcherTowerGenerator {
     private static final Set<Long> BUILT_REGIONS = new HashSet<>();
+    private static final Set<BlockPos> BUILT_POSITIONS = new HashSet<>();
     private static final Map<Integer, BlockPos> GUARANTEED_POSITIONS = new HashMap<>();
+    private static final double MIN_STRUCTURE_SEPARATION_SQUARED = 300.0D * 300.0D;
+    // Legacy saves only recorded 128x128 regions, so use a conservative buffer around
+    // unknown old positions until newly generated structures can record exact coordinates.
+    private static final double LEGACY_REGION_BUFFER_SQUARED = 500.0D * 500.0D;
     private static final int MAX_STRUCTURES_PER_SESSION = 10;
     private static int guaranteedStructuresMask;
     private static int towersBuilt;
@@ -34,6 +39,7 @@ public final class WatcherTowerGenerator {
 
     public static void resetForRun() {
         BUILT_REGIONS.clear();
+        BUILT_POSITIONS.clear();
         GUARANTEED_POSITIONS.clear();
         towersBuilt = 0;
         guaranteedStructuresMask = 0;
@@ -47,6 +53,15 @@ public final class WatcherTowerGenerator {
         BUILT_REGIONS.clear();
         BUILT_REGIONS.addAll(regions);
         towersBuilt = BUILT_REGIONS.size();
+    }
+
+    public static Set<BlockPos> snapshotBuiltPositions() {
+        return Set.copyOf(BUILT_POSITIONS);
+    }
+
+    public static void restoreBuiltPositions(Set<BlockPos> positions) {
+        BUILT_POSITIONS.clear();
+        BUILT_POSITIONS.addAll(positions);
     }
 
     public static int snapshotGuaranteedStructuresMask() {
@@ -73,11 +88,16 @@ public final class WatcherTowerGenerator {
     public static boolean generateGuaranteedStructures(ServerWorld world) {
         int before = guaranteedStructuresMask;
         generateGuaranteedSpawnTower(world);
-        generateGuaranteedSite(world, 2, new int[][]{{11, 2}, {12, 5}, {10, 7}, {13, -2}},
+        // Four primary sites are arranged around the start, but every accepted site must
+        // remain at least 300 blocks from every other recorded structure.
+        generateGuaranteedSite(world, 2,
+                new int[][]{{22, 0}, {25, 7}, {25, -7}, {29, 0}, {0, 26}, {0, -26}},
                 WatcherTowerGenerator::buildAbandonedCabin);
-        generateGuaranteedSite(world, 4, new int[][]{{-11, 3}, {-12, -4}, {-10, 7}, {-13, 0}},
+        generateGuaranteedSite(world, 4,
+                new int[][]{{-22, 0}, {-25, 7}, {-25, -7}, {-29, 0}, {0, 26}, {0, -26}},
                 WatcherTowerGenerator::buildRitualShrine);
-        generateGuaranteedSite(world, 8, new int[][]{{3, -11}, {-4, -12}, {7, -10}, {0, -13}},
+        generateGuaranteedSite(world, 8,
+                new int[][]{{0, -22}, {7, -25}, {-7, -25}, {0, -29}, {26, 0}, {-26, 0}},
                 WatcherTowerGenerator::buildRuinedCamp);
         return before != guaranteedStructuresMask;
     }
@@ -100,8 +120,8 @@ public final class WatcherTowerGenerator {
             int z = (chunkZ << 4) + 8;
             int regionX = Math.floorDiv(x, 128);
             int regionZ = Math.floorDiv(z, 128);
-            long regionKey = ((long) regionX << 32) ^ (regionZ & 0xffffffffL);
-            if (BUILT_REGIONS.contains(regionKey)) {
+            long regionKey = regionKey(x, z);
+            if (BUILT_REGIONS.contains(regionKey) || !isFarEnoughFromStructures(x, z)) {
                 continue;
             }
 
@@ -132,6 +152,7 @@ public final class WatcherTowerGenerator {
             builder.accept(world, siteBase);
             scarSurroundingTerrain(world, siteBase);
             BUILT_REGIONS.add(regionKey);
+            BUILT_POSITIONS.add(siteBase);
             towersBuilt++;
             guaranteedStructuresMask |= bit;
             GUARANTEED_POSITIONS.put(bit, new BlockPos(x, y, z));
@@ -152,19 +173,15 @@ public final class WatcherTowerGenerator {
         }
 
         BlockPos spawn = world.getSpawnPos();
-        for (int attempt = 0; attempt < 48; attempt++) {
-            // A 16-chunk square keeps the tower near spawn while allowing safe alternatives.
-            int chunkOffsetX = world.random.nextInt(33) - 16;
-            int chunkOffsetZ = world.random.nextInt(33) - 16;
-            if (chunkOffsetX == 0 && chunkOffsetZ == 0) {
-                chunkOffsetX = 1;
-            }
+        for (int attempt = 0; attempt < 64; attempt++) {
+            // Keep the main tower genuinely near the start: roughly 7–10 chunks away.
+            double angle = world.random.nextDouble() * Math.PI * 2.0D;
+            double radius = 7.0D + world.random.nextDouble() * 3.0D;
+            int chunkOffsetX = (int) Math.round(Math.cos(angle) * radius);
+            int chunkOffsetZ = (int) Math.round(Math.sin(angle) * radius);
+            if (chunkOffsetX == 0 && chunkOffsetZ == 0) chunkOffsetX = 1;
             int chunkX = (spawn.getX() >> 4) + chunkOffsetX;
             int chunkZ = (spawn.getZ() >> 4) + chunkOffsetZ;
-            // Keep the starting tower at least ten chunks from the world origin (0, 0).
-            if ((long) chunkX * chunkX + (long) chunkZ * chunkZ < 100L) {
-                continue;
-            }
             int x = (chunkX << 4) + 8;
             int z = (chunkZ << 4) + 8;
 
@@ -175,10 +192,8 @@ public final class WatcherTowerGenerator {
                 continue;
             }
 
-            int regionX = Math.floorDiv(x, 128);
-            int regionZ = Math.floorDiv(z, 128);
-            long regionKey = ((long) regionX << 32) ^ (regionZ & 0xffffffffL);
-            if (BUILT_REGIONS.contains(regionKey)) {
+            long regionKey = regionKey(x, z);
+            if (BUILT_REGIONS.contains(regionKey) || !isFarEnoughFromStructures(x, z)) {
                 continue;
             }
 
@@ -198,6 +213,7 @@ public final class WatcherTowerGenerator {
             buildTower(world, base);
             scarSurroundingTerrain(world, base);
             BUILT_REGIONS.add(regionKey);
+            BUILT_POSITIONS.add(base);
             towersBuilt++;
             guaranteedStructuresMask |= 1;
             GUARANTEED_POSITIONS.put(1, base);
@@ -229,10 +245,8 @@ public final class WatcherTowerGenerator {
                 continue;
             }
 
-            int regionX = Math.floorDiv(x, 128);
-            int regionZ = Math.floorDiv(z, 128);
-            long regionKey = ((long) regionX << 32) ^ (regionZ & 0xffffffffL);
-            if (BUILT_REGIONS.contains(regionKey)) {
+            long regionKey = regionKey(x, z);
+            if (BUILT_REGIONS.contains(regionKey) || !isFarEnoughFromStructures(x, z)) {
                 continue;
             }
 
@@ -253,6 +267,7 @@ public final class WatcherTowerGenerator {
             }
             scarSurroundingTerrain(world, base);
             BUILT_REGIONS.add(regionKey);
+            BUILT_POSITIONS.add(base);
             towersBuilt++;
             return true;
         }
@@ -388,6 +403,55 @@ public final class WatcherTowerGenerator {
                 || state.isOf(net.minecraft.block.Blocks.SAND)
                 || state.isOf(net.minecraft.block.Blocks.RED_SAND)
                 || state.isOf(net.minecraft.block.Blocks.MOSS_BLOCK);
+    }
+
+    private static long regionKey(int x, int z) {
+        int regionX = Math.floorDiv(x, 128);
+        int regionZ = Math.floorDiv(z, 128);
+        return ((long) regionX << 32) ^ (regionZ & 0xffffffffL);
+    }
+
+    private static boolean isFarEnoughFromStructures(int x, int z) {
+        for (BlockPos position : BUILT_POSITIONS) {
+            if (position.getSquaredDistance(x, position.getY(), z) < MIN_STRUCTURE_SEPARATION_SQUARED) {
+                return false;
+            }
+        }
+        for (BlockPos position : GUARANTEED_POSITIONS.values()) {
+            if (position.getSquaredDistance(x, position.getY(), z) < MIN_STRUCTURE_SEPARATION_SQUARED) {
+                return false;
+            }
+        }
+
+        // Saves made before exact structure positions were recorded only contain region IDs.
+        // Use a larger safety buffer for those unknown sites to preserve the 300-block guarantee.
+        for (long key : BUILT_REGIONS) {
+            int regionX = (int) (key >> 32);
+            int regionZ = (int) key;
+            int centerX = regionX * 128 + 64;
+            int centerZ = regionZ * 128 + 64;
+            boolean hasExactPosition = false;
+            for (BlockPos position : BUILT_POSITIONS) {
+                if (regionKey(position.getX(), position.getZ()) == key) {
+                    hasExactPosition = true;
+                    break;
+                }
+            }
+            if (!hasExactPosition) {
+                for (BlockPos position : GUARANTEED_POSITIONS.values()) {
+                    if (regionKey(position.getX(), position.getZ()) == key) {
+                        hasExactPosition = true;
+                        break;
+                    }
+                }
+            }
+            if (!hasExactPosition) {
+                long dx = (long) x - centerX;
+                long dz = (long) z - centerZ;
+                if (dx * dx + dz * dz < LEGACY_REGION_BUFFER_SQUARED) return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isFlatAndClear(ServerWorld world, int x, int baseY, int z) {
@@ -547,9 +611,7 @@ public final class WatcherTowerGenerator {
                     RawFilteredPair.of("The four sites each held a record: tower, cabin, shrine, camp. Keep every evidence page. The Watcher cannot be hurt while the story is incomplete. When all four records are together, it can bleed. Do not mistake that for mercy.")
             )));
             chest.setStack(0, logbook);
-            ItemStack evidence = new ItemStack(Items.PAPER);
-            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal("Evidence: Tower"));
-            chest.setStack(9, evidence);
+            chest.setStack(9, WatcherEvidence.create(world, "Tower"));
 
             Item[] supplies = {Items.COOKED_BEEF, Items.BREAD, Items.TORCH, Items.SOUL_TORCH,
                     Items.IRON_INGOT, Items.GOLD_INGOT, Items.ARROW, Items.COMPASS, Items.SPYGLASS,
@@ -949,9 +1011,7 @@ public final class WatcherTowerGenerator {
                 : pages.get(0).startsWith("CELLAR NOTES") ? "Evidence: Root Cellar"
                 : "Evidence: Unknown";
         if (!evidenceName.endsWith("Unknown")) {
-            ItemStack evidence = new ItemStack(Items.PAPER);
-            evidence.set(DataComponentTypes.CUSTOM_NAME, net.minecraft.text.Text.literal(evidenceName));
-            chest.setStack(9, evidence);
+            chest.setStack(9, WatcherEvidence.create(world, evidenceName.substring("Evidence: ".length())));
         }
         chest.markDirty();
     }
