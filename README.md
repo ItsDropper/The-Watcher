@@ -68,9 +68,11 @@ The run can now place several distinct exploration sites in suitable, already-lo
 - **Abandoned cabin** — a boarded-up shelter with a survivor's journal.
 - **Ritual shrine** — a moss-covered stone site with chained pillars and a multi-part account of the failed offerings.
 - **Ruined expedition camp** — a derelict campsite with an expedition log.
+- **Signal station** — a raised, abandoned signal post with a dead lamp, broken rail spur, and a log about something answering its signals.
+- **Root cellar** — a half-buried shelter whose notes describe a room that seems to connect to itself.
 - **Watchtower** — the original lookout with its own logbook and supplies.
 
-Each site uses a different book to reveal another part of the setting. These are currently built by the run manager in existing loaded terrain, not registered as vanilla world-generation structures. If no valid site can be placed, the run retries instead of treating the attempt as successful.
+Each site has a distinct layout, lore book, evidence slip, and randomized survival supplies. The five non-tower site types are selected for later discoveries, so repeat runs can reveal different locations and accounts. These are currently built by the run manager in explored terrain rather than registered as vanilla world-generation structures. If a valid site cannot be placed, the run retries instead of treating the attempt as successful.
 
 ### Optional Ollama horror director
 
@@ -126,7 +128,7 @@ The world-creation screen includes **Difficulty: Watcher** and **Run length** co
 
 A run begins with a randomized hidden-learning period. No natural Watcher entity exists during this stage, while the run samples player movement and exploration. The first reveal is delayed until a later night and uses the chat message `Watcher joined the game`. After the reveal, the Watcher can begin its normal stalking cycle. Run lengths are 1, 3, 6, or 12 hours of active play, counted by server ticks; the run state is saved with the world.
 
-During a run, the mod guarantees a watchtower, abandoned cabin, ritual shrine, and ruined expedition camp near world spawn when safe placement is available. Each site has a distinct book and supplies. Additional structures can appear as players explore; guaranteed placements retry when terrain or region conflicts prevent placement.
+During a run, the mod guarantees a watchtower, abandoned cabin, ritual shrine, and ruined expedition camp near world spawn when safe placement is available. As players explore, additional discoveries can include cabins, shrines, camps, signal stations, and root cellars. Each site contains a distinct account of the Watcher and randomized survival supplies. Guaranteed placements retry when terrain or region conflicts prevent placement.
 
 This progression is still under active development. The adaptive model now tracks gaze timing, movement speed, sprinting, stationary behavior, typical height, and repeated close encounters. World-generation integration and in-game behavior still need gameplay verification.
 
