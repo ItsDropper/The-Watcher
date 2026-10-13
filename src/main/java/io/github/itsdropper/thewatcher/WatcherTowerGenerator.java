@@ -480,12 +480,10 @@ public final class WatcherTowerGenerator {
         for (int dx = -2; dx <= 2; dx++) {
             world.setBlockState(new BlockPos(x + dx, y + 1, z - 5),
                     net.minecraft.block.Blocks.SPRUCE_PLANKS.getDefaultState(), 3);
-            world.setBlockState(new BlockPos(x + dx, y + 1, z - 6),
-                    net.minecraft.block.Blocks.SPRUCE_SLAB.getDefaultState(), 3);
         }
         for (int dx : new int[]{-2, 2}) {
             for (int dy = 1; dy <= 3; dy++) {
-                world.setBlockState(new BlockPos(x + dx, y + dy, z - 6),
+                world.setBlockState(new BlockPos(x + dx, y + dy, z - 5),
                         net.minecraft.block.Blocks.SPRUCE_FENCE.getDefaultState(), 3);
             }
         }
@@ -496,11 +494,7 @@ public final class WatcherTowerGenerator {
         }
         world.setBlockState(new BlockPos(x + 3, y + 10, z + 2),
                 net.minecraft.block.Blocks.CAMPFIRE.getDefaultState(), 3);
-        for (int dz = -7; dz >= -10; dz--) {
-            world.setBlockState(new BlockPos(x, y, z + dz),
-                    (dz % 2 == 0 ? net.minecraft.block.Blocks.GRAVEL : net.minecraft.block.Blocks.COARSE_DIRT)
-                            .getDefaultState(), 3);
-        }
+        world.setBlockState(new BlockPos(x, y, z - 5), net.minecraft.block.Blocks.GRAVEL.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x - 2, y + 1, z - 2),
                 net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 3, y + 1, z + 2), net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
@@ -574,7 +568,7 @@ public final class WatcherTowerGenerator {
         for (int dy = 3; dy <= 5; dy++) {
             world.setBlockState(new BlockPos(x, y + dy, z), net.minecraft.block.Blocks.CHAIN.getDefaultState(), 3);
         }
-        for (int dz = -4; dz >= -9; dz--) {
+        for (int dz = -4; dz >= -5; dz--) {
             world.setBlockState(new BlockPos(x, y, z + dz),
                     (dz % 2 == 0 ? net.minecraft.block.Blocks.MOSSY_COBBLESTONE
                             : net.minecraft.block.Blocks.COBBLED_DEEPSLATE).getDefaultState(), 3);
@@ -640,11 +634,7 @@ public final class WatcherTowerGenerator {
         world.setBlockState(new BlockPos(x + 4, y + 1, z + 1), net.minecraft.block.Blocks.SPRUCE_LOG.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 3, y + 2, z + 1), net.minecraft.block.Blocks.WHITE_WOOL.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 2, y + 1, z + 1), net.minecraft.block.Blocks.WHITE_WOOL.getDefaultState(), 3);
-        for (int dz = -5; dz >= -8; dz--) {
-            world.setBlockState(new BlockPos(x, y, z + dz),
-                    (dz % 2 == 0 ? net.minecraft.block.Blocks.GRAVEL : net.minecraft.block.Blocks.COARSE_DIRT)
-                            .getDefaultState(), 3);
-        }
+        world.setBlockState(new BlockPos(x, y, z - 5), net.minecraft.block.Blocks.GRAVEL.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x - 3, y + 1, z + 3), cobble, 3);
         world.setBlockState(new BlockPos(x - 3, y + 2, z + 3), net.minecraft.block.Blocks.OAK_SIGN.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 3, y + 1, z + 3), cobble, 3);
