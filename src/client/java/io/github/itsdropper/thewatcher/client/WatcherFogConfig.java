@@ -10,8 +10,8 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /**
- * Client-only fog quality and atmosphere controls. The renderer reads a few cached
- * values per fog pass; no particles, extra geometry, or per-frame allocations.
+ * Client-only atmosphere controls. Fog and exposure are applied through the
+ * vanilla renderer/lightmap, without particles or per-frame allocations.
  */
 public final class WatcherFogConfig {
     public enum Detail {
@@ -63,7 +63,7 @@ public final class WatcherFogConfig {
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
             try (var output = Files.newOutputStream(CONFIG_PATH)) {
-                properties.store(output, "The Watcher client fog quality");
+                properties.store(output, "The Watcher client atmosphere quality");
             }
         } catch (IOException exception) {
             // Keep the current in-memory setting usable if the config directory is read-only.
@@ -82,32 +82,31 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.84F;
-            case MEDIUM -> 0.72F;
-            case HIGH -> 0.62F;
-            case ULTRA -> 0.52F;
+            case LOW -> 0.82F;
+            case MEDIUM -> 0.70F;
+            case HIGH -> 0.60F;
+            case ULTRA -> 0.50F;
         };
-        // Keep the transition broad enough to avoid a hard-looking fog wall at chunk edges.
-        return Math.max(0.0F, original * scale * (1.0F - 0.03F * nightFactor()));
+        // Start the atmospheric veil sooner, but keep a broad transition.
+        return Math.max(0.0F, original * scale * (1.0F - 0.08F * nightFactor()));
     }
 
     public static float adjustEnd(float original) {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 1.00F;
-            case MEDIUM -> 0.99F;
-            case HIGH -> 0.97F;
-            case ULTRA -> 0.93F;
+            case LOW -> 0.96F;
+            case MEDIUM -> 0.90F;
+            case HIGH -> 0.83F;
+            case ULTRA -> 0.74F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
-        // Avoid pulling the opaque fog cutoff far inside the loaded terrain boundary.
-        scale *= 1.0F - 0.05F * nightFactor();
-        if (client.world != null && client.world.isRaining()) scale *= 0.97F;
-        return Math.max(8.0F, original * scale);
+        scale *= 1.0F - 0.09F * nightFactor();
+        if (client.world != null && client.world.isRaining()) scale *= 0.88F;
+        return Math.max(12.0F, original * scale);
     }
 
-    /** Hide the vanilla sun while any atmospheric fog preset is active. */
+    /** Hide the sun for the deliberately overcast Watcher sky. */
     public static boolean shouldHideSun() {
         return shouldApply();
     }
@@ -115,56 +114,51 @@ public final class WatcherFogConfig {
     public static float colorBlendWeight() {
         if (!shouldApply()) return 0.0F;
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world != null && BloodMoonSystem.isActive(client.world)) {
-            return 0.92F;
-        }
-        return switch (getDetail()) {
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.96F;
+        float base = switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.12F;
-            case MEDIUM -> 0.20F;
-            case HIGH -> 0.28F;
-            case ULTRA -> 0.38F;
-        } + (0.08F * nightFactor());
+            case LOW -> 0.24F;
+            case MEDIUM -> 0.38F;
+            case HIGH -> 0.52F;
+            case ULTRA -> 0.66F;
+        };
+        return Math.min(0.78F, base + 0.12F * nightFactor()
+                + (client.world != null && client.world.isRaining() ? 0.12F : 0.0F));
     }
 
     public static float fogTargetRed() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.42F;
-        return lerp(0.25F, 0.018F, nightFactor());
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.32F;
+        return lerp(0.30F, 0.055F, nightFactor());
     }
 
     public static float fogTargetGreen() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.025F;
-        return lerp(0.275F, 0.024F, nightFactor());
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.018F;
+        return lerp(0.32F, 0.075F, nightFactor());
     }
 
     public static float fogTargetBlue() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.035F;
-        return lerp(0.30F, 0.040F, nightFactor());
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.025F;
+        return lerp(0.34F, 0.085F, nightFactor());
     }
 
-    /**
-     * Daylight exposure reduction for the vanilla lightmap. This changes the
-     * brightness of the actual terrain, not just how far the player can see.
-     * LOW is subtle; ULTRA is deliberately oppressive.
-     */
+    /** Reduce sky-driven exposure while preserving useful light from torches. */
     public static float daylightMultiplier() {
         if (!shouldApply()) return 1.0F;
         float strength = switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.05F;
-            case MEDIUM -> 0.10F;
-            case HIGH -> 0.18F;
-            case ULTRA -> 0.28F;
+            case LOW -> 0.10F;
+            case MEDIUM -> 0.20F;
+            case HIGH -> 0.30F;
+            case ULTRA -> 0.42F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
-        float weatherFactor = client.world != null && client.world.isRaining() ? 1.18F : 1.0F;
+        float weatherFactor = client.world != null && client.world.isRaining() ? 1.15F : 1.0F;
         return 1.0F - strength * dayFactor() * weatherFactor;
     }
 
-    /** Smoothly fades the daytime grade out around dusk and dawn. */
     private static float dayFactor() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null) return 0.0F;
@@ -173,9 +167,7 @@ public final class WatcherFogConfig {
         if (time >= 11_000L && time < 13_000L) {
             return 1.0F - smoothstep((time - 11_000L) / 2_000.0F);
         }
-        if (time >= 23_000L) {
-            return smoothstep((time - 23_000L) / 1_000.0F);
-        }
+        if (time >= 23_000L) return smoothstep((time - 23_000L) / 1_000.0F);
         if (time < 1_000L) return smoothstep(time / 1_000.0F);
         if (time >= 9_000L && time < 11_000L) {
             return 1.0F - smoothstep((time - 9_000L) / 2_000.0F);
@@ -196,9 +188,7 @@ public final class WatcherFogConfig {
             return smoothstep((time - 12_000L) / 2_000.0F);
         }
         if (time >= 14_000L && time < 22_000L) return 1.0F;
-        if (time >= 22_000L) {
-            return 1.0F - smoothstep((time - 22_000L) / 2_000.0F);
-        }
+        if (time >= 22_000L) return 1.0F - smoothstep((time - 22_000L) / 2_000.0F);
         return 0.0F;
     }
 
