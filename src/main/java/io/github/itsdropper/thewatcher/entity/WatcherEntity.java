@@ -229,9 +229,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         // The simulation deliberately starts close and visible; normal gameplay still enforces distance in OBSERVING.
         boolean distanceSensitivePhase = phase == Phase.STALKING
                 || (phase == Phase.OBSERVING && !debugSimulation);
-        if (distanceSensitivePhase) {
-            learningEngine.observeStalkingDistance(distance, renderChunks);
-        }
         long localTime = Math.floorMod(world.getTimeOfDay(), 24_000L);
         boolean nightStalking = localTime >= 13_000L && localTime < 23_000L;
         double minimumSafeDistance = Math.max(26.0D,
