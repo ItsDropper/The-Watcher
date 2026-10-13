@@ -86,7 +86,7 @@ public final class WatcherFogConfig {
             case HIGH -> 0.58F;
             case ULTRA -> 0.43F;
         };
-        return Math.max(0.0F, original * scale * (isNight() ? 0.92F : 1.0F));
+        return Math.max(0.0F, original * scale * (1.0F - 0.08F * nightFactor()));
     }
 
     public static float adjustEnd(float original) {
@@ -99,7 +99,7 @@ public final class WatcherFogConfig {
             case ULTRA -> 0.68F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
-        if (isNight()) scale *= 0.88F;
+        scale *= 1.0F - 0.12F * nightFactor();
         if (client.world != null && client.world.isRaining()) scale *= 0.93F;
         return Math.max(8.0F, original * scale);
     }
@@ -112,19 +112,19 @@ public final class WatcherFogConfig {
             case MEDIUM -> 0.18F;
             case HIGH -> 0.28F;
             case ULTRA -> 0.38F;
-        } + (isNight() ? 0.07F : 0.0F);
+        } + (0.07F * nightFactor());
     }
 
     public static float fogTargetRed() {
-        return isNight() ? 0.035F : 0.57F;
+        return lerp(0.57F, 0.035F, nightFactor());
     }
 
     public static float fogTargetGreen() {
-        return isNight() ? 0.045F : 0.59F;
+        return lerp(0.59F, 0.045F, nightFactor());
     }
 
     public static float fogTargetBlue() {
-        return isNight() ? 0.070F : 0.61F;
+        return lerp(0.61F, 0.070F, nightFactor());
     }
 
     public static float blendColor(float original, float target) {
@@ -132,10 +132,26 @@ public final class WatcherFogConfig {
         return original + (target - original) * weight;
     }
 
-    private static boolean isNight() {
+    private static float nightFactor() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null) return false;
+        if (client.world == null) return 0.0F;
         long time = Math.floorMod(client.world.getTimeOfDay(), 24_000L);
-        return time >= 13_000L && time < 23_000L;
+        if (time >= 12_000L && time < 14_000L) {
+            return smoothstep((time - 12_000L) / 2_000.0F);
+        }
+        if (time >= 14_000L && time < 22_000L) return 1.0F;
+        if (time >= 22_000L) {
+            return 1.0F - smoothstep((time - 22_000L) / 2_000.0F);
+        }
+        return 0.0F;
+    }
+
+    private static float smoothstep(float value) {
+        float t = Math.max(0.0F, Math.min(1.0F, value));
+        return t * t * (3.0F - 2.0F * t);
+    }
+
+    private static float lerp(float start, float end, float amount) {
+        return start + (end - start) * amount;
     }
 }
