@@ -460,6 +460,47 @@ public final class WatcherTowerGenerator {
                 }
             }
         }
+
+        // Give the cabin a readable exterior: heavy corner posts, glazed windows, a porch,
+        // a chimney, and a broken approach path. The original empty window holes looked unfinished.
+        for (int dx : new int[]{-4, 4}) {
+            for (int dz : new int[]{-4, 4}) {
+                for (int dy = 1; dy <= 4; dy++) {
+                    world.setBlockState(new BlockPos(x + dx, y + dy, z + dz),
+                            net.minecraft.block.Blocks.SPRUCE_LOG.getDefaultState(), 3);
+                }
+            }
+        }
+        BlockState glass = net.minecraft.block.Blocks.GLASS_PANE.getDefaultState();
+        for (BlockPos window : List.of(
+                new BlockPos(x - 2, y + 2, z - 4), new BlockPos(x + 2, y + 2, z - 4),
+                new BlockPos(x - 4, y + 2, z), new BlockPos(x + 4, y + 2, z))) {
+            world.setBlockState(window, glass, 3);
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            world.setBlockState(new BlockPos(x + dx, y + 1, z - 5),
+                    net.minecraft.block.Blocks.SPRUCE_PLANKS.getDefaultState(), 3);
+            world.setBlockState(new BlockPos(x + dx, y + 1, z - 6),
+                    net.minecraft.block.Blocks.SPRUCE_SLAB.getDefaultState(), 3);
+        }
+        for (int dx : new int[]{-2, 2}) {
+            for (int dy = 1; dy <= 3; dy++) {
+                world.setBlockState(new BlockPos(x + dx, y + dy, z - 6),
+                        net.minecraft.block.Blocks.SPRUCE_FENCE.getDefaultState(), 3);
+            }
+        }
+        // A brick chimney breaks the roofline and gives the cabin a distinct silhouette.
+        for (int dy = 6; dy <= 9; dy++) {
+            world.setBlockState(new BlockPos(x + 3, y + dy, z + 2),
+                    net.minecraft.block.Blocks.BRICKS.getDefaultState(), 3);
+        }
+        world.setBlockState(new BlockPos(x + 3, y + 10, z + 2),
+                net.minecraft.block.Blocks.CAMPFIRE.getDefaultState(), 3);
+        for (int dz = -7; dz >= -10; dz--) {
+            world.setBlockState(new BlockPos(x, y, z + dz),
+                    (dz % 2 == 0 ? net.minecraft.block.Blocks.GRAVEL : net.minecraft.block.Blocks.COARSE_DIRT)
+                            .getDefaultState(), 3);
+        }
         world.setBlockState(new BlockPos(x - 2, y + 1, z - 2),
                 net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 3, y + 1, z + 2), net.minecraft.block.Blocks.BARREL.getDefaultState(), 3);
@@ -513,6 +554,33 @@ public final class WatcherTowerGenerator {
         world.setBlockState(new BlockPos(x + 2, y + 1, z - 2), net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x, y + 1, z - 3), net.minecraft.block.Blocks.BLACK_CANDLE.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x, y + 1, z + 3), net.minecraft.block.Blocks.BLACK_CANDLE.getDefaultState(), 3);
+
+        // Complete the shrine's architecture with a broken lintel ring, hanging center chain,
+        // and a deliberate approach axis. This reads as a small ruined monument from outside.
+        for (int dx = -3; dx <= 3; dx++) {
+            if (Math.abs(dx) != 1) {
+                world.setBlockState(new BlockPos(x + dx, y + 5, z - 3),
+                        (dx == -3 || dx == 3 ? deepslate : stone), 3);
+                world.setBlockState(new BlockPos(x + dx, y + 5, z + 3),
+                        (dx == -3 || dx == 3 ? deepslate : mossy), 3);
+            }
+        }
+        for (int dz = -2; dz <= 2; dz++) {
+            if (dz != 0) {
+                world.setBlockState(new BlockPos(x - 3, y + 5, z + dz), stone, 3);
+                world.setBlockState(new BlockPos(x + 3, y + 5, z + dz), stone, 3);
+            }
+        }
+        for (int dy = 3; dy <= 5; dy++) {
+            world.setBlockState(new BlockPos(x, y + dy, z), net.minecraft.block.Blocks.CHAIN.getDefaultState(), 3);
+        }
+        for (int dz = -4; dz >= -9; dz--) {
+            world.setBlockState(new BlockPos(x, y, z + dz),
+                    (dz % 2 == 0 ? net.minecraft.block.Blocks.MOSSY_COBBLESTONE
+                            : net.minecraft.block.Blocks.COBBLED_DEEPSLATE).getDefaultState(), 3);
+        }
+        world.setBlockState(new BlockPos(x - 4, y + 1, z - 4), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 4, y + 1, z - 4), net.minecraft.block.Blocks.SOUL_LANTERN.getDefaultState(), 3);
         placeLoreChest(world, new BlockPos(x, y + 1, z + 2), Direction.SOUTH, List.of(
                 "ARCHIVE FRAGMENT A. We built the shrine after the same dream reached seven houses in one night. Everyone described a person standing just beyond the doorway. Nobody described a face.",
                 "FRAGMENT B. The offerings remained untouched. We began leaving written names instead. The next morning, every name had been crossed out except those of people who had not yet been born.",
@@ -550,6 +618,33 @@ public final class WatcherTowerGenerator {
             world.setBlockState(new BlockPos(x + dx, y + 2, z), planks, 3);
         }
         world.setBlockState(new BlockPos(x, y + 1, z), net.minecraft.block.Blocks.CAMPFIRE.getDefaultState(), 3);
+
+        // Two hastily abandoned shelters make the camp read as a real expedition site, not a
+        // scatter of props. One tent is intact enough to shelter supplies; the second has collapsed.
+        for (int dx : new int[]{-2, 1}) {
+            for (int dz : new int[]{-1, 2}) {
+                world.setBlockState(new BlockPos(x + dx, y + 1, z + dz),
+                        net.minecraft.block.Blocks.SPRUCE_LOG.getDefaultState(), 3);
+            }
+        }
+        for (int dx = -2; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 2; dz++) {
+                if (dx == -2 || dx == 1 || dz == -1 || dz == 2) {
+                    world.setBlockState(new BlockPos(x + dx, y + 3, z + dz),
+                            net.minecraft.block.Blocks.WHITE_WOOL.getDefaultState(), 3);
+                }
+            }
+        }
+        world.setBlockState(new BlockPos(x - 1, y + 1, z), net.minecraft.block.Blocks.RED_BED.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x - 1, y + 2, z + 1), net.minecraft.block.Blocks.WHITE_WOOL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 4, y + 1, z + 1), net.minecraft.block.Blocks.SPRUCE_LOG.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 3, y + 2, z + 1), net.minecraft.block.Blocks.WHITE_WOOL.getDefaultState(), 3);
+        world.setBlockState(new BlockPos(x + 2, y + 1, z + 1), net.minecraft.block.Blocks.WHITE_WOOL.getDefaultState(), 3);
+        for (int dz = -5; dz >= -8; dz--) {
+            world.setBlockState(new BlockPos(x, y, z + dz),
+                    (dz % 2 == 0 ? net.minecraft.block.Blocks.GRAVEL : net.minecraft.block.Blocks.COARSE_DIRT)
+                            .getDefaultState(), 3);
+        }
         world.setBlockState(new BlockPos(x - 3, y + 1, z + 3), cobble, 3);
         world.setBlockState(new BlockPos(x - 3, y + 2, z + 3), net.minecraft.block.Blocks.OAK_SIGN.getDefaultState(), 3);
         world.setBlockState(new BlockPos(x + 3, y + 1, z + 3), cobble, 3);
