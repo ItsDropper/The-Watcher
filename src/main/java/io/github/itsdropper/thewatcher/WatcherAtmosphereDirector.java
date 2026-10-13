@@ -43,11 +43,18 @@ public final class WatcherAtmosphereDirector {
     }
 
     public static void tick(ServerWorld world, boolean runRevealed) {
-        if (!runRevealed || world.getRegistryKey() != World.OVERWORLD || world.getTime() % 20L != 0L) {
+        if (!runRevealed || world.getRegistryKey() != World.OVERWORLD) {
             return;
         }
 
         Map<UUID, PlayerState> states = STATES.computeIfAbsent(world, ignored -> new HashMap<>());
+        // Knock sequences are tick-scheduled so the three impacts have a deliberate rhythm;
+        // the rest of the director only samples player behavior once per second.
+        tickPendingKnocks(world, states);
+        if (world.getTime() % 20L != 0L) {
+            return;
+        }
+
         for (ServerPlayerEntity player : world.getPlayers()) {
             if (!player.isAlive() || player.isSpectator()) {
                 continue;
@@ -123,6 +130,19 @@ public final class WatcherAtmosphereDirector {
         int light = world.getLightLevel(player.getBlockPos());
         boolean dark = light <= 7 || isNight(world);
         int event = world.random.nextInt(100);
+
+        // If the player has settled into a dark, enclosed room, occasionally knock on a
+        // nearby wall. Three separated impacts sound intentional; no blocks are changed,
+        // and the source is a real wall beside the shelter rather than the player's ears.
+        if (event < 11 && dark && state.events >= 2 && state.knocksRemaining == 0) {
+            BlockPos wall = findShelteredWall(world, player);
+            if (wall != null) {
+                state.knockPosition = wall;
+                state.knocksRemaining = 3;
+                state.nextKnockAt = world.getTime() + 1L;
+                return;
+            }
+        }
 
         // Daylight horror must not depend on the Watcher or darkness. Keep cues physically
         // plausible enough to dismiss, but place them where the player cannot immediately
@@ -212,6 +232,55 @@ public final class WatcherAtmosphereDirector {
         }
     }
 
+    private static void tickPendingKnocks(ServerWorld world, Map<UUID, PlayerState> states) {
+        for (Map.Entry<UUID, PlayerState> entry : states.entrySet()) {
+            PlayerState state = entry.getValue();
+            if (state.knocksRemaining <= 0 || state.knockPosition == null
+                    || world.getTime() < state.nextKnockAt) {
+                continue;
+            }
+            ServerPlayerEntity player = world.getServer().getPlayerManager().getPlayer(entry.getKey());
+            if (player == null || !player.isAlive() || player.isSpectator()
+                    || player.getWorld() != world
+                    || player.getPos().squaredDistanceTo(Vec3d.ofCenter(state.knockPosition)) > 32.0D * 32.0D) {
+                state.knocksRemaining = 0;
+                state.knockPosition = null;
+                continue;
+            }
+
+            world.playSound(null, state.knockPosition, SoundEvents.BLOCK_WOODEN_DOOR_CLOSE,
+                    SoundCategory.AMBIENT, 0.22F, 0.48F + world.random.nextFloat() * 0.12F);
+            state.knocksRemaining--;
+            state.nextKnockAt = world.getTime() + 7L + world.random.nextInt(4);
+            if (state.knocksRemaining == 0) {
+                state.knockPosition = null;
+                state.nextKnockAt = 0L;
+            }
+        }
+    }
+
+    private static BlockPos findShelteredWall(ServerWorld world, ServerPlayerEntity player) {
+        BlockPos feet = player.getBlockPos();
+        BlockPos roof = feet.up(2);
+        if (!world.getBlockState(roof).isSolidBlock(world, roof)) {
+            return null;
+        }
+
+        int solidSides = 0;
+        BlockPos selectedWall = null;
+        int[][] offsets = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int[] offset : offsets) {
+            BlockPos side = feet.add(offset[0], 0, offset[1]);
+            if (world.getBlockState(side).isSolidBlock(world, side)) {
+                solidSides++;
+                if (selectedWall == null || world.random.nextBoolean()) {
+                    selectedWall = side;
+                }
+            }
+        }
+        return solidSides >= 2 ? selectedWall : null;
+    }
+
     private static void playFootstep(ServerWorld world, ServerPlayerEntity player,
                                      PlayerState state, double distance, boolean distant) {
         Vec3d look = player.getRotationVec(1.0F).normalize();
@@ -243,6 +312,9 @@ public final class WatcherAtmosphereDirector {
         private int events;
         private int lookBackCount;
         private int stillTicks;
+        private int knocksRemaining;
+        private long nextKnockAt;
+        private BlockPos knockPosition;
         private float lastYaw;
         private Vec3d lastPosition = Vec3d.ZERO;
         private boolean hasLastSample;
