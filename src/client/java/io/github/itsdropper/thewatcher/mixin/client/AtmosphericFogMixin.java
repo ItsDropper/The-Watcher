@@ -1,7 +1,6 @@
 package io.github.itsdropper.thewatcher.mixin.client;
 
 import io.github.itsdropper.thewatcher.client.WatcherFogConfig;
-import com.mojang.blaze3d.systems.RenderSystem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -40,8 +39,8 @@ public abstract class AtmosphericFogMixin {
     )
     private static void theWatcher$gradeFogColor(Args args) {
         if (!WatcherFogConfig.shouldApply()) return;
-        args.set(0, WatcherFogConfig.blendColor((float) args.get(0), WatcherFogConfig.fogTargetRed()));
-        args.set(1, WatcherFogConfig.blendColor((float) args.get(1), WatcherFogConfig.fogTargetGreen()));
-        args.set(2, WatcherFogConfig.blendColor((float) args.get(2), WatcherFogConfig.fogTargetBlue()));
+        args.set(0, WatcherFogConfig.blendColor(((Number) args.get(0)).floatValue(), WatcherFogConfig.fogTargetRed()));
+        args.set(1, WatcherFogConfig.blendColor(((Number) args.get(1)).floatValue(), WatcherFogConfig.fogTargetGreen()));
+        args.set(2, WatcherFogConfig.blendColor(((Number) args.get(2)).floatValue(), WatcherFogConfig.fogTargetBlue()));
     }
 }
