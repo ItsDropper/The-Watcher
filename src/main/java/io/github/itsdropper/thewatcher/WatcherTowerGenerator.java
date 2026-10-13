@@ -343,14 +343,18 @@ public final class WatcherTowerGenerator {
             if (world.random.nextBoolean()) {
                 BlockPos limb = ground.add(1, height - 1, 0);
                 BlockPos web = ground.add(2, height - 1, 0);
-                if (world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
+                if (world.isChunkLoaded(limb.getX() >> 4, limb.getZ() >> 4)
+                        && world.isChunkLoaded(web.getX() >> 4, web.getZ() >> 4)
+                        && world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
                     world.setBlockState(limb, net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
                     world.setBlockState(web, net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
                 }
             } else {
                 BlockPos limb = ground.add(-1, height - 2, 0);
                 BlockPos web = ground.add(-2, height - 2, 0);
-                if (world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
+                if (world.isChunkLoaded(limb.getX() >> 4, limb.getZ() >> 4)
+                        && world.isChunkLoaded(web.getX() >> 4, web.getZ() >> 4)
+                        && world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
                     world.setBlockState(limb, net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
                     world.setBlockState(web, net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
                 }
@@ -358,7 +362,9 @@ public final class WatcherTowerGenerator {
             if (world.random.nextBoolean()) {
                 BlockPos limb = ground.add(0, height, 1);
                 BlockPos web = ground.add(0, height + 1, 1);
-                if (world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
+                if (world.isChunkLoaded(limb.getX() >> 4, limb.getZ() >> 4)
+                        && world.isChunkLoaded(web.getX() >> 4, web.getZ() >> 4)
+                        && world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
                     world.setBlockState(limb, net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
                     world.setBlockState(web, net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
                 }
