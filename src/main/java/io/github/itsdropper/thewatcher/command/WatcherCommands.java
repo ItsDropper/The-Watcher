@@ -36,7 +36,7 @@ public final class WatcherCommands {
                 .requires(source -> source.hasPermissionLevel(2))
                 .executes(context -> {
                     context.getSource().sendFeedback(() -> Text.literal(
-                            "The Watcher: mode on|off | debug test|ending|spawn|status|learning|structures|despawn|simulate|phase|darkness"), false);
+                            "The Watcher: mode on|off | debug test|ending|spawn|status|learning|structures|despawn|simulate|phase|darkness|bloodmoon"), false);
                     return 1;
                 })
                 .then(literal("mode")
@@ -45,7 +45,7 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: test | spawn | status | learning | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
+                                    "Watcher debug: test | spawn | status | learning | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off> | bloodmoon"),
                                     false);
                             return 1;
                         })
@@ -90,6 +90,7 @@ public final class WatcherCommands {
                                 .then(literal("retreat").executes(context ->
                                         setNearestPhase(context.getSource(), WatcherEntity.Phase.RETREATING)))
                                 .then(literal("auto").executes(context -> resumeAutomatic(context.getSource()))))
+                        .then(literal("bloodmoon").executes(context -> startBloodMoon(context.getSource())))
                         .then(literal("darkness")
                                 .then(literal("on").executes(context -> setDarkness(context.getSource(), true)))
                                 .then(literal("off").executes(context -> setDarkness(context.getSource(), false)))
@@ -428,6 +429,22 @@ public final class WatcherCommands {
                 + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", distance)
                 + ", serverChunkLoaded=" + loaded + ", cameraBlockValid=" + validBlock
                 + ". Open the network screen to test the live feed; the player should remain at their current position."), false);
+        return 1;
+    }
+
+    private static int startBloodMoon(ServerCommandSource source) {
+        ServerWorld world = (ServerWorld) source.getWorld();
+        if (world.getRegistryKey() != net.minecraft.world.World.OVERWORLD) {
+            source.sendError(Text.literal("Blood Moon debug can only be triggered in the Overworld."));
+            return 0;
+        }
+
+        // Day eight is a scheduled Blood Moon day; move to its night so the normal
+        // BloodMoonSystem activates without a separate debug-only rendering path.
+        world.setTimeOfDay(8L * 24_000L + 14_000L);
+        source.sendFeedback(() -> Text.literal(
+                "Blood Moon started. World time was moved to day 8 at night; normal Blood Moon effects are active."),
+                false);
         return 1;
     }
 
