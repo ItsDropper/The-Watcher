@@ -77,7 +77,7 @@ public final class WatcherAtmosphereDirector {
 
             // Evidence is a progression trigger, not just a key item. Each new record
             // changes the Watcher's behavior and produces one restrained, player-local cue.
-            int evidenceCount = countRequiredEvidence(player);
+            int evidenceCount = countRequiredEvidence(world, player);
             if (evidenceCount > state.highestEvidenceCount) {
                 state.highestEvidenceCount = evidenceCount;
                 deliverEvidenceMilestone(world, player, evidenceCount);
@@ -115,17 +115,17 @@ public final class WatcherAtmosphereDirector {
         }
     }
 
-    private static int countRequiredEvidence(ServerPlayerEntity player) {
+    private static int countRequiredEvidence(ServerWorld world, ServerPlayerEntity player) {
         int count = 0;
         String[] required = {
                 "Evidence: Tower", "Evidence: Cabin",
                 "Evidence: Shrine", "Evidence: Expedition"
         };
         for (String evidenceName : required) {
+            String category = evidenceName.substring("Evidence: ".length());
             for (int slot = 0; slot < player.getInventory().size(); slot++) {
                 net.minecraft.item.ItemStack stack = player.getInventory().getStack(slot);
-                if (!stack.isEmpty() && stack.isOf(net.minecraft.item.Items.PAPER)
-                        && stack.getName().getString().equals(evidenceName)) {
+                if (WatcherEvidence.isAuthentic(world, stack, category)) {
                     count++;
                     break;
                 }
