@@ -286,7 +286,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 // Do not apply the stalking freeze/retreat rules during an active attack.
                 // The Watcher must keep pathing toward the player even while being watched.
             } else if (tooCloseForPhase) {
-                // A nearby Watcher must not freeze in the player's face during stalking.
+                // Cancel any slow gaze-approach path before retreating; otherwise navigation
+                // would keep following the old path and ignore the retreat request.
+                getNavigation().stop();
                 moveAwayFrom(player, 1.65D);
                 recoverStuckRetreat(world, player);
             } else if (phase == Phase.STALKING && attentionTicks >= 80) {
