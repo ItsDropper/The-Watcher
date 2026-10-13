@@ -20,6 +20,8 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - The entity does not use the usual automatic target and continuous melee goals.
 
 ### Optional native desktop horror popups (Windows)
+To trigger one immediately for testing, join a world and run the client-side command `/watcherclient debug desktop-popup`. This manual debug command works even when random desktop popups are disabled; random events still require the opt-in setting.
+
 
 In **The Watcher Settings → Gameplay**, enable **Native desktop popups** to opt in. When enabled, a rare event can open a real Windows desktop message box over the game, using a separate PowerShell process rather than Minecraft's Java process. It is disabled by default, only runs in the Overworld, and uses fictional messages titled **The Watcher**—it does not impersonate Windows Security or claim that a real system problem occurred. Turn the option off to stop future popups. This feature is Windows-only and requires Windows PowerShell.
 
