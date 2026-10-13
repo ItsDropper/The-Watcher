@@ -401,7 +401,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
                 // Signal-station notes reveal part of its relocation rhythm, giving prepared
                 // players a small but real advantage without making the Watcher harmless.
+                int evidenceCount = countRequiredEvidence(player);
                 int baseTeleportChance = hasEvidence(player, "Evidence: Signal Station") ? 22 : 32;
+                // Each recovered record makes the Watcher less willing to stay distant.
+                // Signal Station evidence still offsets some of that pressure.
+                baseTeleportChance = Math.min(48, baseTeleportChance + evidenceCount * 3);
                 int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
                 boolean relocationRoll = random.nextInt(100) < teleportChance;
                 if (!tooCloseForPhase && TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
@@ -416,7 +420,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     }
                 }
 
-                int duration = learningEngine.adjustStalkDuration(STALK_TICKS);
+                // Evidence changes the encounter's pace: the closer the player gets to
+                // proving the story, the less time the Watcher spends merely observing them.
+                int evidenceCount = countRequiredEvidence(player);
+                int duration = Math.max(260,
+                        learningEngine.adjustStalkDuration(STALK_TICKS) - evidenceCount * 45);
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.ESCALATING);
                 }
@@ -670,10 +678,17 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     private boolean hasAllEvidence(PlayerEntity player) {
-        return hasEvidence(player, "Evidence: Tower")
-                && hasEvidence(player, "Evidence: Cabin")
-                && hasEvidence(player, "Evidence: Shrine")
-                && hasEvidence(player, "Evidence: Expedition");
+        return countRequiredEvidence(player) == 4;
+    }
+
+    /** Counts the four records that expose the Watcher to damage. */
+    public int countRequiredEvidence(PlayerEntity player) {
+        int count = 0;
+        if (hasEvidence(player, "Evidence: Tower")) count++;
+        if (hasEvidence(player, "Evidence: Cabin")) count++;
+        if (hasEvidence(player, "Evidence: Shrine")) count++;
+        if (hasEvidence(player, "Evidence: Expedition")) count++;
+        return count;
     }
 
     private boolean hasEvidence(PlayerEntity player, String evidenceName) {
