@@ -1,5 +1,6 @@
 package io.github.itsdropper.thewatcher.client;
 
+import io.github.itsdropper.thewatcher.BloodMoonSystem;
 import io.github.itsdropper.thewatcher.CameraNetwork;
 import io.github.itsdropper.thewatcher.CameraListPayload;
 import io.github.itsdropper.thewatcher.CameraListRequestPayload;
@@ -30,6 +31,8 @@ public class TheWatcherClient implements ClientModInitializer {
     private static PositionedSoundInstance endingMusic;
     private static int desktopAnomalyDelay = -1;
     private static Object desktopAnomalyWorld;
+    private static Object bloodMoonWorld;
+    private static boolean previousBloodMoon;
 
     public static boolean isEndingMusicActive() {
         return endingMusic != null;
@@ -117,8 +120,28 @@ public class TheWatcherClient implements ClientModInitializer {
             if (client.player == null || client.world == null) {
                 desktopAnomalyDelay = -1;
                 desktopAnomalyWorld = null;
+                bloodMoonWorld = null;
+                previousBloodMoon = false;
                 return;
             }
+
+            boolean bloodMoon = BloodMoonSystem.isActive(client.world);
+            if (bloodMoonWorld != client.world) {
+                bloodMoonWorld = client.world;
+                previousBloodMoon = bloodMoon;
+            } else if (bloodMoon != previousBloodMoon) {
+                previousBloodMoon = bloodMoon;
+                if (bloodMoon) {
+                    client.inGameHud.setTitle(Text.literal("BLOOD MOON"));
+                    client.inGameHud.setSubtitle(Text.literal("The night is watching."));
+                    client.inGameHud.setTitleTicks(10, 65, 20);
+                } else {
+                    client.inGameHud.setTitle(Text.literal("DAWN"));
+                    client.inGameHud.setSubtitle(Text.literal("The red has faded."));
+                    client.inGameHud.setTitleTicks(5, 35, 15);
+                }
+            }
+
             if (desktopAnomalyWorld != client.world) {
                 desktopAnomalyWorld = client.world;
                 desktopAnomalyDelay = 6_000 + client.world.random.nextInt(12_001);

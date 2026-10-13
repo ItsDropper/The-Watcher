@@ -1,5 +1,6 @@
 package io.github.itsdropper.thewatcher.mixin.client;
 
+import io.github.itsdropper.thewatcher.BloodMoonSystem;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.client.WatcherFogConfig;
 import net.minecraft.client.MinecraftClient;
@@ -53,6 +54,11 @@ public abstract class NightLightmapMixin {
                     int red = (int) (((argb >>> 16) & 0xFF) * multiplier);
                     int green = (int) (((argb >>> 8) & 0xFF) * multiplier);
                     int blue = (int) ((argb & 0xFF) * multiplier);
+                    if (BloodMoonSystem.isActive(client.world)) {
+                        red = Math.min(255, Math.round(red * 1.12F) + 6);
+                        green = Math.round(green * 0.62F);
+                        blue = Math.round(blue * 0.68F);
+                    }
                     image.setColor(blockLight, skyLight,
                             (alpha << 24) | (red << 16) | (green << 8) | blue);
                 }
