@@ -84,8 +84,8 @@ public final class WatcherFogConfig {
             case OFF -> 1.0F;
             case LOW -> 0.76F;
             case MEDIUM -> 0.62F;
-            case HIGH -> 0.48F;
-            case ULTRA -> 0.34F;
+            case HIGH -> 0.32F;
+            case ULTRA -> 0.20F;
         };
         // Start the atmospheric veil sooner, but keep a broad transition.
         return Math.max(0.0F, original * scale * (1.0F - 0.12F * nightFactor()));
@@ -97,13 +97,13 @@ public final class WatcherFogConfig {
             case OFF -> 1.0F;
             case LOW -> 0.90F;
             case MEDIUM -> 0.80F;
-            case HIGH -> 0.68F;
-            case ULTRA -> 0.52F;
+            case HIGH -> 0.46F;
+            case ULTRA -> 0.30F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
         scale *= 1.0F - 0.14F * nightFactor();
         if (client.world != null && client.world.isRaining()) scale *= 0.78F;
-        return Math.max(12.0F, original * scale);
+        return Math.max(8.0F, original * scale);
     }
 
     /** Hide the sun for the deliberately overcast Watcher sky. */
