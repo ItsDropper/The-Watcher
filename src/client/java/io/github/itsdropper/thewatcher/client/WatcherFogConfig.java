@@ -1,5 +1,6 @@
 package io.github.itsdropper.thewatcher.client;
 
+import io.github.itsdropper.thewatcher.BloodMoonSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.world.World;
 
@@ -113,6 +114,10 @@ public final class WatcherFogConfig {
 
     public static float colorBlendWeight() {
         if (!shouldApply()) return 0.0F;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) {
+            return 0.92F;
+        }
         return switch (getDetail()) {
             case OFF -> 0.0F;
             case LOW -> 0.24F;
@@ -123,14 +128,20 @@ public final class WatcherFogConfig {
     }
 
     public static float fogTargetRed() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.42F;
         return lerp(0.25F, 0.018F, nightFactor());
     }
 
     public static float fogTargetGreen() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.025F;
         return lerp(0.275F, 0.024F, nightFactor());
     }
 
     public static float fogTargetBlue() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.035F;
         return lerp(0.30F, 0.040F, nightFactor());
     }
 
