@@ -341,21 +341,27 @@ public final class WatcherTowerGenerator {
             }
             // Asymmetric fence limbs and a hanging cobweb give each tree a broken outline.
             if (world.random.nextBoolean()) {
-                world.setBlockState(ground.add(1, height - 1, 0),
-                        net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
-                world.setBlockState(ground.add(2, height - 1, 0),
-                        net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+                BlockPos limb = ground.add(1, height - 1, 0);
+                BlockPos web = ground.add(2, height - 1, 0);
+                if (world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
+                    world.setBlockState(limb, net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
+                    world.setBlockState(web, net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+                }
             } else {
-                world.setBlockState(ground.add(-1, height - 2, 0),
-                        net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
-                world.setBlockState(ground.add(-2, height - 2, 0),
-                        net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+                BlockPos limb = ground.add(-1, height - 2, 0);
+                BlockPos web = ground.add(-2, height - 2, 0);
+                if (world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
+                    world.setBlockState(limb, net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
+                    world.setBlockState(web, net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+                }
             }
             if (world.random.nextBoolean()) {
-                world.setBlockState(ground.add(0, height, 1),
-                        net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
-                world.setBlockState(ground.add(0, height + 1, 1),
-                        net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+                BlockPos limb = ground.add(0, height, 1);
+                BlockPos web = ground.add(0, height + 1, 1);
+                if (world.getBlockState(limb).isAir() && world.getBlockState(web).isAir()) {
+                    world.setBlockState(limb, net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
+                    world.setBlockState(web, net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+                }
             }
             treesPlaced++;
         }
