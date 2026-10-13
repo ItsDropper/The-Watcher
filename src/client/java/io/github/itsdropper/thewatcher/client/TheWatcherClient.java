@@ -4,6 +4,7 @@ import io.github.itsdropper.thewatcher.CameraNetwork;
 import io.github.itsdropper.thewatcher.CameraListPayload;
 import io.github.itsdropper.thewatcher.CameraListRequestPayload;
 import io.github.itsdropper.thewatcher.TheWatcher;
+import io.github.itsdropper.thewatcher.client.WatcherFogConfig;
 import io.github.itsdropper.thewatcher.client.render.WatcherRenderer;
 import io.github.itsdropper.thewatcher.client.hosting.HostingTunnelService;
 import net.fabricmc.api.ClientModInitializer;
@@ -41,6 +42,7 @@ public class TheWatcherClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        WatcherFogConfig.load();
         DesktopAnomalyConfig.load();
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommandManager.literal("watcherclient")
