@@ -8,9 +8,9 @@ import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 /**
- * Grays the vanilla sky-dome shader color at the point it is submitted for
- * rendering. This avoids relying on a World.getSkyColor method that is not
- * consistently mapped/targeted in this Minecraft version.
+ * Desaturates sky-render shader colors so the horizon behind unloaded chunks
+ * cannot retain vanilla's blue tint. Apply to every shader-color submission
+ * during renderSky, not just one ordinal that may differ between mappings.
  */
 @Mixin(WorldRenderer.class)
 public abstract class OvercastSkyColorMixin {
@@ -18,10 +18,9 @@ public abstract class OvercastSkyColorMixin {
             method = "renderSky",
             at = @At(
                     value = "INVOKE",
-                    target = "Lcom/mojang/blaze3d/systems/RenderSystem;setShaderColor(FFFF)V",
-                    ordinal = 0
+                    target = "Lcom/mojang/blaze3d/systems/RenderSystem;setShaderColor(FFFF)V"
             ),
-            require = 0
+            require = 1
     )
     private void theWatcher$graySkyDome(Args args) {
         if (!WatcherFogConfig.shouldApply()) return;
@@ -29,7 +28,7 @@ public abstract class OvercastSkyColorMixin {
         float red = ((Number) args.get(0)).floatValue();
         float green = ((Number) args.get(1)).floatValue();
         float blue = ((Number) args.get(2)).floatValue();
-        float gray = Math.max(0.16F, Math.min(0.48F, (red + green + blue) / 3.0F * 0.62F));
+        float gray = Math.max(0.12F, Math.min(0.42F, (red + green + blue) / 3.0F * 0.58F));
 
         args.set(0, gray);
         args.set(1, gray);
