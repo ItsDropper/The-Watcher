@@ -120,21 +120,21 @@ public final class WatcherSettingsScreen extends Screen {
             button.setMessage(toggleText("LOCAL OLLAMA", WatcherOllamaConfig.ENABLED));
         }).dimensions(left, top, fieldWidth, 20).build());
 
-        endpointField = new TextFieldWidget(textRenderer, left, top + 42, fieldWidth, 18,
+        endpointField = new TextFieldWidget(textRenderer, left, top + 40, fieldWidth, 18,
                 Text.literal("Ollama endpoint"));
         endpointField.setMaxLength(240);
         endpointField.setText(WatcherOllamaConfig.ENDPOINT);
         endpointField.setPlaceholder(Text.literal("http://localhost:11434"));
         addDrawableChild(endpointField);
 
-        modelField = new TextFieldWidget(textRenderer, left, top + 78, fieldWidth, 18,
+        modelField = new TextFieldWidget(textRenderer, left, top + 75, fieldWidth, 18,
                 Text.literal("Ollama model"));
         modelField.setMaxLength(120);
         modelField.setText(WatcherOllamaConfig.MODEL);
         modelField.setPlaceholder(Text.literal("Installed model name"));
         addDrawableChild(modelField);
 
-        promptField = new TextFieldWidget(textRenderer, left, top + 114, fieldWidth, 18,
+        promptField = new TextFieldWidget(textRenderer, left, top + 110, fieldWidth, 18,
                 Text.literal("System prompt"));
         promptField.setMaxLength(1800);
         promptField.setText(WatcherOllamaConfig.SYSTEM_PROMPT);
@@ -145,7 +145,7 @@ public final class WatcherSettingsScreen extends Screen {
             WatcherOllamaConfig.cyclePromptPreset();
             promptField.setText(WatcherOllamaConfig.SYSTEM_PROMPT);
             button.setMessage(promptPresetText());
-        }).dimensions(left, top + 139, fieldWidth, 20).build());
+        }).dimensions(left, top + 132, fieldWidth, 20).build());
     }
 
     private void openPage(int nextPage) {
