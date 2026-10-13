@@ -13,6 +13,8 @@ import java.util.Properties;
  */
 public final class WatcherLearningEngine {
     private static final double EMA_WEIGHT = 0.18D;
+    // Behavioral habits should accumulate over minutes, not forget a whole day in seconds.
+    private static final double BEHAVIOR_EMA_WEIGHT = 0.035D;
     private static final int MAX_RUN_TICKS = 72000;
 
     private double averageWatchedTicks = 100.0D;
@@ -81,8 +83,9 @@ public final class WatcherLearningEngine {
         double gazePattern = averageWatchedTicks - averageUnwatchedTicks;
         double campingOpportunity = clamp((averageStationaryTicks - 80.0D) * 0.018D, 0.0D, 8.0D);
         double vigilancePenalty = averageLookBackRatio * 16.0D;
+        double jumpinessPenalty = averageJumpRatio * 4.0D;
         int adjustment = (int) Math.round(clamp(gazePattern * 0.08D + campingOpportunity
-                - vigilancePenalty, -18.0D, 14.0D));
+                - vigilancePenalty - jumpinessPenalty, -20.0D, 14.0D));
         return (int) clamp(baseChance + adjustment, 4.0D, 68.0D);
     }
 
@@ -104,16 +107,16 @@ public final class WatcherLearningEngine {
         double vx = player.getVelocity().x;
         double vz = player.getVelocity().z;
         double horizontalSpeed = Math.sqrt(vx * vx + vz * vz);
-        averageHorizontalSpeed = blend(averageHorizontalSpeed, clamp(horizontalSpeed, 0.0D, 1.5D));
-        averageSprintRatio = blend(averageSprintRatio, player.isSprinting() ? 1.0D : 0.0D);
-        averagePlayerHeight = blend(averagePlayerHeight, clamp(player.getY(), -64.0D, 320.0D));
-        averageSneakRatio = blend(averageSneakRatio, player.isSneaking() ? 1.0D : 0.0D);
-        averageItemUseRatio = blend(averageItemUseRatio, player.isUsingItem() ? 1.0D : 0.0D);
-        averageJumpRatio = blend(averageJumpRatio, player.getVelocity().y > 0.12D ? 1.0D : 0.0D);
+        averageHorizontalSpeed = blendBehavior(averageHorizontalSpeed, clamp(horizontalSpeed, 0.0D, 1.5D));
+        averageSprintRatio = blendBehavior(averageSprintRatio, player.isSprinting() ? 1.0D : 0.0D);
+        averagePlayerHeight = blendBehavior(averagePlayerHeight, clamp(player.getY(), -64.0D, 320.0D));
+        averageSneakRatio = blendBehavior(averageSneakRatio, player.isSneaking() ? 1.0D : 0.0D);
+        averageItemUseRatio = blendBehavior(averageItemUseRatio, player.isUsingItem() ? 1.0D : 0.0D);
+        averageJumpRatio = blendBehavior(averageJumpRatio, player.getVelocity().y > 0.12D ? 1.0D : 0.0D);
         if (hasPreviousYaw) {
             double turn = Math.abs(player.getYaw() - previousYaw) % 360.0D;
             turn = Math.min(turn, 360.0D - turn);
-            averageLookBackRatio = blend(averageLookBackRatio, turn >= 95.0D ? 1.0D : 0.0D);
+            averageLookBackRatio = blendBehavior(averageLookBackRatio, turn >= 95.0D ? 1.0D : 0.0D);
         }
         previousYaw = player.getYaw();
         hasPreviousYaw = true;
@@ -123,7 +126,7 @@ public final class WatcherLearningEngine {
         } else {
             currentStationaryTicks = Math.max(0, currentStationaryTicks - 3 * sampleTicks);
         }
-        averageStationaryTicks = blend(averageStationaryTicks, currentStationaryTicks);
+        averageStationaryTicks = blendBehavior(averageStationaryTicks, currentStationaryTicks);
     }
 
     /**
@@ -257,6 +260,10 @@ public final class WatcherLearningEngine {
 
     private static double blend(double current, double sample) {
         return current + (sample - current) * EMA_WEIGHT;
+    }
+
+    private static double blendBehavior(double current, double sample) {
+        return current + (sample - current) * BEHAVIOR_EMA_WEIGHT;
     }
 
     private static double clamp(double value, double min, double max) {
