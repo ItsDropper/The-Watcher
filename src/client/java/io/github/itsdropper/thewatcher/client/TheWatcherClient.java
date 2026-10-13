@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.world.World;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.sound.SoundCategory;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -23,6 +24,8 @@ import org.lwjgl.glfw.GLFW;
 public class TheWatcherClient implements ClientModInitializer {
     private static KeyBinding openCameraMonitorKey;
     private static PositionedSoundInstance endingMusic;
+    private static int windowsAnomalyDelay = -1;
+    private static Object windowsAnomalyWorld;
 
     public static boolean isEndingMusicActive() {
         return endingMusic != null;
@@ -81,6 +84,42 @@ public class TheWatcherClient implements ClientModInitializer {
                 if (client.player != null && client.world != null && client.currentScreen == null) {
                     client.setScreen(new CameraMonitorScreen());
                 }
+            }
+
+            // Extremely rare fictional OS-style dialogs, rendered inside Minecraft only.
+            // Reset the initial delay for each world; never interrupt menus or other screens.
+            if (client.player == null || client.world == null) {
+                windowsAnomalyDelay = -1;
+                windowsAnomalyWorld = null;
+                return;
+            }
+            if (windowsAnomalyWorld != client.world) {
+                windowsAnomalyWorld = client.world;
+                windowsAnomalyDelay = 6_000 + client.world.random.nextInt(12_001);
+            }
+            if (windowsAnomalyDelay > 0) {
+                windowsAnomalyDelay--;
+            } else if (client.currentScreen == null
+                    && client.world.getRegistryKey() == World.OVERWORLD) {
+                // A single 35% roll every 20–40 minutes keeps it rare rather than predictable.
+                if (client.world.random.nextInt(100) < 35) {
+                    String[][] anomalies = {
+                            {"Windows Security", "An unfamiliar process accessed this window.",
+                                    "The process could not be identified."},
+                            {"Application Error", "The requested object could not be located.",
+                                    "It may have been moved or may no longer exist."},
+                            {"Windows", "This application is waiting for a response.",
+                                    "No response was received from the requested window."},
+                            {"System Notification", "A background task changed state.",
+                                    "The previous state could not be restored."},
+                            {"Windows Security", "An unexpected window was detected.",
+                                    "The source of this window is unknown."}
+                    };
+                    String[] anomaly = anomalies[client.world.random.nextInt(anomalies.length)];
+                    client.setScreen(new WindowsAnomalyScreen(client.currentScreen,
+                            anomaly[0], anomaly[1], anomaly[2]));
+                }
+                windowsAnomalyDelay = 24_000 + client.world.random.nextInt(24_001);
             }
         });
     }
