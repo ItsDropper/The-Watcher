@@ -142,7 +142,7 @@ public final class WatcherFogConfig {
             case ULTRA -> 0.40F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
-        float weatherFactor = client.world != null && client.world.isRaining() ? 0.72F : 1.0F;
+        float weatherFactor = client.world != null && client.world.isRaining() ? 1.18F : 1.0F;
         return 1.0F - strength * dayFactor() * weatherFactor;
     }
 
