@@ -36,7 +36,7 @@ public final class WatcherCommands {
                 .requires(source -> source.hasPermissionLevel(2))
                 .executes(context -> {
                     context.getSource().sendFeedback(() -> Text.literal(
-                            "The Watcher: mode on|off | debug ending|spawn|status|structures|despawn|simulate|phase|darkness"), false);
+                            "The Watcher: mode on|off | debug test|ending|spawn|status|structures|despawn|simulate|phase|darkness"), false);
                     return 1;
                 })
                 .then(literal("mode")
@@ -419,7 +419,7 @@ public final class WatcherCommands {
         source.sendFeedback(() -> Text.literal("Camera test: registered=" + cameras.size()
                 + ", nearest=" + nearest.getX() + " " + nearest.getY() + " " + nearest.getZ()
                 + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", distance)
-                + ", chunkLoaded=" + loaded + ", cameraBlockValid=" + validBlock
+                + ", serverChunkLoaded=" + loaded + ", cameraBlockValid=" + validBlock
                 + ". Open the network screen to test the live feed; the player should remain at their current position."), false);
         return 1;
     }
