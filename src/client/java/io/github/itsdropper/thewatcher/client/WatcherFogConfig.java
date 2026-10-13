@@ -81,26 +81,28 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.72F;
-            case MEDIUM -> 0.48F;
-            case HIGH -> 0.28F;
-            case ULTRA -> 0.12F;
+            case LOW -> 0.78F;
+            case MEDIUM -> 0.62F;
+            case HIGH -> 0.48F;
+            case ULTRA -> 0.36F;
         };
-        return Math.max(0.0F, original * scale * (1.0F - 0.08F * nightFactor()));
+        // Keep the transition broad enough to avoid a hard-looking fog wall at chunk edges.
+        return Math.max(0.0F, original * scale * (1.0F - 0.03F * nightFactor()));
     }
 
     public static float adjustEnd(float original) {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.84F;
-            case MEDIUM -> 0.70F;
-            case HIGH -> 0.56F;
-            case ULTRA -> 0.38F;
+            case LOW -> 0.97F;
+            case MEDIUM -> 0.94F;
+            case HIGH -> 0.90F;
+            case ULTRA -> 0.84F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
-        scale *= 1.0F - 0.12F * nightFactor();
-        if (client.world != null && client.world.isRaining()) scale *= 0.93F;
+        // Avoid pulling the opaque fog cutoff far inside the loaded terrain boundary.
+        scale *= 1.0F - 0.05F * nightFactor();
+        if (client.world != null && client.world.isRaining()) scale *= 0.97F;
         return Math.max(8.0F, original * scale);
     }
 
