@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher.entity;
 
 import io.github.itsdropper.thewatcher.TheWatcher;
+import io.github.itsdropper.thewatcher.WatcherEvidence;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlockEntity;
 import net.minecraft.block.Blocks;
 import net.minecraft.registry.tag.BlockTags;
@@ -710,10 +711,13 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     private boolean hasEvidence(PlayerEntity player, String evidenceName) {
+        if (!(player.getWorld() instanceof ServerWorld world)) return false;
+        String prefix = "Evidence: ";
+        if (!evidenceName.startsWith(prefix)) return false;
+        String category = evidenceName.substring(prefix.length());
         for (int slot = 0; slot < player.getInventory().size(); slot++) {
             ItemStack stack = player.getInventory().getStack(slot);
-            if (!stack.isEmpty() && stack.isOf(net.minecraft.item.Items.PAPER)
-                    && stack.getName().getString().equals(evidenceName)) {
+            if (WatcherEvidence.isAuthentic(world, stack, category)) {
                 return true;
             }
         }
