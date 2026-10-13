@@ -422,9 +422,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
 
                 // Evidence changes the encounter's pace: the closer the player gets to
                 // proving the story, the less time the Watcher spends merely observing them.
-                int evidenceCount = countRequiredEvidence(player);
+                int stalkingEvidenceCount = countRequiredEvidence(player);
                 int duration = Math.max(260,
-                        learningEngine.adjustStalkDuration(STALK_TICKS) - evidenceCount * 45);
+                        learningEngine.adjustStalkDuration(STALK_TICKS) - stalkingEvidenceCount * 45);
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
                     setPhase(Phase.ESCALATING);
                 }
