@@ -82,10 +82,10 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.78F;
-            case MEDIUM -> 0.62F;
-            case HIGH -> 0.48F;
-            case ULTRA -> 0.36F;
+            case LOW -> 0.84F;
+            case MEDIUM -> 0.72F;
+            case HIGH -> 0.62F;
+            case ULTRA -> 0.52F;
         };
         // Keep the transition broad enough to avoid a hard-looking fog wall at chunk edges.
         return Math.max(0.0F, original * scale * (1.0F - 0.03F * nightFactor()));
@@ -95,10 +95,10 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.97F;
-            case MEDIUM -> 0.94F;
-            case HIGH -> 0.90F;
-            case ULTRA -> 0.84F;
+            case LOW -> 1.00F;
+            case MEDIUM -> 0.99F;
+            case HIGH -> 0.97F;
+            case ULTRA -> 0.93F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
         // Avoid pulling the opaque fog cutoff far inside the loaded terrain boundary.
@@ -120,10 +120,10 @@ public final class WatcherFogConfig {
         }
         return switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.24F;
-            case MEDIUM -> 0.38F;
-            case HIGH -> 0.54F;
-            case ULTRA -> 0.68F;
+            case LOW -> 0.12F;
+            case MEDIUM -> 0.20F;
+            case HIGH -> 0.28F;
+            case ULTRA -> 0.38F;
         } + (0.08F * nightFactor());
     }
 
@@ -154,10 +154,10 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return 1.0F;
         float strength = switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.08F;
-            case MEDIUM -> 0.17F;
-            case HIGH -> 0.28F;
-            case ULTRA -> 0.40F;
+            case LOW -> 0.05F;
+            case MEDIUM -> 0.10F;
+            case HIGH -> 0.18F;
+            case ULTRA -> 0.28F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
         float weatherFactor = client.world != null && client.world.isRaining() ? 1.18F : 1.0F;
