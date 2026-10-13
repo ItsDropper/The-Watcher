@@ -375,8 +375,11 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 }
 
                 // A second scare style: a brief, close-range blackout and an abrupt sound cue.
+                // Root-cellar evidence teaches the player to recognize the pattern before
+                // the close blackout; it reduces, but does not eliminate, this event.
+                int blackoutChance = hasEvidence(player, "Evidence: Root Cellar") ? 1 : 3;
                 if (closeJumpscareCooldown <= 0 && unseenTicks >= 40 && distance < 11.0D
-                        && random.nextInt(100) < 3) {
+                        && random.nextInt(100) < blackoutChance) {
                     closeJumpscareCooldown = 900 + random.nextInt(901);
                     player.addStatusEffect(new StatusEffectInstance(
                             StatusEffects.DARKNESS, 25 + random.nextInt(25), 0, false, false, true));
@@ -396,7 +399,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     moveAwayFrom(player, 1.8D);
                 }
 
-                int baseTeleportChance = 32;
+                // Signal-station notes reveal part of its relocation rhythm, giving prepared
+                // players a small but real advantage without making the Watcher harmless.
+                int baseTeleportChance = hasEvidence(player, "Evidence: Signal Station") ? 22 : 32;
                 int teleportChance = learningEngine.adjustTeleportChance(baseTeleportChance);
                 boolean relocationRoll = random.nextInt(100) < teleportChance;
                 if (!tooCloseForPhase && TheWatcher.TELEPORTS_ENABLED && hiddenMoveCooldown <= 0
@@ -665,17 +670,21 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     private boolean hasAllEvidence(PlayerEntity player) {
-        boolean tower = false, cabin = false, shrine = false, expedition = false;
+        return hasEvidence(player, "Evidence: Tower")
+                && hasEvidence(player, "Evidence: Cabin")
+                && hasEvidence(player, "Evidence: Shrine")
+                && hasEvidence(player, "Evidence: Expedition");
+    }
+
+    private boolean hasEvidence(PlayerEntity player, String evidenceName) {
         for (int slot = 0; slot < player.getInventory().size(); slot++) {
             ItemStack stack = player.getInventory().getStack(slot);
-            if (stack.isEmpty() || !stack.isOf(net.minecraft.item.Items.PAPER)) continue;
-            String name = stack.getName().getString();
-            tower |= name.equals("Evidence: Tower");
-            cabin |= name.equals("Evidence: Cabin");
-            shrine |= name.equals("Evidence: Shrine");
-            expedition |= name.equals("Evidence: Expedition");
+            if (!stack.isEmpty() && stack.isOf(net.minecraft.item.Items.PAPER)
+                    && stack.getName().getString().equals(evidenceName)) {
+                return true;
+            }
         }
-        return tower && cabin && shrine && expedition;
+        return false;
     }
 
     private boolean isUnsafeGround(net.minecraft.block.BlockState state) {
