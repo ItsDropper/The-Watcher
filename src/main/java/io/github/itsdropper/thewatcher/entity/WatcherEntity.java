@@ -151,8 +151,40 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         // destroy them when their chunks unload or during normal stalking.
 
         if (!debugPhaseLocked && !debugSimulation && !night) {
-            // Natural encounters go dormant during the day, but the persistent entity
-            // is retained so it can resume stalking after nightfall.
+            // Daytime is the Watcher's learning phase, not a free pass for the player.
+            // It observes every tick but stays at least 200 blocks away whenever a safe,
+            // unseen destination is available. No daytime attacks or close stalking.
+            if (naturalRunEntity) {
+                PlayerEntity daytimeTarget = world.getPlayers().stream()
+                        .filter(candidate -> candidate.isAlive() && !candidate.isSpectator())
+                        .min(Comparator.comparingDouble(this::squaredDistanceTo))
+                        .orElse(null);
+                if (daytimeTarget != null) {
+                    setTarget(daytimeTarget);
+                    double daytimeDistance = Math.sqrt(squaredDistanceTo(daytimeTarget));
+                    learningEngine.observe(isPlayerWatching(daytimeTarget), daytimeDistance);
+                    learningEngine.observePlayerBehavior(daytimeTarget);
+                    learningEngine.observeStalkingDistance(daytimeDistance,
+                            WatcherStalkingDirector.renderDistanceChunks(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS));
+
+                    if (daytimeDistance < 200.0D) {
+                        if (!isWithinPlayerView(daytimeTarget)
+                                && tryDaytimeRelocation(world, daytimeTarget)) {
+                            hiddenMoveCooldown = 0;
+                            getNavigation().stop();
+                        } else {
+                            // Never teleport in front of a player. If they keep it in sight,
+                            // it physically withdraws instead of breaking the established rule.
+                            moveAwayFrom(daytimeTarget, 2.4D);
+                        }
+                    } else {
+                        getNavigation().stop();
+                        setVelocity(0.0D, getVelocity().y, 0.0D);
+                    }
+                } else {
+                    getNavigation().stop();
+                }
+            }
             resetToIdle();
             return;
         }
@@ -404,6 +436,60 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 }
             }
         }
+    }
+
+    /**
+     * Daytime withdrawal uses a much wider ring than ordinary night stalking.
+     * It only selects already-loaded, safe terrain and never relocates while visible.
+     */
+    private boolean tryDaytimeRelocation(ServerWorld world, PlayerEntity player) {
+        if (isWithinPlayerView(player)) return false;
+        double bestScore = -Double.MAX_VALUE;
+        BlockPos best = null;
+
+        for (int i = 0; i < 160; i++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            double radius = 208.0D + random.nextDouble() * 72.0D;
+            int x = (int) Math.floor(player.getX() + Math.cos(angle) * radius);
+            int z = (int) Math.floor(player.getZ() + Math.sin(angle) * radius);
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+
+            int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+            BlockPos feet = new BlockPos(x, y, z);
+            BlockPos ground = feet.down();
+            if (!world.getBlockState(ground).isSolidBlock(world, ground)
+                    || isUnsafeGround(world.getBlockState(ground))
+                    || !world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
+                    || !world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
+                    || !world.getBlockState(feet).getFluidState().isEmpty()
+                    || !world.getBlockState(feet.up()).getFluidState().isEmpty()
+                    || !world.isSpaceEmpty(this, getBoundingBox().offset(
+                            x + 0.5D - getX(), y - getY(), z + 0.5D - getZ()))) {
+                continue;
+            }
+
+            Vec3d eyes = new Vec3d(x + 0.5D, y + 1.4D, z + 0.5D);
+            Vec3d direction = eyes.subtract(player.getEyePos()).normalize();
+            BlockHitResult sight = world.raycast(new RaycastContext(player.getEyePos(), eyes,
+                    RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, player));
+            if (sight.getType() == BlockHitResult.Type.MISS
+                    && player.getRotationVec(1.0F).normalize().dotProduct(direction) > 0.15D) {
+                continue;
+            }
+
+            double distance = Math.sqrt(player.getBlockPos().getSquaredDistance(feet));
+            if (distance < 200.0D) continue;
+            double score = distance + random.nextDouble() * 20.0D;
+            if (score > bestScore) {
+                bestScore = score;
+                best = feet;
+            }
+        }
+
+        if (best == null) return false;
+        requestTeleport(best.getX() + 0.5D, best.getY(), best.getZ() + 0.5D);
+        lookAtPlayer(player);
+        return true;
     }
 
     /**
