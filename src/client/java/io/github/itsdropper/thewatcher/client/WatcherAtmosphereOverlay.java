@@ -35,7 +35,7 @@ public final class WatcherAtmosphereOverlay {
         if (width < 80 || height < 60) return;
 
         // Low-opacity veil means even nearby terrain looks swallowed by haze.
-        int veilAlpha = Math.round(10.0F + 31.0F * strength);
+        int veilAlpha = Math.round(18.0F + 48.0F * strength);
         context.fill(0, 0, width, height, (veilAlpha << 24) | 0x18232A);
 
         // Persistent slate-dark sky tint: deliberately overcast even at midday.
@@ -44,7 +44,7 @@ public final class WatcherAtmosphereOverlay {
             float progress = (band + 1.0F) / BANDS;
             int y = Math.round(skyHeight * band / (float) BANDS);
             int nextY = Math.max(y + 1, Math.round(skyHeight * (band + 1) / (float) BANDS));
-            int alpha = Math.round((7.0F + 23.0F * strength) * (1.0F - progress * 0.38F));
+            int alpha = Math.round((10.0F + 30.0F * strength) * (1.0F - progress * 0.38F));
             context.fill(0, y, width, nextY, (alpha << 24) | 0x101B22);
         }
 
@@ -54,7 +54,7 @@ public final class WatcherAtmosphereOverlay {
             float progress = (band + 1.0F) / BANDS;
             int thickness = Math.max(2, Math.round(height * 0.19F / BANDS));
             int y = horizonY + Math.round(height * 0.22F * band / BANDS);
-            int alpha = Math.round(3.0F + 25.0F * strength * (1.0F - progress * 0.45F));
+            int alpha = Math.round(7.0F + 39.0F * strength * (1.0F - progress * 0.45F));
             context.fill(0, y, width, Math.min(height, y + thickness), (alpha << 24) | 0x87949A);
         }
 
