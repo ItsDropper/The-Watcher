@@ -607,6 +607,23 @@ public final class WatcherRunManager {
                 }
             }
             WatcherTowerGenerator.restoreGuaranteedPositions(guaranteedPositions);
+
+            Set<BlockPos> builtPositions = new HashSet<>();
+            String builtPositionList = properties.getProperty("builtStructurePositions", "");
+            if (!builtPositionList.isBlank()) {
+                for (String entry : builtPositionList.split(";")) {
+                    try {
+                        String[] coordinates = entry.split(",");
+                        if (coordinates.length == 3) {
+                            builtPositions.add(new BlockPos(Integer.parseInt(coordinates[0]),
+                                    Integer.parseInt(coordinates[1]), Integer.parseInt(coordinates[2])));
+                        }
+                    } catch (IllegalArgumentException ignored) {
+                        // Skip one malformed position without discarding the rest of the run state.
+                    }
+                }
+            }
+            WatcherTowerGenerator.restoreBuiltPositions(builtPositions);
             for (String key : properties.stringPropertyNames()) {
                 if (key.startsWith("learning.")) {
                     run.learningProperties.setProperty(key.substring("learning.".length()),
@@ -638,6 +655,11 @@ public final class WatcherRunManager {
                         .sorted(Map.Entry.comparingByKey())
                         .map(entry -> entry.getKey() + ":" + entry.getValue().getX() + ","
                                 + entry.getValue().getY() + "," + entry.getValue().getZ())
+                        .collect(java.util.stream.Collectors.joining(";")));
+        properties.setProperty("builtStructurePositions",
+                WatcherTowerGenerator.snapshotBuiltPositions().stream()
+                        .sorted(Comparator.comparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ))
+                        .map(position -> position.getX() + "," + position.getY() + "," + position.getZ())
                         .collect(java.util.stream.Collectors.joining(";")));
         if (run.naturalWatcherUuid != null) {
             net.minecraft.entity.Entity tracked = world.getEntity(run.naturalWatcherUuid);
