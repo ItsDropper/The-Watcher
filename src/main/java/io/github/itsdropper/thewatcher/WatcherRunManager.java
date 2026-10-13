@@ -161,7 +161,7 @@ public final class WatcherRunManager {
             if (loadedWatcher != null) {
                 loadedWatcher.observePlayerForLearning(player);
             } else if (unloadedLearning != null) {
-                unloadedLearning.observePlayerBehavior(player);
+                unloadedLearning.observePlayerBehavior(player, 20);
             }
 
             UUID id = player.getUuid();
