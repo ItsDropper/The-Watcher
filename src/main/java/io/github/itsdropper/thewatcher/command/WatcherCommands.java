@@ -36,7 +36,7 @@ public final class WatcherCommands {
                 .requires(source -> source.hasPermissionLevel(2))
                 .executes(context -> {
                     context.getSource().sendFeedback(() -> Text.literal(
-                            "The Watcher: mode on|off | debug test|ending|spawn|status|structures|despawn|simulate|phase|darkness"), false);
+                            "The Watcher: mode on|off | debug test|ending|spawn|status|learning|structures|despawn|simulate|phase|darkness"), false);
                     return 1;
                 })
                 .then(literal("mode")
@@ -45,7 +45,7 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: test | spawn | status | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
+                                    "Watcher debug: test | spawn | status | learning | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
                                     false);
                             return 1;
                         })
@@ -74,6 +74,7 @@ public final class WatcherCommands {
                         .then(literal("ending").executes(context -> triggerEnding(context.getSource())))
                         .then(literal("spawn").executes(context -> spawnWatcher(context.getSource())))
                         .then(literal("status").executes(context -> showStatus(context.getSource())))
+                        .then(literal("learning").executes(context -> showLearning(context.getSource())))
                         .then(literal("structures").executes(context -> showStructures(context.getSource())))
                         .then(literal("despawn").executes(context -> despawnNearest(context.getSource())))
                         .then(literal("simulate")
@@ -186,6 +187,12 @@ public final class WatcherCommands {
         return 1;
     }
 
+
+    private static int showLearning(ServerCommandSource source) {
+        String summary = WatcherRunManager.getLearningSummary((ServerWorld) source.getWorld());
+        source.sendFeedback(() -> Text.literal(summary), false);
+        return summary.startsWith("No active") ? 0 : 1;
+    }
 
     private static int showStructures(ServerCommandSource source) {
         var positions = WatcherTowerGenerator.snapshotGuaranteedPositions();
