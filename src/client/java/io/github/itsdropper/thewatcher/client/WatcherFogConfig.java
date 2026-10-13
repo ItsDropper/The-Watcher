@@ -108,23 +108,61 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return 0.0F;
         return switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.10F;
-            case MEDIUM -> 0.18F;
-            case HIGH -> 0.28F;
-            case ULTRA -> 0.38F;
-        } + (0.07F * nightFactor());
+            case LOW -> 0.24F;
+            case MEDIUM -> 0.38F;
+            case HIGH -> 0.54F;
+            case ULTRA -> 0.68F;
+        } + (0.08F * nightFactor());
     }
 
     public static float fogTargetRed() {
-        return lerp(0.57F, 0.035F, nightFactor());
+        return lerp(0.25F, 0.018F, nightFactor());
     }
 
     public static float fogTargetGreen() {
-        return lerp(0.59F, 0.045F, nightFactor());
+        return lerp(0.275F, 0.024F, nightFactor());
     }
 
     public static float fogTargetBlue() {
-        return lerp(0.61F, 0.070F, nightFactor());
+        return lerp(0.30F, 0.040F, nightFactor());
+    }
+
+    /**
+     * Daylight exposure reduction for the vanilla lightmap. This changes the
+     * brightness of the actual terrain, not just how far the player can see.
+     * LOW is subtle; ULTRA is deliberately oppressive.
+     */
+    public static float daylightMultiplier() {
+        if (!shouldApply()) return 1.0F;
+        float strength = switch (getDetail()) {
+            case OFF -> 0.0F;
+            case LOW -> 0.08F;
+            case MEDIUM -> 0.17F;
+            case HIGH -> 0.28F;
+            case ULTRA -> 0.40F;
+        };
+        MinecraftClient client = MinecraftClient.getInstance();
+        float weatherFactor = client.world != null && client.world.isRaining() ? 0.72F : 1.0F;
+        return 1.0F - strength * dayFactor() * weatherFactor;
+    }
+
+    /** Smoothly fades the daytime grade out around dusk and dawn. */
+    private static float dayFactor() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null) return 0.0F;
+        long time = Math.floorMod(client.world.getTimeOfDay(), 24_000L);
+        if (time >= 13_000L && time < 23_000L) return 0.0F;
+        if (time >= 11_000L && time < 13_000L) {
+            return 1.0F - smoothstep((time - 11_000L) / 2_000.0F);
+        }
+        if (time >= 23_000L) {
+            return smoothstep((time - 23_000L) / 1_000.0F);
+        }
+        if (time < 1_000L) return smoothstep(time / 1_000.0F);
+        if (time >= 9_000L && time < 11_000L) {
+            return 1.0F - smoothstep((time - 9_000L) / 2_000.0F);
+        }
+        return 1.0F;
     }
 
     public static float blendColor(float original, float target) {
