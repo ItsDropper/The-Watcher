@@ -73,29 +73,23 @@ public final class CameraNetwork {
                 || !world.getBlockState(pos).isOf(TheWatcher.SURVEILLANCE_CAMERA)) return;
 
         ChunkPos center = new ChunkPos(pos);
-        FeedSession session = new FeedSession(world, player.getX(), player.getY(), player.getZ(),
-                player.getYaw(), player.getPitch(), player.getVelocity(), player.isInvulnerable(),
+        // Keep the real player at their actual server position. The feed uses a client-only
+        // camera entity; moving the player here made everyone else see them teleport to each camera.
+        FeedSession session = new FeedSession(world, player.getVelocity(), player.isInvulnerable(),
                 player.hasNoGravity(), center.x, center.z);
         SESSIONS.put(player.getUuid(), session);
         player.setInvulnerable(true);
         player.setNoGravity(true);
+        player.setVelocity(Vec3d.ZERO);
+        player.velocityModified = true;
 
+        // Keep the camera's server chunks alive while the feed is open. The player itself never
+        // changes position or dimension.
         for (int x = center.x - 2; x <= center.x + 2; x++) {
             for (int z = center.z - 2; z <= center.z + 2; z++) {
                 acquireChunk(world, x, z);
             }
         }
-
-        // Vanilla streams terrain around the server-side player, not around client-only camera entities.
-        float facingYaw = world.getBlockState(pos).contains(SurveillanceCameraBlock.FACING)
-                ? world.getBlockState(pos).get(SurveillanceCameraBlock.FACING).asRotation() : 180.0F;
-        var facing = world.getBlockState(pos).contains(SurveillanceCameraBlock.FACING)
-                ? world.getBlockState(pos).get(SurveillanceCameraBlock.FACING) : net.minecraft.util.math.Direction.NORTH;
-        player.teleport(world, pos.getX() + 0.5D + facing.getOffsetX() * 2.5D,
-                pos.getY() + 0.1D, pos.getZ() + 0.5D + facing.getOffsetZ() * 2.5D,
-                facingYaw, 0.0F);
-        player.setVelocity(Vec3d.ZERO);
-        player.velocityModified = true;
     }
 
     private static void acquireChunk(ServerWorld world, int x, int z) {
@@ -142,17 +136,15 @@ public final class CameraNetwork {
             }
         }
 
-        // A disconnected player must not be teleported or have state mutated after logout.
+        // A disconnected player must not have state mutated after logout.
         if (!restorePlayer || player.getServer() == null) return;
-        player.teleport(session.world(), session.x(), session.y(), session.z(), session.yaw(), session.pitch());
         player.setVelocity(session.velocity());
         player.velocityModified = true;
         player.setInvulnerable(session.wasInvulnerable());
         player.setNoGravity(session.hadNoGravity());
     }
 
-    private record FeedSession(ServerWorld world, double x, double y, double z, float yaw, float pitch,
-                               Vec3d velocity, boolean wasInvulnerable, boolean hadNoGravity,
-                               int cameraChunkX, int cameraChunkZ) {
+    private record FeedSession(ServerWorld world, Vec3d velocity, boolean wasInvulnerable,
+                               boolean hadNoGravity, int cameraChunkX, int cameraChunkZ) {
     }
 }
