@@ -49,6 +49,28 @@ public final class WatcherCommands {
                                     false);
                             return 1;
                         })
+                        .then(literal("test")
+                                .executes(context -> {
+                                    context.getSource().sendFeedback(() -> Text.literal(
+                                            "Test suite: encounter | camera | structures | cleanup | attack <melee|rush|ambush|jumpscare|blackout>. " +
+                                            "Also use /watcher debug phase <observe|stalk|escalate|retreat|auto> and /watcher debug status."), false);
+                                    return 1;
+                                })
+                                .then(literal("encounter").executes(context -> startSimulation(context.getSource())))
+                                .then(literal("camera").executes(context -> showCameraStatus(context.getSource())))
+                                .then(literal("structures").executes(context -> showStructures(context.getSource())))
+                                .then(literal("cleanup").executes(context -> despawnNearest(context.getSource())))
+                                .then(literal("attack")
+                                        .executes(context -> {
+                                            context.getSource().sendFeedback(() -> Text.literal(
+                                                    "Choose: melee | rush | ambush | jumpscare | blackout"), false);
+                                            return 1;
+                                        })
+                                        .then(literal("melee").executes(context -> testAttack(context.getSource(), "melee")))
+                                        .then(literal("rush").executes(context -> testAttack(context.getSource(), "rush")))
+                                        .then(literal("ambush").executes(context -> testAttack(context.getSource(), "ambush")))
+                                        .then(literal("jumpscare").executes(context -> testAttack(context.getSource(), "jumpscare")))
+                                        .then(literal("blackout").executes(context -> testAttack(context.getSource(), "blackout"))))
                         .then(literal("ending").executes(context -> triggerEnding(context.getSource())))
                         .then(literal("spawn").executes(context -> spawnWatcher(context.getSource())))
                         .then(literal("status").executes(context -> showStatus(context.getSource())))
@@ -375,6 +397,30 @@ public final class WatcherCommands {
         }
         source.sendFeedback(() -> Text.literal("Triggered Watcher attack test: " + attack
                 + ". Use /watcher debug status to inspect its state."), false);
+        return 1;
+    }
+
+    private static int showCameraStatus(ServerCommandSource source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        ServerWorld world = source.getWorld();
+        List<BlockPos> cameras = io.github.itsdropper.thewatcher.CameraRegistry.getCameras(world);
+        if (cameras.isEmpty()) {
+            source.sendError(Text.literal("No registered cameras in this dimension. Place a camera and wait one second, then retry."));
+            return 0;
+        }
+
+        BlockPos nearest = cameras.stream()
+                .min(Comparator.comparingDouble(player.getBlockPos()::getSquaredDistance))
+                .orElseThrow();
+        boolean loaded = world.isChunkLoaded(nearest.getX() >> 4, nearest.getZ() >> 4);
+        boolean validBlock = loaded && world.getBlockState(nearest).isOf(TheWatcher.SURVEILLANCE_CAMERA);
+        double distance = Math.sqrt(player.getBlockPos().getSquaredDistance(nearest));
+        source.sendFeedback(() -> Text.literal("Camera test: registered=" + cameras.size()
+                + ", nearest=" + nearest.getX() + " " + nearest.getY() + " " + nearest.getZ()
+                + ", distance=" + String.format(java.util.Locale.ROOT, "%.1f", distance)
+                + ", chunkLoaded=" + loaded + ", cameraBlockValid=" + validBlock
+                + ". Open the network screen to test the live feed; the player should remain at their current position."), false);
         return 1;
     }
 
