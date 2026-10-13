@@ -31,6 +31,7 @@ public final class WatcherSettingsScreen extends Screen {
     @Override
     protected void init() {
         WatcherOllamaConfig.load();
+        DesktopAnomalyConfig.load();
         int centerX = this.width / 2;
         int top = Math.max(10, this.height / 5 - 8);
         int panelWidth = Math.min(280, this.width - 24);
@@ -51,6 +52,7 @@ public final class WatcherSettingsScreen extends Screen {
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> {
             saveAiSettings();
+            DesktopAnomalyConfig.save();
             this.client.setScreen(parent);
         }).dimensions(centerX - 80, this.height - 38, 160, 20).build());
     }
@@ -82,6 +84,12 @@ public final class WatcherSettingsScreen extends Screen {
                     MinecraftClient.getInstance().options.getViewDistance().getValue();
             button.setMessage(renderDistanceText(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS));
         }).dimensions(centerX - 112, top + 81, 224, 20).build());
+
+        addDrawableChild(ButtonWidget.builder(toggleText("Native desktop popups", DesktopAnomalyConfig.ENABLED), button -> {
+            DesktopAnomalyConfig.ENABLED = !DesktopAnomalyConfig.ENABLED;
+            DesktopAnomalyConfig.save();
+            button.setMessage(toggleText("Native desktop popups", DesktopAnomalyConfig.ENABLED));
+        }).dimensions(centerX - 112, top + 108, 224, 20).build());
     }
 
     private void initLocalAi(int centerX, int left, int panelWidth, int top) {
@@ -126,6 +134,7 @@ public final class WatcherSettingsScreen extends Screen {
             return;
         }
         saveAiSettings();
+        DesktopAnomalyConfig.save();
         this.client.setScreen(new WatcherSettingsScreen(parent, nextPage));
     }
 
@@ -190,6 +199,7 @@ public final class WatcherSettingsScreen extends Screen {
     @Override
     public void close() {
         saveAiSettings();
+        DesktopAnomalyConfig.save();
         this.client.setScreen(parent);
     }
 }
