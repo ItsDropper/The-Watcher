@@ -163,9 +163,6 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                     setTarget(daytimeTarget);
                     double daytimeDistance = Math.sqrt(squaredDistanceTo(daytimeTarget));
                     learningEngine.observe(isPlayerWatching(daytimeTarget), daytimeDistance);
-                    learningEngine.observePlayerBehavior(daytimeTarget);
-                    learningEngine.observeStalkingDistance(daytimeDistance,
-                            WatcherStalkingDirector.renderDistanceChunks(TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS));
 
                     if (daytimeDistance < 200.0D) {
                         if (!isWithinPlayerView(daytimeTarget)
@@ -228,7 +225,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         boolean watched = isPlayerWatching(player);
         double distance = Math.sqrt(squaredDistanceTo(player));
         learningEngine.observe(watched, distance);
-        learningEngine.observePlayerBehavior(player);
+        // Player habits and proximity pressure are sampled by WatcherRunManager once per second.
         // The simulation deliberately starts close and visible; normal gameplay still enforces distance in OBSERVING.
         boolean distanceSensitivePhase = phase == Phase.STALKING
                 || (phase == Phase.OBSERVING && !debugSimulation);
@@ -950,7 +947,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         int renderChunks = WatcherStalkingDirector.renderDistanceChunks(
                 TheWatcher.WATCHER_RENDER_DISTANCE_CHUNKS);
         learningEngine.observe(isPlayerWatching(player), distance);
-        learningEngine.observePlayerBehavior(player);
+        learningEngine.observePlayerBehavior(player, 20);
         learningEngine.observeStalkingDistance(distance, renderChunks);
     }
 
