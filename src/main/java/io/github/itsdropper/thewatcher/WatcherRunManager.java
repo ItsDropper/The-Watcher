@@ -60,7 +60,10 @@ public final class WatcherRunManager {
                         world.random.nextInt(6_001) + 3_600L);
                 run.nextTowerAt = world.getTime() + world.random.nextInt(4_801) + 2_400L;
                 WatcherTowerGenerator.resetForRun();
-                // Prepare the guaranteed tower during run initialization, before exploration.
+                // New horror runs begin in woodland when a safe forest can be found nearby.
+                // Existing runs are not relocated when they are loaded from disk.
+                WatcherForestSpawn.prepare(world);
+                // Prepare guaranteed story sites around the selected forest spawn.
                 WatcherTowerGenerator.generateGuaranteedStructures(world);
                 RUNS.put(world, run);
                 CHECKED_WORLDS.add(world);
