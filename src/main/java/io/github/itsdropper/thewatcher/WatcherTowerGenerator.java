@@ -128,7 +128,9 @@ public final class WatcherTowerGenerator {
                 }
             }
 
-            builder.accept(world, new BlockPos(x, y, z));
+            BlockPos siteBase = new BlockPos(x, y, z);
+            builder.accept(world, siteBase);
+            scarSurroundingTerrain(world, siteBase);
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
             guaranteedStructuresMask |= bit;
@@ -194,6 +196,7 @@ public final class WatcherTowerGenerator {
 
             BlockPos base = new BlockPos(x, y, z);
             buildTower(world, base);
+            scarSurroundingTerrain(world, base);
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
             guaranteedStructuresMask |= 1;
@@ -248,11 +251,131 @@ public final class WatcherTowerGenerator {
                 case 3 -> buildSignalStation(world, base);
                 default -> buildRootCellar(world, base);
             }
+            scarSurroundingTerrain(world, base);
             BUILT_REGIONS.add(regionKey);
             towersBuilt++;
             return true;
         }
         return false;
+    }
+
+    /**
+     * Leaves a restrained blight around story sites. This runs only when a site is
+     * first generated, edits natural surface blocks only, and never loads extra chunks.
+     * The broken silhouettes are meant to read as wrong at a distance, not as a second
+     * large structure competing with the site itself.
+     */
+    private static void scarSurroundingTerrain(ServerWorld world, BlockPos base) {
+        int treesPlaced = 0;
+        int attempts = 0;
+
+        // Patchy ground avoids a uniform "painted circle" and preserves the original biome.
+        for (int i = 0; i < 72; i++) {
+            double angle = world.random.nextDouble() * Math.PI * 2.0D;
+            double radius = 7.0D + world.random.nextDouble() * 13.0D;
+            int x = base.getX() + (int) Math.round(Math.cos(angle) * radius);
+            int z = base.getZ() + (int) Math.round(Math.sin(angle) * radius);
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+
+            int surfaceY = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            BlockPos surface = new BlockPos(x, surfaceY - 1, z);
+            BlockState ground = world.getBlockState(surface);
+            if (!isNaturalScarringGround(ground)) continue;
+
+            // Keep the scar irregular: some earth is deadened, some is torn open to stone.
+            int roll = world.random.nextInt(10);
+            BlockState scar = roll < 5
+                    ? net.minecraft.block.Blocks.COARSE_DIRT.getDefaultState()
+                    : roll < 8
+                    ? net.minecraft.block.Blocks.ROOTED_DIRT.getDefaultState()
+                    : net.minecraft.block.Blocks.PODZOL.getDefaultState();
+            if (roll == 9) {
+                scar = net.minecraft.block.Blocks.GRAVEL.getDefaultState();
+            }
+            world.setBlockState(surface, scar, 3);
+
+            // Rare exposed rock teeth make the ground look fractured without carving holes.
+            if (world.random.nextInt(9) == 0) {
+                BlockPos tooth = surface.up();
+                if (world.getBlockState(tooth).isAir()) {
+                    world.setBlockState(tooth, net.minecraft.block.Blocks.COBBLED_DEEPSLATE.getDefaultState(), 3);
+                    if (world.random.nextBoolean() && world.getBlockState(tooth.up()).isAir()) {
+                        world.setBlockState(tooth.up(), net.minecraft.block.Blocks.MOSSY_COBBLESTONE.getDefaultState(), 3);
+                    }
+                }
+            }
+
+            // A few dead bushes interrupt otherwise ordinary grass and dirt.
+            if (world.random.nextInt(7) == 0 && world.getBlockState(surface.up()).isAir()) {
+                world.setBlockState(surface.up(), net.minecraft.block.Blocks.DEAD_BUSH.getDefaultState(), 3);
+            }
+            attempts++;
+        }
+
+        // Generate only a handful of crooked dead trees per site, and only on natural ground.
+        int wantedTrees = 2 + world.random.nextInt(3);
+        for (int i = 0; i < 28 && treesPlaced < wantedTrees; i++) {
+            double angle = world.random.nextDouble() * Math.PI * 2.0D;
+            double radius = 9.0D + world.random.nextDouble() * 10.0D;
+            int x = base.getX() + (int) Math.round(Math.cos(angle) * radius);
+            int z = base.getZ() + (int) Math.round(Math.sin(angle) * radius);
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) continue;
+
+            int surfaceY = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+            BlockPos ground = new BlockPos(x, surfaceY - 1, z);
+            if (!isNaturalScarringGround(world.getBlockState(ground))) continue;
+
+            boolean clear = true;
+            int height = 3 + world.random.nextInt(3);
+            for (int dy = 1; dy <= height + 2; dy++) {
+                if (!world.getBlockState(ground.up(dy)).isAir()) {
+                    clear = false;
+                    break;
+                }
+            }
+            if (!clear) continue;
+
+            world.setBlockState(ground.up(), net.minecraft.block.Blocks.STRIPPED_DARK_OAK_LOG.getDefaultState(), 3);
+            for (int dy = 2; dy <= height; dy++) {
+                world.setBlockState(ground.up(dy), net.minecraft.block.Blocks.STRIPPED_DARK_OAK_LOG.getDefaultState(), 3);
+            }
+            // Asymmetric fence limbs and a hanging cobweb give each tree a broken outline.
+            if (world.random.nextBoolean()) {
+                world.setBlockState(ground.add(1, height - 1, 0),
+                        net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
+                world.setBlockState(ground.add(2, height - 1, 0),
+                        net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+            } else {
+                world.setBlockState(ground.add(-1, height - 2, 0),
+                        net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
+                world.setBlockState(ground.add(-2, height - 2, 0),
+                        net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+            }
+            if (world.random.nextBoolean()) {
+                world.setBlockState(ground.add(0, height, 1),
+                        net.minecraft.block.Blocks.DARK_OAK_FENCE.getDefaultState(), 3);
+                world.setBlockState(ground.add(0, height + 1, 1),
+                        net.minecraft.block.Blocks.COBWEB.getDefaultState(), 3);
+            }
+            treesPlaced++;
+        }
+
+        if (attempts > 0 || treesPlaced > 0) {
+            TheWatcher.LOGGER.debug("Scarred terrain around Watcher site at {} ({} ground patches, {} dead trees)",
+                    base, attempts, treesPlaced);
+        }
+    }
+
+    private static boolean isNaturalScarringGround(BlockState state) {
+        return state.isIn(BlockTags.DIRT)
+                || state.isOf(net.minecraft.block.Blocks.GRASS_BLOCK)
+                || state.isOf(net.minecraft.block.Blocks.MYCELIUM)
+                || state.isOf(net.minecraft.block.Blocks.STONE)
+                || state.isOf(net.minecraft.block.Blocks.COBBLESTONE)
+                || state.isOf(net.minecraft.block.Blocks.GRAVEL)
+                || state.isOf(net.minecraft.block.Blocks.SAND)
+                || state.isOf(net.minecraft.block.Blocks.RED_SAND)
+                || state.isOf(net.minecraft.block.Blocks.MOSS_BLOCK);
     }
 
     private static boolean isFlatAndClear(ServerWorld world, int x, int baseY, int z) {
