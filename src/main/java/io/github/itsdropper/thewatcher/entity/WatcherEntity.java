@@ -175,6 +175,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                         } else {
                             // Never teleport in front of a player. If they keep it in sight,
                             // it physically withdraws instead of breaking the established rule.
+                            getNavigation().stop();
                             moveAwayFrom(daytimeTarget, 2.4D);
                         }
                     } else {
@@ -182,10 +183,13 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                         setVelocity(0.0D, getVelocity().y, 0.0D);
                     }
                 } else {
+                    setTarget(null);
                     getNavigation().stop();
                 }
             }
-            resetToIdle();
+            // Do not call resetToIdle here: it would cancel the daytime withdrawal path.
+            setPhase(Phase.IDLE);
+            phaseTicks = 0;
             return;
         }
 
