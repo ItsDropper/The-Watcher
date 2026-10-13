@@ -60,10 +60,19 @@ public final class CameraNetwork {
                 context.server().execute(() -> endFeed(context.player(), true)));
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                server.execute(() -> WatcherRunManager.syncEndingMusic(handler.player)));
+                server.execute(() -> {
+                    // Recover from a camera feed interrupted by a client/server crash.
+                    // Player entity flags can survive in saved player data even though
+                    // the in-memory feed session does not survive a server restart.
+                    if (!SESSIONS.containsKey(handler.player.getUuid())) {
+                        handler.player.setNoGravity(false);
+                    }
+                    WatcherRunManager.syncEndingMusic(handler.player);
+                }));
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                server.execute(() -> endFeed(handler.player, false)));
+                // Restore flags before the disconnecting player entity is saved.
+                server.execute(() -> endFeed(handler.player, true)));
     }
 
     private static void beginFeed(ServerPlayerEntity player, BlockPos pos) {
