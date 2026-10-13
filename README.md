@@ -7,13 +7,13 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 ## Current gameplay
 
 - The Watcher has its own phases: **observing**, **stalking**, **escalating**, and **retreating**.
-- When the player directly watches it, The Watcher freezes completely. It has no look-around goal and always uses its idle animation.
+- When the player directly watches it, The Watcher holds still at first. During stalking, four seconds of uninterrupted eye contact can make it take a slow, deliberate step closer, accompanied occasionally by a faint heartbeat. It never teleports while visible, and it retreats if it gets too close. Looking at it buys time; it is not a permanent safety button. It has no look-around goal and uses its idle animation.
 - During observing, The Watcher wanders around nearby surveillance cameras instead of standing still. It walks away if it gets too close; it can teleport only during stalking, and only while outside your view or hidden by solid cover. The first reveal now starts farther away, scaled to render distance. Stalking teleports are silent; the goal is a silhouette you can actually spot, not an entity permanently at the render edge.
 - Render distance is sampled continuously, so changing Minecraft's video setting takes effect without reopening The Watcher Settings. `/watcher debug status` reports the current stalking distance band.
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
 - Retreating is physical movement: it runs away instead of teleporting. Teleport relocation is exclusive to stalking.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
-- Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
+- Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Prolonged eye contact can trigger a slow visible advance and a faint heartbeat, forcing players to choose between watching it and making progress. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
 - Close encounters can trigger randomized cave ambience, an Enderman-like stare cue, and short Darkness bursts instead of constant predictable effects.
 - The pause menu includes **The Watcher Settings** for toggling dread effects, night darkness, and unpredictable teleporting.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
