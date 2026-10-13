@@ -281,6 +281,31 @@ public final class WatcherRunManager {
         }
     }
 
+    public static String getLearningSummary(ServerWorld world) {
+        RunState run = RUNS.get(world);
+        if (run == null || !run.revealed || run.ended) {
+            return "No active revealed Watcher run. Start a run and survive until the first reveal.";
+        }
+        if (run.naturalWatcherUuid != null
+                && world.getEntity(run.naturalWatcherUuid) instanceof WatcherEntity watcher
+                && !watcher.isRemoved()) {
+            watcher.writeLearningToProperties(run.learningProperties, "");
+        }
+        WatcherLearningEngine learning = new WatcherLearningEngine();
+        learning.readFromProperties(run.learningProperties, "");
+        return "Persistent learning profile (also updates while the Watcher is unloaded): samples="
+                + learning.getObservedTicks()
+                + ", watchedWindow=" + String.format(java.util.Locale.ROOT, "%.1f ticks", learning.getAverageWatchedTicks())
+                + ", unseenWindow=" + String.format(java.util.Locale.ROOT, "%.1f ticks", learning.getAverageUnwatchedTicks())
+                + ", stationary=" + String.format(java.util.Locale.ROOT, "%.1f ticks", learning.getAverageStationaryTicks())
+                + ", sprint=" + String.format(java.util.Locale.ROOT, "%.2f", learning.getAverageSprintRatio())
+                + ", sneak=" + String.format(java.util.Locale.ROOT, "%.2f", learning.getAverageSneakRatio())
+                + ", itemUse=" + String.format(java.util.Locale.ROOT, "%.2f", learning.getAverageItemUseRatio())
+                + ", jump=" + String.format(java.util.Locale.ROOT, "%.2f", learning.getAverageJumpRatio())
+                + ", lookBack=" + String.format(java.util.Locale.ROOT, "%.2f", learning.getAverageLookBackRatio())
+                + ", avgDistance=" + String.format(java.util.Locale.ROOT, "%.1f blocks", learning.getAveragePlayerDistance());
+    }
+
     public static boolean shouldDiscardNaturalEntity(ServerWorld world) {
         RunState run = RUNS.get(world);
         return run != null && run.ended;
