@@ -1,5 +1,6 @@
 package io.github.itsdropper.thewatcher.entity;
 
+import io.github.itsdropper.thewatcher.BloodMoonSystem;
 import io.github.itsdropper.thewatcher.TheWatcher;
 import io.github.itsdropper.thewatcher.WatcherEvidence;
 import io.github.itsdropper.thewatcher.SurveillanceCameraBlockEntity;
@@ -141,7 +142,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
             io.github.itsdropper.thewatcher.WatcherRunManager.captureLearning(world, this);
         }
 
-        int tickScale = debugSimulation ? 4 : 1;
+        int tickScale = debugSimulation ? 4 : BloodMoonSystem.isActive(world) ? 2 : 1;
         hiddenMoveCooldown = Math.max(0, hiddenMoveCooldown - tickScale);
         proximityCorrectionCooldown = Math.max(0, proximityCorrectionCooldown - tickScale);
         dreadEffectCooldown = Math.max(0, dreadEffectCooldown - tickScale);
