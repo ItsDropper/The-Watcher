@@ -56,6 +56,9 @@ public final class WatcherAtmosphereDirector {
             PlayerState state = states.computeIfAbsent(player.getUuid(), ignored -> {
                 PlayerState created = new PlayerState();
                 created.nextEventAt = world.getTime() + 4_000L + world.random.nextInt(4_001);
+                // Adaptive responses cannot fire immediately just because the player looked around
+                // during the first few seconds of a run.
+                created.nextAdaptiveCueAt = created.nextEventAt + 1_800L + world.random.nextInt(2_401);
                 created.lastYaw = player.getYaw();
                 created.lastPosition = player.getPos();
                 created.hasLastSample = true;
