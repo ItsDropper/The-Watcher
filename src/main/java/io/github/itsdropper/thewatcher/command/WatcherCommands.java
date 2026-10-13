@@ -45,7 +45,7 @@ public final class WatcherCommands {
                 .then(literal("debug")
                         .executes(context -> {
                             context.getSource().sendFeedback(() -> Text.literal(
-                                    "Watcher debug: spawn | status | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
+                                    "Watcher debug: test | spawn | status | structures | despawn | simulate [stop] | ending | phase <observe|stalk|escalate|retreat|auto> | darkness <on|off>"),
                                     false);
                             return 1;
                         })
