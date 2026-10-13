@@ -82,27 +82,27 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.82F;
-            case MEDIUM -> 0.70F;
-            case HIGH -> 0.60F;
-            case ULTRA -> 0.50F;
+            case LOW -> 0.76F;
+            case MEDIUM -> 0.62F;
+            case HIGH -> 0.48F;
+            case ULTRA -> 0.34F;
         };
         // Start the atmospheric veil sooner, but keep a broad transition.
-        return Math.max(0.0F, original * scale * (1.0F - 0.08F * nightFactor()));
+        return Math.max(0.0F, original * scale * (1.0F - 0.12F * nightFactor()));
     }
 
     public static float adjustEnd(float original) {
         if (!shouldApply()) return original;
         float scale = switch (getDetail()) {
             case OFF -> 1.0F;
-            case LOW -> 0.96F;
-            case MEDIUM -> 0.90F;
-            case HIGH -> 0.83F;
-            case ULTRA -> 0.74F;
+            case LOW -> 0.90F;
+            case MEDIUM -> 0.80F;
+            case HIGH -> 0.68F;
+            case ULTRA -> 0.52F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
-        scale *= 1.0F - 0.09F * nightFactor();
-        if (client.world != null && client.world.isRaining()) scale *= 0.88F;
+        scale *= 1.0F - 0.14F * nightFactor();
+        if (client.world != null && client.world.isRaining()) scale *= 0.78F;
         return Math.max(12.0F, original * scale);
     }
 
@@ -117,31 +117,31 @@ public final class WatcherFogConfig {
         if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.96F;
         float base = switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.24F;
-            case MEDIUM -> 0.38F;
-            case HIGH -> 0.52F;
-            case ULTRA -> 0.66F;
+            case LOW -> 0.30F;
+            case MEDIUM -> 0.46F;
+            case HIGH -> 0.64F;
+            case ULTRA -> 0.78F;
         };
-        return Math.min(0.78F, base + 0.12F * nightFactor()
-                + (client.world != null && client.world.isRaining() ? 0.12F : 0.0F));
+        return Math.min(0.92F, base + 0.16F * nightFactor()
+                + (client.world != null && client.world.isRaining() ? 0.16F : 0.0F));
     }
 
     public static float fogTargetRed() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.32F;
-        return lerp(0.30F, 0.055F, nightFactor());
+        return lerp(0.20F, 0.035F, nightFactor());
     }
 
     public static float fogTargetGreen() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.018F;
-        return lerp(0.32F, 0.075F, nightFactor());
+        return lerp(0.22F, 0.052F, nightFactor());
     }
 
     public static float fogTargetBlue() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world != null && BloodMoonSystem.isActive(client.world)) return 0.025F;
-        return lerp(0.34F, 0.085F, nightFactor());
+        return lerp(0.24F, 0.075F, nightFactor());
     }
 
     /** Reduce sky-driven exposure while preserving useful light from torches. */
@@ -149,10 +149,10 @@ public final class WatcherFogConfig {
         if (!shouldApply()) return 1.0F;
         float strength = switch (getDetail()) {
             case OFF -> 0.0F;
-            case LOW -> 0.10F;
-            case MEDIUM -> 0.20F;
-            case HIGH -> 0.30F;
-            case ULTRA -> 0.42F;
+            case LOW -> 0.12F;
+            case MEDIUM -> 0.28F;
+            case HIGH -> 0.42F;
+            case ULTRA -> 0.56F;
         };
         MinecraftClient client = MinecraftClient.getInstance();
         float weatherFactor = client.world != null && client.world.isRaining() ? 1.15F : 1.0F;
