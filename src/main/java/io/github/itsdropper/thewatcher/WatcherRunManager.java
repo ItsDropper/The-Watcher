@@ -1,6 +1,7 @@
 package io.github.itsdropper.thewatcher;
 
 import io.github.itsdropper.thewatcher.entity.WatcherEntity;
+import io.github.itsdropper.thewatcher.entity.WatcherLearningEngine;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.entity.player.PlayerEntity;
@@ -133,10 +134,35 @@ public final class WatcherRunManager {
     }
 
     private static void samplePlayers(ServerWorld world, RunState run) {
+        WatcherEntity loadedWatcher = null;
+        if (run.naturalWatcherUuid != null
+                && world.getEntity(run.naturalWatcherUuid) instanceof WatcherEntity watcher
+                && !watcher.isRemoved()) {
+            loadedWatcher = watcher;
+            // Keep the shared model in sync with the entity before adding this sample.
+            watcher.writeLearningToProperties(run.learningProperties, "");
+        }
+
+        WatcherLearningEngine unloadedLearning = null;
+        if (loadedWatcher == null && run.revealed) {
+            unloadedLearning = new WatcherLearningEngine();
+            unloadedLearning.readFromProperties(run.learningProperties, "");
+        }
+
         for (ServerPlayerEntity player : world.getPlayers()) {
             if (!player.isAlive() || player.isSpectator()) {
                 continue;
             }
+
+            // Learning continues at one sample per second even when the Watcher's distant
+            // entity chunk is unloaded. This is important for daytime observation: it learns
+            // how each participant moves, sneaks, jumps, uses items, camps, and checks behind.
+            if (loadedWatcher != null) {
+                loadedWatcher.observePlayerForLearning(player);
+            } else if (unloadedLearning != null) {
+                unloadedLearning.observePlayerBehavior(player);
+            }
+
             UUID id = player.getUuid();
             Vec3d current = player.getPos();
             Vec3d previous = run.lastPositions.put(id, current);
@@ -145,6 +171,12 @@ public final class WatcherRunManager {
                 double activity = Math.min(moved, 8.0D) + (player.isSprinting() ? 0.5D : 0.0D);
                 run.playerExplorationScores.merge(id, activity, Double::sum);
             }
+        }
+
+        if (loadedWatcher != null) {
+            loadedWatcher.writeLearningToProperties(run.learningProperties, "");
+        } else if (unloadedLearning != null) {
+            unloadedLearning.writeToProperties(run.learningProperties, "");
         }
     }
 
