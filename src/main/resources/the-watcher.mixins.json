@@ -13,6 +13,7 @@
     "client.HideSunMixin",
     "client.NightLightmapMixin",
     "client.AtmosphereOverlayMixin",
+    "client.OvercastSkyMixin",
     "client.EndingMusicPriorityMixin"
   ],
   "injectors": {
