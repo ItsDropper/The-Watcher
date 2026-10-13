@@ -14,7 +14,7 @@ import java.util.Properties;
 public final class WatcherLearningEngine {
     private static final double EMA_WEIGHT = 0.18D;
     // Behavioral habits should accumulate over minutes, not forget a whole day in seconds.
-    private static final double BEHAVIOR_EMA_WEIGHT = 0.035D;
+    private static final double BEHAVIOR_EMA_WEIGHT = 0.006D;
     private static final int MAX_RUN_TICKS = 72000;
 
     private double averageWatchedTicks = 100.0D;
