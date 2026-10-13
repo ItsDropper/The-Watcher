@@ -12,9 +12,9 @@
     "client.AtmosphericFogMixin",
     "client.HideSunMixin",
     "client.NightLightmapMixin",
-    "client.AtmosphereOverlayMixin",
     "client.OvercastSkyMixin",
-    "client.EndingMusicPriorityMixin"
+    "client.EndingMusicPriorityMixin",
+    "client.OvercastSkyColorMixin"
   ],
   "injectors": {
     "defaultRequire": 1
