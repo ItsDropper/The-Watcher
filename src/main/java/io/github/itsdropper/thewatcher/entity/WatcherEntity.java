@@ -72,6 +72,7 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
     private int closeJumpscareCooldown;
     private int watchedAttackCooldown;
     private int escalationAttackCooldown;
+    private boolean huntTelegraphed;
     private boolean debugPhaseLocked;
     private boolean debugSimulation;
     private boolean debugPhaseAutoAdvance;
@@ -426,7 +427,20 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
                 int duration = Math.max(260,
                         learningEngine.adjustStalkDuration(STALK_TICKS) - stalkingEvidenceCount * 45);
                 if ((!debugPhaseLocked || debugPhaseAutoAdvance) && phaseTicks >= duration) {
-                    setPhase(Phase.ESCALATING);
+                    if (stalkingEvidenceCount >= 3 && !huntTelegraphed) {
+                        // Late-run hunts are announced by a single unmistakable cue, giving
+                        // players a brief chance to move, seek cover, or prepare to fight.
+                        huntTelegraphed = true;
+                        phaseTicks = Math.max(0, duration - 40);
+                        player.sendMessage(net.minecraft.text.Text.literal(
+                                "The silence breaks. It is coming."), true);
+                        world.playSound(null, player.getBlockPos(), SoundEvents.ENTITY_WARDEN_HEARTBEAT,
+                                SoundCategory.HOSTILE, 0.65F, 0.48F);
+                        world.spawnParticles(ParticleTypes.ASH, player.getX(), player.getEyeY(),
+                                player.getZ(), 18, 0.4D, 0.3D, 0.4D, 0.008D);
+                    } else {
+                        setPhase(Phase.ESCALATING);
+                    }
                 }
             }
             case ESCALATING -> {
@@ -637,6 +651,10 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (!found) {
             return false;
         }
+        // Leave a brief ash disturbance at the departure point. It does not alter blocks,
+        // but observant players can notice where the Watcher had been standing.
+        world.spawnParticles(ParticleTypes.ASH, getX(), getY() + 0.6D, getZ(),
+                10, 0.22D, 0.35D, 0.22D, 0.004D);
         requestTeleport(bestX + 0.5D, bestY, bestZ + 0.5D);
         getNavigation().stop();
         return true;
@@ -1168,6 +1186,9 @@ public class WatcherEntity extends PathAwareEntity implements GeoEntity {
         if (phase != newPhase) {
             phase = newPhase;
             phaseTicks = 0;
+            if (newPhase == Phase.STALKING) {
+                huntTelegraphed = false;
+            }
             if (newPhase == Phase.ESCALATING) {
                 attemptedEscalationAttack = false;
                 escalationAttackCooldown = 0;
