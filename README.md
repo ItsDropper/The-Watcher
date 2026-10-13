@@ -13,7 +13,7 @@ The mod focuses on a custom stalking entity, unnerving audio cues, darker nights
 - The Watcher Settings screen includes a render-distance control that changes Minecraft's actual view distance and uses it to calculate long-range stalking positions.
 - Retreating is physical movement: it runs away instead of teleporting. Teleport relocation is exclusive to stalking.
 - Escalation makes it pursue the player and allows one attack attempt per escalation.
-- Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Prolonged eye contact can trigger a slow visible advance and a faint heartbeat, forcing players to choose between watching it and making progress. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
+- Distant stalking can trigger rare false footsteps behind the player, quiet cave ambience, or a brief ash disturbance near the edge of vision. Prolonged eye contact can trigger a slow visible advance and a faint heartbeat, forcing players to choose between watching it and making progress. In dark, enclosed shelters, the atmosphere director can also schedule three quiet knocks against a nearby wall; the knocks are spatially located, separated by short pauses, and never alter blocks. Cues are intentionally sparse and do not reveal the Watcher’s exact location.
 - Close encounters can trigger randomized cave ambience, an Enderman-like stare cue, and short Darkness bursts instead of constant predictable effects.
 - The pause menu includes **The Watcher Settings** for toggling dread effects, night darkness, and unpredictable teleporting.
 - Overworld nights apply extra Darkness by default. Operators can disable this for testing.
